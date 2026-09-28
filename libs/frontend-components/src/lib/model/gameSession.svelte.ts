@@ -1,5 +1,8 @@
+import type * as Type from 'typebox'
+import { TitlePreferences } from '../preferences/titlePreferences.svelte.js'
 import * as Value from 'typebox/value'
 import {
+    type TitlePreferenceDefinition,
     ActionSource,
     Game,
     GameAction,
@@ -702,7 +705,26 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
         }
     }
 
+    private preferenceDisposers: (() => void)[] = []
+
+    protected createPreferences<P extends Type.TObject>(definition: TitlePreferenceDefinition<P>) {
+        const preferences = new TitlePreferences(
+            definition,
+            this.game.typeId,
+            this.api,
+            () => this.sessionUserStore.current?.id,
+            // This just persists things like which tab a player last had open, so it saves in
+            // the background on ordinary view/tab switches. A save failure here (e.g. a transient
+            // etag conflict) is low-stakes and shouldn't interrupt play with an error toast - log
+            // it instead so it's still visible in devtools/telemetry if it becomes a real problem.
+            (message) => console.warn(`Preferences: ${message}`)
+        )
+        this.preferenceDisposers.push(() => preferences.dispose())
+        return preferences
+    }
+
     dispose() {
+        for (const dispose of this.preferenceDisposers) dispose()
         this.notifications.stop()
         this.representations.dispose()
         this.effectDisposer()
@@ -1091,9 +1113,21 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
             return
         }
 
+        await this.undoToTarget(this.undoableAction)
+    }
+
+    // Low-level primitive behind undo() above, factored out so a title can offer a narrowly
+    // scoped "undo past an already-committed decision" escape hatch (e.g. for manual testing of
+    // a title-specific one-time choice after the game has already ended) without loosening
+    // undoableAction's own real permission/history rules for every other undo in the app -
+    // undoableAction still governs the normal UNDO button entirely unchanged (see undo() above).
+    // Callers of this method directly are responsible for their own guards (game/view state,
+    // busy, whether targetActionSource is even still a legal thing to undo to) - it does none of
+    // undo()'s own checks itself.
+    async undoToTarget(targetActionSource: GameAction) {
         const context = this.currentModifiableContext
         const isRepresentationCurrent = this.representations.captureValidity()
-        const targetAction = structuredClone($state.snapshot(this.undoableAction))
+        const targetAction = structuredClone($state.snapshot(targetActionSource))
         const before = context.clone()
         const hosted =
             this.usesHostExecution(context) || context.game.storage === GameStorage.Remote

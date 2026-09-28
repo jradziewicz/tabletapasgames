@@ -59,6 +59,7 @@
 @source "../../../games/kaivai-ui/src/**/*.{html,js,svelte,ts}";
 @source "../../../games/estates-ui/src/**/*.{html,js,svelte,ts}";
 @source "../../../games/sol-ui/src/**/*.{html,js,svelte,ts}";
+@source "../../../games/stellar-ventures-ui/src/**/*.{html,js,svelte,ts}";
 @source "../../../libs/frontend-components/src/**/*.{html,js,svelte,ts}";
 @source "./**/*.{html,js,svelte,ts}";
 

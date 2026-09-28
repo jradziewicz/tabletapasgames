@@ -16,8 +16,10 @@ import {
     deployFrontendCommand,
     deployGameLogicCommand,
     deployGameUiCommand,
+    deployManifestCommand,
     gcsDirectoryPlaceholderCommands,
     gcsRsyncDirectoryPlaceholderCommands,
+    restartBackendCommand,
     rollbackBackendCommand,
     runCommand
 } from './lib/commands.js'
@@ -41,9 +43,14 @@ Commands:
   deploy-logic <gameId>        Build + bundle game logic and deploy to GCS
   build-frontend               Build the frontend
   deploy-frontend              Deploy the frontend bundle to GCS
+  deploy-manifest              Upload site-manifest.json to GCS
   build-backend                Build the backend
   deploy-backend [--with-traffic] Deploy the backend (Cloud Run)
+  restart-backend              Roll backend + tasks onto fresh revisions (picks up a new manifest now)
   rollback-backend <revision>  Shift traffic to a backend revision
+
+After deploy-frontend / deploy-ui, run deploy-manifest. Running instances pick the new manifest
+up on their own within about a minute; run restart-backend to make it immediate.
 
 Environment:
   TABLETOP_GCS_BUCKET           GCS bucket name
@@ -208,6 +215,25 @@ const main = async () => {
         const allowTraffic = values['with-traffic'] === true
         const spec = deployBackendCommand(repoRoot, deployConfig, { allowTraffic })
         await runAndReport(spec, () => runCommand(spec))
+        return
+    }
+
+    if (command === 'deploy-manifest') {
+        await loadSyncedManifest()
+        const spec = deployManifestCommand(manifestPath, deployConfig)
+        await runDeployWithDirectoryPlaceholders(spec)
+        return
+    }
+
+    if (command === 'restart-backend') {
+        const services = [deployConfig.backend?.service, deployConfig.backend?.tasksService].filter(
+            (service): service is string => Boolean(service)
+        )
+        if (services.length === 0) throw new Error('Missing backend service config for restart')
+        for (const service of services) {
+            const spec = restartBackendCommand(repoRoot, deployConfig, { service })
+            await runAndReport(spec, () => runCommand(spec))
+        }
         return
     }
 

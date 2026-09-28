@@ -40,4 +40,15 @@ export interface EmailService {
         url: string
         toEmail: string
     }): Promise<void>
+    sendTurnNotificationEmail({
+        title,
+        gameName,
+        url,
+        toEmail
+    }: {
+        title: string
+        gameName: string
+        url: string
+        toEmail: string
+    }): Promise<void>
 }

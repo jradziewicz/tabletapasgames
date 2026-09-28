@@ -7,10 +7,10 @@
 </script>
 
 <svelte:head>
-    <title>About us — Board Together</title>
+    <title>About us — TableTapas</title>
     <meta
         name="description"
-        content="Board Together is a free, open source place to play board games online with friends. Join the conversation or help build the next game."
+        content="TableTapas is a free, open source place to play board games online with friends. Join the conversation or help build the next game."
     />
 </svelte:head>
 

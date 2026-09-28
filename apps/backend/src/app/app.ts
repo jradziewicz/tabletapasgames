@@ -121,7 +121,15 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
     await fastify.register(FastifyFormbody)
 
     await fastify.register(cors, {
-        origin: [FRONTEND_HOST],
+        // FRONTEND_HOST is the canonical public URL; EXTRA_CORS_ORIGINS (comma-separated) lets
+        // older/alternate hostnames (e.g. the raw Cloud Run URL) keep working too.
+        origin: [
+            FRONTEND_HOST,
+            ...(process.env['EXTRA_CORS_ORIGINS'] ?? '')
+                .split(',')
+                .map((o) => o.trim())
+                .filter(Boolean)
+        ],
         credentials: true,
         methods: ['GET', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
         exposedHeaders: ['X-Tabletop-Version']

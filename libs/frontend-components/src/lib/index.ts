@@ -58,3 +58,12 @@ export * from './utils/publishCssVarFromRect.js'
 export * from './utils/runeBackedStore.svelte.js'
 
 export * from './utils/validateLocalGameState.js'
+
+export { default as TabWorkspace } from './components/TabWorkspace.svelte'
+export { TitlePreferences } from './preferences/titlePreferences.svelte.js'
+export { DebouncedLayout } from './preferences/debouncedLayout.svelte.js'
+export type { WorkspaceTab, WorkspaceFixedPane } from './components/workspaceTypes.js'
+export type { WorkspaceInitialSplit, SplitAxis } from './components/tabWorkspace.js'
+export type { SavedWorkspace, SavedPane } from './components/workspacePersistence.js'
+export { restoreWorkspace, saveWorkspace } from './components/workspacePersistence.js'
+export { workspaceLayout } from './components/tabWorkspace.js'

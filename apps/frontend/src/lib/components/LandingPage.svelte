@@ -18,20 +18,12 @@
     let showAllGames = $state(false)
     const shelfSize = 10
     let shelfTitles = $derived(signedIn || showAllGames ? titles : titles.slice(0, shelfSize))
-    const featuredIds = ['bus', 'indonesia', 'sol']
-    let featuredTitles = $derived(
-        featuredIds.flatMap((id) => titles.filter((title) => title.id === id))
-    )
 </script>
 
 <main class="landing collection-page" class:signed-in={signedIn}>
     {#if !signedIn}
-        <section class="hero" aria-labelledby="welcome-heading">
+        <section class="hero" aria-label="Welcome">
             <div class="introduction">
-                <h1 id="welcome-heading">Care to play<br />a <span>game?</span></h1>
-                <p class="intro-copy">
-                    Bring your friends.<br />Take your turns at your own pace.
-                </p>
                 <div class="actions">
                     <button class="primary-action" onclick={openLoginModal}>
                         Take a seat <ArrowRightOutline class="h-5 w-5" />
@@ -40,16 +32,6 @@
                         Explore the games <ArrowDownOutline class="h-4 w-4" />
                     </a>
                 </div>
-                <p class="small-print"><strong>Always</strong> free to play. Fully open source.</p>
-            </div>
-
-            <div class="showcase" aria-hidden="true">
-                <div class="table-ring"></div>
-                {#each featuredTitles as title (title.id)}
-                    <div class="featured-cover" data-game={title.id}>
-                        <img src={title.thumbnailUrl} alt="" fetchpriority="high" />
-                    </div>
-                {/each}
             </div>
         </section>
     {/if}
@@ -172,10 +154,8 @@
 
     .hero {
         font-family: 'Inter', sans-serif;
-        display: grid;
-        grid-template-columns: 1fr 1fr;
+        display: flex;
         align-items: center;
-        gap: 24px;
         padding: 32px 40px 12px 0;
     }
 
@@ -251,70 +231,6 @@
         margin-top: 32px;
         color: var(--color-gray-400);
         font-size: 11px;
-    }
-
-    .showcase {
-        position: relative;
-        height: 370px;
-        isolation: isolate;
-    }
-
-    .showcase::before {
-        content: '';
-        position: absolute;
-        inset: -40px -20px;
-        background: radial-gradient(ellipse, #427ac725, transparent 68%);
-        z-index: -1;
-    }
-
-    .table-ring {
-        position: absolute;
-        inset: 16px 10%;
-        border: 1px solid #427ac726;
-        border-radius: 50%;
-        transform: rotate(-20deg);
-    }
-
-    .table-ring::after {
-        content: '';
-        position: absolute;
-        inset: 24px -20px;
-        border: 1px solid #427ac714;
-        border-radius: 50%;
-    }
-
-    .featured-cover {
-        position: absolute;
-        width: 43%;
-        top: 23%;
-        filter: drop-shadow(0 20px 18px #0009);
-    }
-
-    .featured-cover img {
-        width: 100%;
-        aspect-ratio: 1;
-        object-fit: cover;
-        border-radius: 5px;
-        border: 1px solid #ffffff26;
-    }
-
-    .featured-cover[data-game='bus'] {
-        left: 1%;
-        transform: rotate(-16deg);
-    }
-
-    .featured-cover[data-game='indonesia'] {
-        left: 29%;
-        top: 10%;
-        z-index: 2;
-        transform: rotate(3deg);
-    }
-
-    .featured-cover[data-game='sol'] {
-        right: -1%;
-        top: 39%;
-        z-index: 3;
-        transform: rotate(17deg);
     }
 
     .collection-content {
@@ -425,7 +341,7 @@
         width: 32px;
         height: 32px;
         border-radius: 50%;
-        background: var(--color-blue-600);
+        background: #7165ad;
         color: white;
         opacity: 0;
         transition: opacity 180ms;
@@ -493,9 +409,6 @@
     }
 
     @media (max-width: 1000px) {
-        .showcase {
-            height: 300px;
-        }
         .actions {
             gap: 16px;
         }
@@ -529,9 +442,6 @@
         }
         .small-print {
             font-size: 10px;
-        }
-        .showcase {
-            display: none;
         }
         .section-heading {
             align-items: start;

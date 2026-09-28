@@ -50,6 +50,7 @@ function fixture() {
         addTransport: vi.fn(),
         registerNotificationSubscription: unused,
         unregisterNotificationSubscription: unused,
+        findNotificationSubscriptions: unused,
         sendNotification: vi.fn(async () => {})
     }
     const service = new GameService(

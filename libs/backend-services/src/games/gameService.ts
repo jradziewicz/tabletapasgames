@@ -23,6 +23,7 @@ import {
     GameStatus,
     GameStatusCategory,
     type GameHistoryCursor,
+    type AdminGamesCursor,
     GameStorage,
     GameSyncStatus,
     IsYourTurnNotification,
@@ -446,6 +447,13 @@ export class GameService {
         return this.gameStore.findGameHistory(user, before)
     }
 
+    // Admin-only: every Game across every user, not just the caller's own - see
+    // findAllGames on the store for the ordering/pagination rules. Access is gated at the
+    // route (verifyRoleAdmin), not here, matching every other Admin-only route in this codebase.
+    async getAllGamesForAdmin(category: GameStatusCategory, before?: AdminGamesCursor) {
+        return this.gameStore.findAllGames(category, before)
+    }
+
     async setGameState(state: GameState): Promise<void> {
         const game = await this.getGame({ gameId: state.gameId })
         if (!game) {
@@ -725,7 +733,7 @@ export class GameService {
             await this.notifyGamePlayers(GameNotificationAction.Update, { game: updatedGame })
         }
         await this.notifyJoined(user, updatedGame, player)
-        return updatedGame
+        return this.autoStartGameIfReady({ game: updatedGame, updatedFields })
     }
 
     async declineGame({ user, gameId }: { user: User; gameId: string }): Promise<Game> {
@@ -827,6 +835,22 @@ export class GameService {
             throw new UnauthorizedAccessError({ user, gameId })
         }
 
+        return this.performGameStart({ definition, game })
+    }
+
+    /**
+     * Actually transitions a game from WaitingToStart to Started, building its initial
+     * state. Shared by the owner-triggered `startGame` action and the automatic start
+     * that fires once a game's last open seat is filled (see `autoStartGameIfReady`).
+     */
+    private async performGameStart({
+        definition,
+        game
+    }: {
+        definition: GameDefinition
+        game: Game
+    }): Promise<Game> {
+        const gameId = game.id
         let updatedGame: Game
 
         if (game.parentId) {
@@ -877,6 +901,40 @@ export class GameService {
         await this.notifyGameStarted(updatedGame)
 
         return updatedGame
+    }
+
+    /**
+     * If `updatedFields` shows the game just transitioned into WaitingToStart (i.e. its
+     * last open seat was just filled), immediately starts it rather than waiting for the
+     * owner to click Start. Safe to call after any player-list update: it's a no-op unless
+     * that exact transition just happened, and if it loses a race with another start
+     * attempt it just returns the game as-is.
+     */
+    private async autoStartGameIfReady({
+        game,
+        updatedFields
+    }: {
+        game: Game
+        updatedFields: string[]
+    }): Promise<Game> {
+        if (!updatedFields.includes('status') || game.status !== GameStatus.WaitingToStart) {
+            return game
+        }
+
+        const definition = this.getTitle(game.typeId)
+        if (!definition) {
+            return game
+        }
+
+        try {
+            return await this.performGameStart({ definition, game })
+        } catch (error) {
+            if (error instanceof GameNotWaitingToStartError) {
+                // Someone else already started it (or it moved on) between our check and now.
+                return game
+            }
+            throw error
+        }
     }
 
     @Retryable({
@@ -1547,8 +1605,8 @@ export class GameService {
         try {
             const playerId = this.findValidPlayerForUser({ user, game }).id
 
-            // Make sure it's still the user's turn
-            if (!game.activePlayerIds?.includes(playerId)) {
+            // Make sure the game is still going and it's still the user's turn
+            if (game.status !== GameStatus.Started || !game.activePlayerIds?.includes(playerId)) {
                 return
             }
 
@@ -1564,7 +1622,8 @@ export class GameService {
                         id: game.id,
                         typeId: game.typeId,
                         name: game.name
-                    }
+                    },
+                    alertStage: this.turnAlertStage(delay)
                 }
             }
             await this.notifyUser(notification)
@@ -1583,12 +1642,28 @@ export class GameService {
             return newDelay
         }
 
+        // Sequence measured from when the turn started:
+        //   1 min (push/Discord) -> 5 min (email) -> 24 hours -> every 24 hours after
+        // that until the player moves (notifyIsYourTurn stops once it's no longer
+        // their turn, or the game has ended).
         if (lastDelay <= 60) {
-            newDelay = 4 * 60 * 60 // 4 hours
-        } else if (lastDelay <= 4 * 60 * 60) {
-            newDelay = 12 * 60 * 60 // 12 hours
+            newDelay = 4 * 60 // 4 more minutes, i.e. 5 minutes into the turn
+        } else if (lastDelay <= 4 * 60) {
+            newDelay = 24 * 60 * 60 - 5 * 60 // lands 24 hours into the turn
+        } else {
+            newDelay = 24 * 60 * 60 // then daily
         }
         return newDelay
+    }
+
+    private turnAlertStage(delay: number): 'initial' | 'email' | 'reminder' {
+        if (delay <= 60) {
+            return 'initial'
+        }
+        if (delay <= 4 * 60) {
+            return 'email'
+        }
+        return 'reminder'
     }
 
     private async notifyWasInvited(user: User, owner: User, game: Game): Promise<void> {

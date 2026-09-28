@@ -10,6 +10,6 @@
     }
 </script>
 
-<svelte:head><title>Game library — Board Together</title></svelte:head>
+<svelte:head><title>Game library — TableTapas</title></svelte:head>
 
 <LandingPage signedIn bind:scrollTop={view.scrollTop} />

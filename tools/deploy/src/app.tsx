@@ -641,6 +641,21 @@ export default function App() {
     const manifestInvalidateLogPath = '/tmp/manifest-invalidate.log'
     const invalidateManifestCache = async (signal: AbortSignal) => {
         await fs.writeFile(manifestInvalidateLogPath, '', 'utf8')
+        const admin = deployConfig.backendAdmin
+        const hasAdminCredentials = Boolean(
+            admin?.cookie || admin?.token || (admin?.username && admin?.password)
+        )
+        if (!hasAdminCredentials) {
+            // The backend revalidates its cached manifest against the deployed file on its own
+            // (about once a minute per instance), so the admin call is only a fast path.
+            await appendOutputWithLog(
+                manifestInvalidateLogPath,
+                'No backend admin credentials configured; skipping manual invalidation.\n' +
+                    'Running instances will pick up the new manifest within about a minute ' +
+                    '(or run `restart-backend` to make it immediate).\n'
+            )
+            return
+        }
         await appendOutputWithLog(
             manifestInvalidateLogPath,
             'Invalidating backend manifest cache...\n'

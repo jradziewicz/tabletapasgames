@@ -1,13 +1,9 @@
 import { SecretsService } from '../../secrets/secretsService.js'
-import {
-    Notification,
-    NotificationCategory,
-    UserNotification,
-    UserNotificationAction
-} from '@tabletop/common'
+import { Notification } from '@tabletop/common'
 
 import { GameService } from '../../games/gameService.js'
 import { DiscordSubscription } from '../subscriptions/discordSubscription.js'
+import { discordMessageForNotification } from './discordMessages.js'
 import {
     NotificationResult,
     NotificationTransport,
@@ -20,7 +16,6 @@ import {
     RESTPostAPICurrentUserCreateDMChannelResult
 } from 'discord-api-types/v10'
 
-const FRONTEND_HOST = process.env.FRONTEND_HOST ?? ''
 const API_ENDPOINT = 'https://discord.com/api/v10'
 
 export class DiscordTransport implements NotificationTransport {
@@ -44,7 +39,7 @@ export class DiscordTransport implements NotificationTransport {
         subscription: DiscordSubscription,
         notification: Notification
     ): Promise<NotificationResult> {
-        const message = this.generateMessage(notification)
+        const message = discordMessageForNotification(this.gameService, notification)
         if (!message) {
             return {
                 success: false,
@@ -118,42 +113,5 @@ export class DiscordTransport implements NotificationTransport {
             this.dmCache.set(userId, channelId)
         }
         return channelId
-    }
-
-    private generateMessage(notification: Notification): string | undefined {
-        if (!this.isUserNotification(notification)) {
-            return
-        }
-
-        if (notification.action === UserNotificationAction.PlayerJoined) {
-            const url = `${FRONTEND_HOST}/dashboard`
-            const title = this.gameTitle(notification.data.game.typeId)
-            return `${notification.data.player.name} joined your ${title} game [${notification.data.game.name}](${url})`
-        } else if (notification.action === UserNotificationAction.PlayerDeclined) {
-            const url = `${FRONTEND_HOST}/dashboard`
-            const title = this.gameTitle(notification.data.game.typeId)
-            return `${notification.data.player.name} has declined to join your ${title} game [${notification.data.game.name}](${url})`
-        } else if (notification.action === UserNotificationAction.GameStarted) {
-            const url = `${FRONTEND_HOST}/game/${notification.data.game.id}`
-            const title = this.gameTitle(notification.data.game.typeId)
-            return `Your ${title} game [${notification.data.game.name}](${url}) has begun!`
-        } else if (notification.action === UserNotificationAction.WasInvited) {
-            const url = `${FRONTEND_HOST}/dashboard`
-            const title = this.gameTitle(notification.data.game.typeId)
-            return `${notification.data.owner.username} invited you to join their ${title} game [${notification.data.game.name}](${url})`
-        } else if (notification.action === UserNotificationAction.IsYourTurn) {
-            const url = `${FRONTEND_HOST}/game/${notification.data.game.id}`
-            const title = this.gameTitle(notification.data.game.typeId)
-            return `It's your turn in your ${title} game [${notification.data.game.name}](${url})`
-        }
-        return
-    }
-
-    private isUserNotification(notification: Notification): notification is UserNotification {
-        return notification.type === NotificationCategory.User
-    }
-
-    private gameTitle(typeId: string): string | undefined {
-        return this.gameService.getTitle(typeId)?.info.metadata.name
     }
 }

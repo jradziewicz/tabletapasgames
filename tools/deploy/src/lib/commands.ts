@@ -484,6 +484,44 @@ export const deployBackendCommand = (
     }
 }
 
+/**
+ * Rolls the running Cloud Run service onto a fresh revision without changing its image, by
+ * bumping a label. A fresh instance re-reads the deployed site manifest as it boots, so this is
+ * the quickest way to make a manifest-only deploy (frontend build, UI bundle) take effect. It is
+ * optional: running instances also revalidate the manifest on their own within about a minute.
+ */
+export const restartBackendCommand = (
+    repoRoot: string,
+    config: DeployConfig,
+    options?: { service?: string }
+): CommandSpec => {
+    const backend = config.backend
+    const service = options?.service ?? backend?.service
+    if (!service || !backend?.region || !backend.project) {
+        throw new Error('Missing backend config for restart (service/region/project)')
+    }
+
+    return {
+        label: `restart-backend:${service}`,
+        command: 'gcloud',
+        args: [
+            'run',
+            'services',
+            'update',
+            service,
+            '--region',
+            backend.region,
+            '--project',
+            backend.project,
+            '--update-labels',
+            `deploy-ts=${Math.floor(Date.now() / 1000)}`
+        ],
+        cwd: repoRoot,
+        logPath: `/tmp/backend-restart-${service}.log`,
+        requiresDeploy: true
+    }
+}
+
 export const rollbackBackendCommand = (
     repoRoot: string,
     revision: string,

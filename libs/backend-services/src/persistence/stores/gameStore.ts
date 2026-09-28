@@ -6,7 +6,9 @@ import {
     User,
     GameStatusCategory,
     GameHistoryPage,
-    GameHistoryCursor
+    GameHistoryCursor,
+    AdminGamesPage,
+    AdminGamesCursor
 } from '@tabletop/common'
 import { UpdateValidationResult, UpdateValidator } from './validator.js'
 
@@ -64,6 +66,7 @@ export interface GameStore {
     hasCachedActiveGames(user: User): Promise<boolean>
     findGamesForUser(user: User, category: GameStatusCategory): Promise<Game[]>
     findGameHistory(user: User, before?: GameHistoryCursor): Promise<GameHistoryPage>
+    findAllGames(category: GameStatusCategory, before?: AdminGamesCursor): Promise<AdminGamesPage>
     findOpenGamesForTitle(titleId: string): Promise<Game[]>
     findGameById(gameId: string, includeState: boolean): Promise<Game | undefined>
     findUndoActionWindow({

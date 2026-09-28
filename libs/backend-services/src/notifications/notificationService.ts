@@ -38,6 +38,8 @@ export interface NotificationService {
         identifier: NotificationSubscriptionIdentifier
     ): Promise<void>
 
+    findNotificationSubscriptions(topic: string): Promise<NotificationSubscription[]>
+
     sendNotification({
         notification,
         topics,

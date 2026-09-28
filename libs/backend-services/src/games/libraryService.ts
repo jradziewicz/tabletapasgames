@@ -7,6 +7,10 @@ import { RedisCacheService } from '../cache/cacheService.js'
 import { EnvService } from '../env/envService.js'
 
 const DEFAULT_CACHE_KEY = 'site-manifest'
+// How long an instance trusts the shared Redis copy of the manifest before re-reading the
+// deployed file. The Redis entry itself never expires, so this is what lets a deploy that only
+// uploads a new manifest (frontend build, UI bundle) roll out on its own.
+const DEFAULT_CACHE_SECONDS = 60
 
 const STATIC_ROOT = process.env['STATIC_ROOT'] ?? '.local-static'
 const DEFAULT_GAMES_ROOT = path.join(STATIC_ROOT, 'games')
@@ -44,10 +48,12 @@ export class LibraryService {
     private readonly manifestPath: string
     private readonly manifestCacheKey: string
     private readonly useCache: boolean
+    private readonly cacheSeconds: number
     private readonly allowFallback: boolean
     private readonly logicRoot: string
 
     private manifestSnapshot?: SiteManifest
+    private lastCacheRevalidationAt = 0
     private manifestSignature?: string
     private manifestRefreshQueue: Promise<void> = Promise.resolve()
     private titlesById?: Record<string, GameDefinition>
@@ -61,6 +67,7 @@ export class LibraryService {
         this.manifestPath = options.manifestPath ?? MANIFEST_PATH
         this.manifestCacheKey = options.cacheKey ?? DEFAULT_CACHE_KEY
         this.useCache = options.useCache ?? true
+        this.cacheSeconds = options.cacheSeconds ?? DEFAULT_CACHE_SECONDS
         this.allowFallback = options.allowFallback ?? false
         this.logicRoot = options.logicRoot ?? GAMES_ROOT
     }
@@ -77,6 +84,52 @@ export class LibraryService {
             return
         }
         await this.cacheService.delete(this.manifestCacheKey)
+        this.lastCacheRevalidationAt = Date.now()
+    }
+
+    /**
+     * The shared Redis copy of the manifest has no expiry, and nothing on the deploy side
+     * writes to Redis, so left alone a freshly uploaded manifest would sit behind the cached
+     * one until an admin invalidated it by hand. Instead, each instance periodically compares
+     * the cached copy against the deployed file and drops the cached one when they differ, so
+     * the read that follows re-fills it from the file. That read then flows through the normal
+     * mismatch detection (see onManifestMismatch), which is what actually picks up a new
+     * frontend or logic version. If the file can't be read the cached copy is left alone, so a
+     * brief storage hiccup never costs a working manifest.
+     */
+    private async revalidateManifestCache(): Promise<void> {
+        if (!this.useCache) {
+            return
+        }
+        const now = Date.now()
+        if (now - this.lastCacheRevalidationAt < this.cacheSeconds * 1000) {
+            return
+        }
+        this.lastCacheRevalidationAt = now
+
+        const deployed = await this.readManifestFromDisk()
+        if (!deployed) {
+            return
+        }
+        try {
+            // Peek only: an empty cache is left for the normal read to fill.
+            const { value, cached } = await this.cacheService.cacheGet(this.manifestCacheKey)
+            if (cached && JSON.stringify(value) !== JSON.stringify(deployed)) {
+                await this.cacheService.delete(this.manifestCacheKey)
+            }
+        } catch (error) {
+            console.warn('Unable to revalidate manifest cache', error)
+        }
+    }
+
+    private async readManifestFromDisk(): Promise<SiteManifest | undefined> {
+        try {
+            const manifest: SiteManifest = JSON.parse(await readFile(this.manifestPath, 'utf8'))
+            if (manifest) return manifest
+        } catch (error) {
+            console.warn('Unable to load manifest from disk', error)
+        }
+        return undefined
     }
 
     refreshManifest(): Promise<SiteManifest> {
@@ -89,6 +142,7 @@ export class LibraryService {
     }
 
     private async refreshManifestSnapshot(): Promise<SiteManifest> {
+        await this.revalidateManifestCache()
         const manifest = await this.loadManifest()
         const previous = this.manifestSnapshot
         const signature = this.getManifestSignature(manifest)
@@ -239,12 +293,8 @@ export class LibraryService {
     private async loadManifest(): Promise<SiteManifest> {
         const unavailable = new Error('Manifest unavailable')
         const readManifest = async (): Promise<SiteManifest> => {
-            try {
-                const manifest: SiteManifest = JSON.parse(await readFile(this.manifestPath, 'utf8'))
-                if (manifest) return manifest
-            } catch (error) {
-                console.warn('Unable to load manifest from disk', error)
-            }
+            const manifest = await this.readManifestFromDisk()
+            if (manifest) return manifest
             throw unavailable
         }
 

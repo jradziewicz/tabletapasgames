@@ -84,7 +84,18 @@ export const IsYourTurnNotification = Type.Evaluate(
             action: Type.Literal(UserNotificationAction.IsYourTurn),
             data: Type.Object({
                 user: Type.Pick(User, ['id']),
-                game: Type.Pick(Game, ['id', 'typeId', 'name'])
+                game: Type.Pick(Game, ['id', 'typeId', 'name']),
+                // Which step of the turn-alert sequence this is:
+                //  'initial'  - ~1 min in, push/Discord only
+                //  'email'    - ~5 min in, email only
+                //  'reminder' - later nudges (4h / 12h), every channel
+                alertStage: Type.Optional(
+                    Type.Union([
+                        Type.Literal('initial'),
+                        Type.Literal('email'),
+                        Type.Literal('reminder')
+                    ])
+                )
             })
         })
     ])

@@ -60,3 +60,10 @@ tools/deploy/deploy.config.json
 .worktrees/
 
 .local-rehearsals/
+
+# local scratch / deploy artifacts (fork)
+/.deploy-tmp/
+_to_delete*
+/_tmp_*
+/*.log
+*.tar.gz

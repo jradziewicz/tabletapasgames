@@ -8,7 +8,7 @@
 </script>
 
 <svelte:head>
-    <title>Reset password — Board Together</title>
+    <title>Reset password — TableTapas</title>
 </svelte:head>
 
 <LandingPage />

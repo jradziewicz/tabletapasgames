@@ -4,7 +4,7 @@
 </script>
 
 <svelte:head>
-    <title>Create an account — Board Together</title>
+    <title>Create an account — TableTapas</title>
 </svelte:head>
 
 <div class="min-h-[calc(100dvh-70px)] flex flex-col items-center justify-center px-4 py-8">

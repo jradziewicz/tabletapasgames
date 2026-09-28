@@ -10,7 +10,6 @@
     import { Modal } from 'flowbite-svelte'
     import { ArrowLeftOutline, ArrowRightOutline, UsersOutline } from 'flowbite-svelte-icons'
     import TitleGames from '$lib/components/TitleGames.svelte'
-    import TitleTournaments from '$lib/components/TitleTournaments.svelte'
 
     let { title }: { title: GameUiDefinition<GameState, HydratedGameState> } = $props()
     let creating = $state(false)
@@ -30,7 +29,7 @@
     }
 </script>
 
-<svelte:head><title>{metadata.name} — Board Together</title></svelte:head>
+<svelte:head><title>{metadata.name} — TableTapas</title></svelte:head>
 
 <main class="title-page collection-page">
     <a class="back-link" href="/library"><ArrowLeftOutline class="h-4 w-4" /> All games</a>
@@ -70,7 +69,6 @@
             titleId={title.info.id}
             oncreate={() => (creating = true)}
         />
-        <TitleTournaments titleId={title.info.id} />
     </div>
 </main>
 
@@ -174,7 +172,7 @@
         min-height: 48px;
         margin-top: 28px;
         padding: 0 22px;
-        background: var(--color-blue-600);
+        background: #7165ad;
         color: white;
         border-radius: 8px;
         font-size: 14px;
@@ -182,7 +180,7 @@
         transition: background-color 200ms;
     }
     .start-game:hover {
-        background: var(--color-blue-700);
+        background: #5b4f95;
     }
     a:focus-visible,
     button:focus-visible {

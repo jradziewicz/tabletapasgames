@@ -27,7 +27,16 @@ export const UserPreferences = Type.Object({
     preventWebNotificationPrompt: Type.Boolean(),
     preferredColorsEnabled: Type.Boolean(),
     preferredColors: Type.Array(Type.Enum(Color)),
-    colorBlindPalette: Type.Optional(Type.Boolean())
+    colorBlindPalette: Type.Optional(Type.Boolean()),
+    // Opts out of the "it's your turn" turn-alert emails (both the 5-minute nudge and the
+    // 24-hour-and-later reminders - see EmailTransport/DefaultNotificationService). Undefined
+    // behaves as true (on) so existing users keep getting emails until they explicitly turn
+    // it off; only an explicit false suppresses them.
+    emailNotificationsEnabled: Type.Optional(Type.Boolean()),
+    // One-time in-app announcement flags. Each is set true the moment the announcement is
+    // shown (not waiting on the user to dismiss it), so it never shows more than once per
+    // user - see the "showOnceAnnouncement" effect in the site layout.
+    seenDiscordWebhookAnnouncement: Type.Optional(Type.Boolean())
 })
 
 export type User = Type.Static<typeof User>

@@ -1,12 +1,17 @@
 import { PubSubService, PubSubSubscriber } from '../pubsub/pubSubService.js'
-import { Notification } from '@tabletop/common'
+import {
+    Notification,
+    NotificationCategory,
+    UserNotification,
+    UserNotificationAction
+} from '@tabletop/common'
 import { NotificationStore } from '../persistence/stores/notificationStore.js'
 import {
     NotificationDistributionMethod,
     NotificationListener,
     NotificationService
 } from './notificationService.js'
-import { NotificationTransport } from './transports/notificationTransport.js'
+import { NotificationTransport, TransportType } from './transports/notificationTransport.js'
 import { NotificationSubscription } from './subscriptions/notificationSubscription.js'
 import { NotificationSubscriptionIdentifier } from './subscriptions/notificationSubscriptionIdentifier.js'
 import { TopicTransport } from './transports/topicTransport.js'
@@ -100,11 +105,25 @@ export class DefaultNotificationService implements NotificationService {
             }
 
             if (channels.includes(NotificationDistributionMethod.UserDirect)) {
-                try {
-                    const subscriptions =
-                        await this.notificationStore.findNotificationSubscriptions(topic)
+                const alertStage = this.turnAlertStage(notification)
 
-                    for (const subscription of subscriptions) {
+                // Fetched once and reused below: it drives which registered subscriptions
+                // (push/Discord bot/Discord webhook) get dispatched to, and also - for the
+                // 5-minute turn alert - whether this user has a Discord webhook configured,
+                // in which case the email below is held off.
+                let subscriptions: NotificationSubscription[] = []
+                try {
+                    subscriptions = await this.notificationStore.findNotificationSubscriptions(topic)
+                } catch (e) {
+                    console.log('Error fetching notification subscriptions', e)
+                }
+
+                try {
+                    // The 5-minute turn alert exists only for email; push/Discord already
+                    // pinged at the 1-minute mark, so don't double them up here.
+                    const subscriptionsToNotify = alertStage === 'email' ? [] : subscriptions
+
+                    for (const subscription of subscriptionsToNotify) {
                         const transport = this.transports[subscription.transport]
                         if (!transport) {
                             console.log('No transport found for', subscription.transport)
@@ -126,6 +145,43 @@ export class DefaultNotificationService implements NotificationService {
                 } catch (e) {
                     console.log('Error sending notification', e)
                 }
+
+                // Email is treated as an always-available channel, unlike Discord and
+                // WebPush which require the user to explicitly register a subscription
+                // (linking their Discord account, or granting browser push permission).
+                // Every user already has a registered email address from sign up, so
+                // there's nothing to opt into here and no persisted subscription record
+                // to look up - we dispatch straight to the email transport, keyed off the
+                // user id embedded in the notification itself, if one is registered.
+                //
+                // Exception: once a player has a Discord webhook configured, the 5-minute
+                // "it's your turn" email is redundant with the webhook ping they already got
+                // at the 1-minute mark, so it's skipped. The 24-hour-and-later "reminder"
+                // stage still emails everyone regardless of webhook status - if a full day
+                // has passed and the player still hasn't moved, the webhook may not be
+                // getting through (deleted webhook, muted channel, etc.), so email comes
+                // back as a safety net.
+                const hasWebhookSubscription = subscriptions.some(
+                    (subscription) => subscription.transport === TransportType.DiscordWebhook
+                )
+                const emailTransport = this.transports[TransportType.Email]
+                // Email skips the quick 1-minute nudge and starts at the 5-minute mark.
+                if (
+                    emailTransport &&
+                    this.isUserNotification(notification) &&
+                    alertStage !== 'initial' &&
+                    !(alertStage === 'email' && hasWebhookSubscription)
+                ) {
+                    const emailSubscription: NotificationSubscription = {
+                        id: notification.data.user.id,
+                        transport: TransportType.Email
+                    }
+                    emailTransport
+                        .sendNotification(emailSubscription, notification)
+                        .catch((e) => {
+                            console.log('Error sending email notification', e)
+                        })
+                }
             }
         }
     }
@@ -142,6 +198,10 @@ export class DefaultNotificationService implements NotificationService {
 
     async unregisterNotificationSubscription(identifier: NotificationSubscriptionIdentifier) {
         await this.notificationStore.deleteNotificationSubscription(identifier)
+    }
+
+    async findNotificationSubscriptions(topic: string): Promise<NotificationSubscription[]> {
+        return await this.notificationStore.findNotificationSubscriptions(topic)
     }
 
     private async notifyTopicListeners({
@@ -162,5 +222,19 @@ export class DefaultNotificationService implements NotificationService {
                 // log error
             }
         }
+    }
+
+    private isUserNotification(notification: Notification): notification is UserNotification {
+        return notification.type === NotificationCategory.User
+    }
+
+    private turnAlertStage(notification: Notification): string | undefined {
+        if (
+            this.isUserNotification(notification) &&
+            notification.action === UserNotificationAction.IsYourTurn
+        ) {
+            return notification.data.alertStage
+        }
+        return undefined
     }
 }

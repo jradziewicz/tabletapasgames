@@ -2,6 +2,10 @@ import wretch, { type Wretch, type WretchError } from 'wretch'
 import * as Value from 'typebox/value'
 import { Type, type Static, type TSchema } from 'typebox'
 import {
+    TitlePreferenceData,
+    PreferenceError,
+    type PreferenceChange,
+    type PreferenceResponse,
     type GameCreationOptions,
     type GameCatalogEntry,
     assertExists,
@@ -16,6 +20,8 @@ import {
     GameSyncStatus,
     GameValidator,
     GameHistoryPage,
+    AdminGamesPage,
+    GameStatusCategory,
     User,
     UserPreferences,
     Visibility,
@@ -230,6 +236,48 @@ export class TabletopApi {
         return response.payload.user
     }
 
+    getTitlePreferences?: (titleId: string, userId: string) => Promise<PreferenceResponse> =
+        async (titleId, userId) => {
+            const response = await this.wretch.get(this.preferenceUrl(titleId, userId)).res()
+            return this.preferenceResponse(response)
+        }
+
+    updateTitlePreferences?: (
+        titleId: string,
+        userId: string,
+        change: PreferenceChange,
+        etag: string
+    ) => Promise<PreferenceResponse> = async (titleId, _userId, change, etag) => {
+        const response = await this.wretch
+            .url(`/game/${encodeURIComponent(titleId)}/updateTitlePreferences`)
+            .headers({ 'If-Match': etag })
+            .post(change)
+            .error(412, () => {
+                throw new PreferenceError('Preferences changed', 412)
+            })
+            .res()
+        return this.preferenceResponse(response)
+    }
+
+    private preferenceUrl(titleId: string, userId: string) {
+        return `/game/${encodeURIComponent(titleId)}/preferences?account=${encodeURIComponent(userId)}`
+    }
+
+    private async preferenceResponse(response: Response): Promise<PreferenceResponse> {
+        const body: unknown = await response.json()
+        const etag = response.headers.get('ETag')
+        if (
+            !etag ||
+            typeof body !== 'object' ||
+            body === null ||
+            !('payload' in body) ||
+            !Value.Check(TitlePreferenceData, body.payload)
+        ) {
+            throw new Error('Invalid preference response')
+        }
+        return { data: body.payload, etag }
+    }
+
     async unlinkExternalAccount(externalId: string): Promise<User> {
         const response = await this.wretch
             .post({ externalId }, '/user/unlinkExternalAccount')
@@ -313,6 +361,20 @@ export class TabletopApi {
         Value.Assert(Type.Object({ payload: Type.Unknown() }), response)
         Value.Convert(GameHistoryPage, response.payload)
         Value.Assert(GameHistoryPage, response.payload)
+        return response.payload
+    }
+
+    async getAdminGames(category: GameStatusCategory, before?: string): Promise<AdminGamesPage> {
+        const params = new URLSearchParams({ category })
+        if (before) params.set('before', before)
+        const response = await this.wretch
+            .get(`/admin/games?${params}`)
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<unknown>()
+        Value.Assert(Type.Object({ payload: Type.Unknown() }), response)
+        Value.Convert(AdminGamesPage, response.payload)
+        Value.Assert(AdminGamesPage, response.payload)
         return response.payload
     }
 
@@ -735,6 +797,34 @@ export class TabletopApi {
     async unsubscribeFromPushNotifications(endpoint: string) {
         await this.wretch
             .post({ endpoint }, '/notification/webpush/unsubscribe')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .res()
+    }
+
+    // Discord webhook notifications (a webhook the user created in their own channel).
+    // The URL that comes back is always the token-masked form, never the full secret.
+    async getDiscordWebhookStatus(): Promise<{ webhookUrl?: string }> {
+        const response = await this.wretch
+            .get('/notification/discordwebhook/status')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<{ payload: { webhookUrl?: string } }>()
+        return response.payload
+    }
+
+    async subscribeDiscordWebhook(webhookUrl: string): Promise<{ webhookUrl: string }> {
+        const response = await this.wretch
+            .post({ webhookUrl }, '/notification/discordwebhook/subscribe')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<{ payload: { webhookUrl: string } }>()
+        return response.payload
+    }
+
+    async unsubscribeDiscordWebhook(): Promise<void> {
+        await this.wretch
+            .post({}, '/notification/discordwebhook/unsubscribe')
             .unauthorized(this.on401)
             .badRequest(this.handleError)
             .res()

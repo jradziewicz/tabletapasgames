@@ -13,8 +13,16 @@ export const load: PageLoad = async ({ params, url }) => {
 
     const { id } = params
 
+    // ?admin=1 is how the Admin "all games" list opens a game it isn't the viewer's own -
+    // it asks for the same host/all-info view an Admin already gets on a game they own
+    // (see canAccessHostView on the backend), so score data an Admin is there to record is
+    // never hidden behind the normal spectator projection. Never turned on any other way -
+    // an Admin's OWN in-progress games still load exactly as any other player's would.
+    const wantsAdminView = url.searchParams.get('admin') === '1'
+    const hostView = wantsAdminView && appContext.authorizationService.isAdmin
+
     try {
-        const { game, actions } = await appContext.gameService.loadGame(id)
+        const { game, actions } = await appContext.gameService.loadGame(id, { hostView })
         if (!game) {
             error(404, 'The specified game was not found')
         }

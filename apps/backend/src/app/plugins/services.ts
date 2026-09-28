@@ -20,7 +20,9 @@ import {
     FirestoreNotificationStore,
     DefaultNotificationService,
     DiscordTransport,
+    DiscordWebhookTransport,
     WebPushTransport,
+    EmailTransport,
     AblyTransport,
     AblyService,
     NullPubSubService,
@@ -33,7 +35,9 @@ import {
     PubSubTransport,
     EnvService,
     TournamentService,
-    FirestoreTournamentStore
+    FirestoreTournamentStore,
+    PreferenceService,
+    FirestorePreferenceStore
 } from '@tabletop/backend-services'
 import type { GameDefinition } from '@tabletop/common'
 
@@ -49,6 +53,7 @@ declare module 'fastify' {
         secretsService: SecretsService
         gameService: GameService
         notificationService: NotificationService
+        discordWebhookTransport: DiscordWebhookTransport
         pubSubService: PubSubService
         discordService: DiscordService
         ablyService: AblyService
@@ -57,6 +62,7 @@ declare module 'fastify' {
         libraryService: LibraryService
         catalogService: CatalogService
         tournamentService: TournamentService
+        preferenceService: PreferenceService
     }
 }
 
@@ -127,8 +133,21 @@ export default fp(async (fastify: FastifyInstance) => {
         notificationService.addTransport(discordTransport)
     }
 
+    // User-owned Discord webhooks need nothing from us (no bot token / OAuth app), so this is
+    // always on. Kept on fastify too so the subscribe route can fire the "connected" test message.
+    const discordWebhookTransport = new DiscordWebhookTransport(gameService)
+    notificationService.addTransport(discordWebhookTransport)
+
     const webPushTransport = await WebPushTransport.createWebPushTransport(secretsService)
     notificationService.addTransport(webPushTransport)
+
+    const emailTransport = new EmailTransport(
+        emailService,
+        userService,
+        gameService,
+        redisCacheService
+    )
+    notificationService.addTransport(emailTransport)
 
     if (useAbly) {
         const ablyTransport = await AblyTransport.createAblyTransport(secretsService)
@@ -167,7 +186,12 @@ export default fp(async (fastify: FastifyInstance) => {
     fastify.decorate('catalogService', new CatalogService(path.join(STATIC_ROOT, 'games')))
     fastify.decorate('pubSubService', pubSubService)
     fastify.decorate('notificationService', notificationService)
+    fastify.decorate('discordWebhookTransport', discordWebhookTransport)
     fastify.decorate('discordService', discordService)
     fastify.decorate('chatService', chatService)
     fastify.decorate('cacheService', redisCacheService)
+    fastify.decorate(
+        'preferenceService',
+        new PreferenceService(new FirestorePreferenceStore(fastify.firestore), redisCacheService)
+    )
 })

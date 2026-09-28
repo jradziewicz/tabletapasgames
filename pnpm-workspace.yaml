@@ -6,3 +6,12 @@ packages:
   - "tools/*"
 onlyBuiltDependencies:
   - "camera-controls"
+  - "@fortawesome/fontawesome-common-types"
+  - "@fortawesome/fontawesome-svg-core"
+  - "@fortawesome/free-regular-svg-icons"
+  - "@fortawesome/free-solid-svg-icons"
+  - "bcrypt"
+  - "core-js-pure"
+  - "esbuild"
+  - "protobufjs"
+  - "sharp"
