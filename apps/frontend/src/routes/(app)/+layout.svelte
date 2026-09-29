@@ -26,7 +26,7 @@
     import { onMount } from 'svelte'
     import { PUBLIC_API_HOST } from '$env/static/public'
     import { fromStore } from 'svelte/store'
-    import { UserStatus, Color } from '@tabletop/common'
+    import { UserStatus } from '@tabletop/common'
     import {
         VersionChange,
         GameEditForm,
@@ -251,49 +251,6 @@
         notificationService.hidePrompt()
         showCancelPrompt = true
     }
-
-    // One-time "new feature" nudge toward the Discord webhook notifications (Notifications
-    // page). Fires once per user - the moment it's shown, seenDiscordWebhookAnnouncement is
-    // saved back as true so a slow/failed save is the only way it could ever show twice, and a
-    // successful save means never again. discordAnnouncementFired guards against this effect
-    // re-running (e.g. after that same save updates sessionUser) before the flag round-trips.
-    let discordAnnouncementFired = false
-    $effect(() => {
-        const user = sessionUser
-        if (
-            !user ||
-            discordAnnouncementFired ||
-            user.preferences?.seenDiscordWebhookAnnouncement === true
-        ) {
-            return
-        }
-        discordAnnouncementFired = true
-
-        onceMounted(() => {
-            toast.info(
-                'New: get pinged in Discord for your turn, invites, and game starts - no bot required.',
-                {
-                    duration: 20000,
-                    action: {
-                        label: 'Set it up',
-                        onClick: () => void goto('/notifications')
-                    }
-                }
-            )
-        })
-
-        const preferences = user.preferences ?? {
-            preventWebNotificationPrompt: false,
-            preferredColors: Object.values(Color),
-            preferredColorsEnabled: false
-        }
-        api.updateUserPreferences(user.id, {
-            ...preferences,
-            seenDiscordWebhookAnnouncement: true
-        })
-            .then((updatedUser) => authorizationService.setSessionUser(updatedUser))
-            .catch((e) => console.log('Could not record Discord announcement as seen', e))
-    })
 
     // While a signed-in user has this site visible, tell the server they're around
     // so it can hold off on "it's your turn" emails.

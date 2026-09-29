@@ -6,8 +6,8 @@
     // back out to one image per physical token rather than one per denomination, since the whole
     // point here is a messy stack a player could actually see themselves. Capped at MAX_TOKENS so
     // an unusually large amount still reads as a pile instead of degrading into a wall of icons.
-    // Click (or Enter) splays the pile out into an orderly, non-overlapping, largest-to-smallest
-    // row so a player can actually count it - same "small resting state, bigger on click" idea as
+    // Hovering it (mouse) splays the pile out - tap or Enter toggles it for touch/keyboard - into an orderly, non-overlapping, largest-to-smallest
+    // row so a player can actually count it - same "small resting state, bigger on hover" idea as
     // the Share stack on CorporationCharter.svelte.
     //
     // Fills 100% of whatever width/height the caller's own wrapper gives it - that wrapper MUST
@@ -67,7 +67,9 @@
         class="relative h-full w-full cursor-pointer"
         role="button"
         tabindex="0"
-        onclick={() => (expanded = !expanded)}
+        onpointerenter={(e) => e.pointerType === 'mouse' && (expanded = true)}
+        onpointerleave={(e) => e.pointerType === 'mouse' && (expanded = false)}
+        onclick={(e) => (e as PointerEvent).pointerType !== 'mouse' && (expanded = !expanded)}
         onkeydown={(e) => e.key === 'Enter' && (expanded = !expanded)}
     >
         {#if expanded}

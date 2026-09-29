@@ -782,6 +782,14 @@
         })
     }
 
+    // Escape leaves full screen (only listening while expanded, so it never swallows Escape
+    // for anything else on the page).
+    function handleWindowKeydown(event: KeyboardEvent) {
+        if (isExpanded && event.key === 'Escape') {
+            setExpanded(false)
+        }
+    }
+
     export function expand() {
         setExpanded(true)
     }
@@ -1198,6 +1206,8 @@
         }
     })
 </script>
+
+<svelte:window onkeydown={handleWindowKeydown} />
 
 <div
     class="relative overflow-hidden"

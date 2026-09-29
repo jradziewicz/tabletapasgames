@@ -274,7 +274,7 @@
                     >
                         {#snippet children(id, active)}
                             {#if id === 'board'}
-                                <ScalingWrapper justify="center" controls="bottom-left" dragToPan>
+                                <ScalingWrapper justify="center" controls="bottom-left" dragToPan expandable>
                                     <Board />
                                 </ScalingWrapper>
                             {:else if id === 'shipyard'}

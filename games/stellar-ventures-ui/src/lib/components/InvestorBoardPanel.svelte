@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { PlayerName } from '@tabletop/frontend-components'
+    import { PlayerName, ScalingWrapper } from '@tabletop/frontend-components'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { PlayerSymbolIcons, PlayerVoteTokenIcons } from '$lib/utils/playerSymbolDisplay.js'
     import { INVESTOR_BOARD_ASPECT } from '$lib/utils/investorDisplay.js'
@@ -48,17 +48,20 @@
     // column of pieces rather than an endless scroll - the exact number is always shown below it
     // too.
     const MAX_PIECES_SHOWN = 12
+    // Natural (unzoomed) width of the board + side columns + shares row inside the
+    // ScalingWrapper - the wrapper scales it to fit the panel, then it zooms/pans from there.
+    const CONTENT_WIDTH_PX = 720
     function piecesShown(count: number) {
         return Math.min(Math.max(count, 0), MAX_PIECES_SHOWN)
     }
 </script>
 
-<div class="h-full overflow-y-auto p-4 text-[#e6e9f5]">
-    <h2 class="mb-3 text-xs font-semibold uppercase tracking-widest text-[#7f88ad]">
+<div class="flex h-full flex-col p-4 text-[#e6e9f5]">
+    <h2 class="mb-3 shrink-0 text-xs font-semibold uppercase tracking-widest text-[#7f88ad]">
         Investor Board
     </h2>
 
-    <div class="mb-3 flex flex-wrap gap-1.5">
+    <div class="mb-3 flex shrink-0 flex-wrap gap-1.5">
         {#each players as playerState (playerState.playerId)}
             {@const color = gameSession.colors.getPlayerColor(playerState.playerId)}
             <button
@@ -78,16 +81,19 @@
     </div>
 
     {#if selectedPlayerState}
+      <div class="min-h-0 flex-1">
+        <ScalingWrapper justify="center" controls="bottom-left" dragToPan expandable>
+        <div style="width: {CONTENT_WIDTH_PX}px;">
         <!-- Board centered, flanked by a Boardroom Votes column on the left and an Alien Tech
              Cubes column on the right - both off the board itself (unlike Frozen/Liquid Funds
              and the Action Discs, which stay on it). items-stretch makes both columns match the
              board's own height, and justify-end within each then pins its icons to the bottom -
              "the same general line" as the board's own bottom banner - rather than vertically
              centering the column as a whole. -->
-        <!-- Phones: the board fills the space left between the two side columns (and the columns
-             and gaps tighten) so it is legible; desktop keeps the tuned sizes noted inline. -->
-        <div class="flex items-stretch justify-center gap-2 md:gap-[0.8rem]"> <!-- desktop: 20% smaller than the prior gap-4 -->
-            <div class="flex w-[2.8rem] shrink-0 flex-col items-center justify-end gap-[0.15rem] md:w-[4.8rem]"> <!-- 50% bigger than the prior w-[3.2rem] -->
+        <!-- Fixed desktop proportions: everything here is laid out at CONTENT_WIDTH_PX and the
+             ScalingWrapper fits/zooms it, so phones get the same layout just scaled down. -->
+        <div class="flex items-stretch justify-center gap-[0.8rem]"> <!-- desktop: 20% smaller than the prior gap-4 -->
+            <div class="flex w-[4.8rem] shrink-0 flex-col items-center justify-end gap-[0.15rem]"> <!-- 50% bigger than the prior w-[3.2rem] -->
                 {#each { length: piecesShown(selectedPlayerState.boardroomVotes) } as _, index (index)}
                     {#if selectedPlayerColor && PlayerVoteTokenIcons[selectedPlayerColor]}
                         <img
@@ -99,11 +105,11 @@
                 {/each}
             </div>
 
-            <div class="relative min-w-0 flex-1 md:w-[35.2%] md:flex-none md:shrink-0" style="aspect-ratio: {INVESTOR_BOARD_ASPECT};"> <!-- desktop: 20% smaller than the prior 44% -->
+            <div class="relative min-w-0 flex-1" style="aspect-ratio: {INVESTOR_BOARD_ASPECT};"> <!-- desktop: 20% smaller than the prior 44% -->
                 <InvestorBoard playerId={selectedPlayerId} />
             </div>
 
-            <div class="flex w-[2.2rem] shrink-0 flex-col items-center justify-end gap-[0.1rem] md:w-[3.2rem]"> <!-- 20% smaller than the prior w-16 -->
+            <div class="flex w-[3.2rem] shrink-0 flex-col items-center justify-end gap-[0.1rem]"> <!-- 20% smaller than the prior w-16 -->
                 {#each { length: piecesShown(selectedPlayerState.alienTechCubes) } as _, index (index)}
                     <img src={alienTechCube} alt="Alien Technology cube" class="w-[1.6rem] drop-shadow" />
                 {/each}
@@ -136,5 +142,8 @@
                 {/each}
             </div>
         {/if}
+        </div>
+        </ScalingWrapper>
+      </div>
     {/if}
 </div>

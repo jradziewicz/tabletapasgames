@@ -188,11 +188,12 @@
         </div>
         <div class="flex items-center gap-3">
             <!-- The actual Share Certificate art, so everyone sees at a glance which Corporation's
-                 Share is on the block right now. -->
+                 Share is on the block right now. Hidden on phones, where the info card beside it
+                 already names the Corporation and the space is better spent on that. -->
             <img
                 src={CorporationShareCertificateIcons[corporationId]}
                 alt="{CorporationDisplayNames[corporationId]} Share Certificate"
-                class="h-20 shrink-0 rounded-sm shadow-lg"
+                class="h-20 shrink-0 rounded-sm shadow-lg max-sm:hidden"
                 style="width: {80 * SHARE_CERTIFICATE_ASPECT}px;"
             />
             <div class="flex-1">

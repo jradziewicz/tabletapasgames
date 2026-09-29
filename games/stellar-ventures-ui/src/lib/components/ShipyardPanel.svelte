@@ -185,7 +185,7 @@
          controls sizing via a wrapper - see OrderShipPanel.svelte) rather than sizing itself
          against its own root element's width, which is otherwise indeterminate once this
          component sits inside a flex layout alongside other content. -->
-    <div class="relative mb-3" style="aspect-ratio: 4409 / 741; width: 100%;">
+    <div class="relative mb-3" style="aspect-ratio: 4409 / 741; width: 100%; container-type: inline-size;">
         <img
             src={shipyardBanner}
             alt="The Shipyard track, as printed on the board"
@@ -213,7 +213,7 @@
                          sectionIconHeightPct) that the fuller row never overflows its own width
                          or reaches into the Alien Tile's corner. -->
                     <div
-                        class="absolute flex flex-col items-start justify-end px-[3%] pb-[6%]"
+                        class="absolute flex flex-col items-start justify-end px-[3%] pb-[6%] max-sm:hidden"
                         style="top: {CONTENT_TOP}%; height: {CONTENT_HEIGHT}%; left: 0; width: 100%; row-gap: {ROW_GAP_PCT}%;"
                     >
                         {#each rowCounts as rowCount, rowIndex (rowIndex)}
@@ -245,6 +245,7 @@
                                          glow actually hugs the Ship's shape (see
                                          .shipyard-orderable-ship below). -->
                                     {@const isNextToBuy = isOrderable && rowStart + shipIndex === 0}
+                                    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                                     <!-- svelte-ignore a11y_no_static_element_interactions -->
                                     <!-- svelte-ignore a11y_click_events_have_key_events -->
                                     <img
@@ -260,6 +261,33 @@
                             </div>
                         {/each}
                     </div>
+
+                    <!-- Phones: the whole pile is too small to read as individual Ships, so each
+                         section shows just "N [icon]" (the count, then one Ship icon; ∞ for the
+                         unlimited Level 8 section) instead. Text is sized off the banner's own
+                         width (cqw - see the container-type on the banner) so it scales with the
+                         art. Still the orderable target during the Order Ships picker. -->
+                    {#if displayCount > 0 || section.unlimited}
+                        <div
+                            class="absolute flex items-end justify-start gap-[3%] px-[3%] pb-[6%] sm:hidden"
+                            style="top: {CONTENT_TOP}%; height: {CONTENT_HEIGHT}%; left: 0; width: 100%;"
+                        >
+                            <span
+                                class="font-semibold leading-none text-[#e6e9f5]"
+                                style="font-size: 4.2cqw; padding-bottom: 1%;"
+                            >{section.unlimited ? '∞' : displayCount}</span>
+                            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                            <!-- svelte-ignore a11y_no_static_element_interactions -->
+                            <!-- svelte-ignore a11y_click_events_have_key_events -->
+                            <img
+                                src={ShipLevelIcons[section.level]}
+                                alt="Level {section.level} Ship"
+                                class="{isOrderable ? 'shipyard-orderable-ship cursor-pointer' : 'drop-shadow'}"
+                                style="height: 70%; width: auto;"
+                                onclick={isOrderable ? () => onSelectShip?.() : undefined}
+                            />
+                        </div>
+                    {/if}
 
                     <!-- The Alien Shipyard Tile, for the sections that have one - sized and
                          positioned to land exactly on the hex slot already printed on the board

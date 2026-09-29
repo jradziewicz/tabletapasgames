@@ -68,7 +68,7 @@
     // same "physical piece parked on its printed reminder spot" idea as remainingOutposts
     // elsewhere. One card per remaining Share (capped visually at 5, the most any Corporation
     // ever has - see SHARES_FOR_CORPORATION), splayed down-and-right per card (no rotation) - a
-    // small resting splay by default, spreading out further on click so a player can see each
+    // small resting splay by default, spreading out further on hover so a player can see each
     // card's own art clearly without that larger spread being the permanent resting state.
     const remainingShares = $derived(corporation.availableShareCount)
     const SHARE_STACK_BOX = { left: 64, top: 62, width: 30 }
@@ -83,7 +83,9 @@
     const SHARE_STACK_VERTICAL_OFFSET_RESTING = 3
     const SHARE_STACK_VERTICAL_OFFSET_EXPANDED = 12
 
-    // Toggles between the resting and expanded splay above on click.
+    // Toggles between the resting and expanded splay above: hovering the stack (mouse) splays it,
+    // and tap/Enter toggles it for touch and keyboard. The status marker below only toggles on
+    // tap/Enter - it moves out of the way when the stack splays, so a hover trigger there would flicker.
     let shareStackExpanded = $state(false)
     const shareStackFanOffset = $derived(
         shareStackExpanded ? SHARE_STACK_FAN_OFFSET_EXPANDED : SHARE_STACK_FAN_OFFSET_RESTING
@@ -238,7 +240,10 @@
             class="absolute cursor-pointer"
             role="button"
             tabindex="0"
-            onclick={() => (shareStackExpanded = !shareStackExpanded)}
+            onpointerenter={(e) => e.pointerType === 'mouse' && (shareStackExpanded = true)}
+            onpointerleave={(e) => e.pointerType === 'mouse' && (shareStackExpanded = false)}
+            onclick={(e) =>
+                (e as PointerEvent).pointerType !== 'mouse' && (shareStackExpanded = !shareStackExpanded)}
             onkeydown={(e) => e.key === 'Enter' && (shareStackExpanded = !shareStackExpanded)}
             style="left: {SHARE_STACK_BOX.left}%; top: {SHARE_STACK_BOX.top}%; width: {SHARE_STACK_BOX.width}%;"
         >
@@ -272,7 +277,8 @@
             class="absolute cursor-pointer transition-all duration-150"
             role="button"
             tabindex="0"
-            onclick={() => (shareStackExpanded = !shareStackExpanded)}
+            onclick={(e) =>
+                (e as PointerEvent).pointerType !== 'mouse' && (shareStackExpanded = !shareStackExpanded)}
             onkeydown={(e) => e.key === 'Enter' && (shareStackExpanded = !shareStackExpanded)}
             style="right: {statusMarkerPosition.right}%; top: {statusMarkerPosition.top}%; height: {STATUS_MARKER_HEIGHT_PCT}%; transform: rotate({STATUS_MARKER_ROTATION_DEG}deg); transform-origin: 100% 0%; z-index: 10;"
         >

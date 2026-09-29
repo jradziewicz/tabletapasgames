@@ -1,5 +1,6 @@
 <script lang="ts">
     import { CorporationId } from '@tabletop/stellar-ventures'
+    import { ScalingWrapper } from '@tabletop/frontend-components'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import {
         CorporationDisplayNames,
@@ -10,6 +11,9 @@
     import CorporationCharterWithPowers from './CorporationCharterWithPowers.svelte'
 
     const gameSession = getGameSession()
+
+    // Natural (unzoomed) width of the Charter art inside the ScalingWrapper.
+    const CHARTER_BASE_WIDTH_PX = 1000
 
     // Fixed display order (matches CorporationOutpostIcons/CorporationLogoIcons' own page
     // order) rather than gameState.corporations' array order, so the picker's layout never
@@ -39,12 +43,12 @@
 
 </script>
 
-<div class="h-full overflow-y-auto p-4 text-[#e6e9f5]">
-    <h2 class="mb-3 text-xs font-semibold uppercase tracking-widest text-[#7f88ad]">
+<div class="flex h-full flex-col p-4 text-[#e6e9f5]">
+    <h2 class="mb-3 shrink-0 text-xs font-semibold uppercase tracking-widest text-[#7f88ad]">
         Corporation Charter
     </h2>
 
-    <div class="mb-3 flex flex-wrap gap-1.5">
+    <div class="mb-3 flex shrink-0 flex-wrap gap-1.5">
         {#each DISPLAY_ORDER as corporationId (corporationId)}
             {@const aspect = CorporationLogoAspect[corporationId] ?? 1}
             {@const formed = isFormed(corporationId)}
@@ -72,13 +76,15 @@
         {/each}
     </div>
 
-    <!-- Just the Charter art now - the stats table that used to sit beside it is gone (no
-         longer needed per the co-designer), so this no longer needs a flex row splitting width
-         between the two. -->
-    <!-- Phones: near full width so the Charter art is legible; desktop keeps 45% (25% smaller than the prior 60%). -->
-    <div class="mx-auto w-[92%] md:w-[45%]">
-        <div class="relative" style="aspect-ratio: {CHARTER_ASPECT};">
-            <CorporationCharterWithPowers corporationId={selectedId} />
-        </div>
+    <!-- The Charter art sits in the shared ScalingWrapper (same pan/zoom the Board tab uses):
+         it starts fit to the panel, then zooms with the bottom-left buttons / wheel / pinch and
+         pans by dragging. The art itself is all percentage-positioned, so the fixed base width
+         below only sets how sharp it stays when zoomed in - the wrapper scales it to fit. -->
+    <div class="min-h-0 flex-1">
+        <ScalingWrapper justify="center" controls="bottom-left" dragToPan expandable>
+            <div class="relative" style="width: {CHARTER_BASE_WIDTH_PX}px; aspect-ratio: {CHARTER_ASPECT};">
+                <CorporationCharterWithPowers corporationId={selectedId} />
+            </div>
+        </ScalingWrapper>
     </div>
 </div>

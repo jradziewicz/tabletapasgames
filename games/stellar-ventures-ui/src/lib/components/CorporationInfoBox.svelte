@@ -12,6 +12,10 @@
     import CreditsIcon from './CreditsIcon.svelte'
     import OutpostIcon from './OutpostIcon.svelte'
 
+    // At or below this many unbuilt Outposts left, the Outposts row shows one icon per piece;
+    // above it, a "N [icon]" count.
+    const OUTPOST_ICONS_SHOWN_INDIVIDUALLY_MAX = 5
+
     // The rulebook's Expand Network cost table (pages 12-13), keyed by however many Outposts
     // are built in one action - the same ExpandNetworkOutpostCosts ExpandNetworkPanel itself
     // reads for the live running total, shown here instead as a fixed at-a-glance legend.
@@ -231,9 +235,30 @@
             <span class="mr-1 shrink-0 text-[10px] uppercase tracking-widest text-[#7f88ad]">
                 Outposts:
             </span>
-            {#if remainingOutposts > 0}
+            {#if remainingOutposts > OUTPOST_ICONS_SHOWN_INDIVIDUALLY_MAX}
+                <!-- Big supply: a count then one icon instead of 15-25 separate pieces. Once it
+                     is down to a handful (see the constant above) each one is shown again.
+                     Alien Alchemist's sacrifice pick keeps working - the icon takes on the same
+                     pulsing glow and click handler the individual icons would have had. -->
+                {@const sacrificing = outpostSacrificeHighlightCount > 0}
+                <span class="inline-flex items-center gap-1">
+                    <span class="text-sm font-semibold text-[#e6e9f5]">{remainingOutposts}</span>
+                    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+                    <!-- svelte-ignore a11y_no_static_element_interactions -->
+                    <!-- svelte-ignore a11y_click_events_have_key_events -->
+                    <img
+                        src={CorporationOutpostIcons[corporationId]}
+                        alt={sacrificing ? 'Sacrifice Outposts for Alien Alchemist' : ''}
+                        class="h-6 w-6 shrink-0 object-contain {sacrificing
+                            ? 'alien-alchemist-sacrifice-outpost cursor-pointer'
+                            : 'drop-shadow'}"
+                        onclick={sacrificing ? onOutpostSacrificeClick : undefined}
+                    />
+                </span>
+            {:else if remainingOutposts > 0}
                 {#each { length: remainingOutposts } as _, index (index)}
                     {@const highlighted = index < outpostSacrificeHighlightCount}
+                    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                     <!-- svelte-ignore a11y_no_static_element_interactions -->
                     <!-- svelte-ignore a11y_click_events_have_key_events -->
                     <img

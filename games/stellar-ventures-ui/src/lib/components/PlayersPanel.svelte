@@ -7,6 +7,7 @@
         dividendRowForMiningCapacity,
         shareValuePerShare,
         totalCredits,
+        CorporationId,
         CorporationStatus,
         OutpostSupplyByCorporationId,
         agreementTrackEntryForPlanetCount,
@@ -148,9 +149,6 @@
 
 <div class="space-y-4 p-2 text-[#e6e9f5]">
     <div>
-        <h2 class="mb-1 px-1 text-xs font-semibold uppercase tracking-widest text-[#7f88ad]">
-            Players
-        </h2>
         <div class="space-y-2">
             {#each players as playerState (playerState.playerId)}
                 {@const shareHoldings = shareHoldingsForPlayer(playerState.playerId)}
@@ -363,13 +361,18 @@
                 {@const taxDue = gameSession.gameState.usesTaxes
                     ? taxDueForCorporation(gameSession.gameState, corporation.id)
                     : undefined}
-                <!-- Border takes the Corporation's own color; the operating Corporation is
+                {@const borderColor =
+                    corporation.id === CorporationId.FrostFederated
+                        ? '#ffffff'
+                        : CorporationColors[corporation.id]}
+                <!-- Border takes the Corporation's own color (Frost Federated: white, matching
+                     its white Outpost piece - board/other panels keep the shared color); the operating Corporation is
                      marked by a soft glow in that same color (plus the "Active" badge). -->
                 <div
                     class="overflow-hidden rounded-lg border bg-[#12162b] text-sm"
-                    style:border-color={CorporationColors[corporation.id]}
+                    style:border-color={borderColor}
                     style:box-shadow={corporation.id === operatingCorpId
-                        ? `0 0 0 1px ${CorporationColors[corporation.id]}, 0 0 12px ${CorporationColors[corporation.id]}66`
+                        ? `0 0 0 1px ${borderColor}, 0 0 12px ${borderColor}66`
                         : undefined}
                 >
                     <!-- Header - same layout as a Player card's header (identity marker, not a
