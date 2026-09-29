@@ -186,21 +186,6 @@
         return reconciledIds(level, supply).filter((id) => !pending.has(id))
     }
 
-    // Persist the reconciled lists (and forget pending ids that are gone) before the DOM updates.
-    $effect.pre(() => {
-        for (const section of sections) {
-            const ids = reconciledIds(section.level, supplyFor(section))
-            const stored = shipIds[section.level]
-            if (!stored || stored.length !== ids.length || stored.some((id, i) => id !== ids[i])) {
-                shipIds[section.level] = ids
-            }
-            const pending = pendingIds[section.level]
-            if (pending && pending.some((id) => !ids.includes(id))) {
-                pendingIds[section.level] = pending.filter((id) => ids.includes(id))
-            }
-        }
-    })
-
     let bannerEl: HTMLDivElement | undefined = $state()
     const prefersReducedMotion = () =>
         typeof window !== 'undefined' &&
@@ -279,6 +264,23 @@
     function supplyFor(section: ShipyardSection): number {
         return section.unlimited ? UNLIMITED_DISPLAY_COUNT : section.remainingShips
     }
+
+    // Persist the reconciled lists (and forget pending ids that are gone) before the DOM updates.
+    // ($effect.pre runs synchronously where it is declared, so this must sit below `sections`
+    // and `supplyFor` - declaring it earlier threw "Cannot access before initialization".)
+    $effect.pre(() => {
+        for (const section of sections) {
+            const ids = reconciledIds(section.level, supplyFor(section))
+            const stored = shipIds[section.level]
+            if (!stored || stored.length !== ids.length || stored.some((id, i) => id !== ids[i])) {
+                shipIds[section.level] = ids
+            }
+            const pending = pendingIds[section.level]
+            if (pending && pending.some((id) => !ids.includes(id))) {
+                pendingIds[section.level] = pending.filter((id) => ids.includes(id))
+            }
+        }
+    })
 
     // ---- Reflow animation (FLIP) ----
     // layoutKey changes whenever any section's set of visible Ships does. Just before the DOM
