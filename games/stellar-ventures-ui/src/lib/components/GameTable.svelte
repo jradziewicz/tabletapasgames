@@ -85,25 +85,19 @@
     const MIN_TOP_SECTION_HEIGHT_PX = 96
     const MIN_WORKSPACE_HEIGHT_PX = 240
 
-    function loadSavedTopSectionHeight(): number | undefined {
-        try {
-            const raw = localStorage.getItem(TOP_SECTION_HEIGHT_STORAGE_KEY)
-            const value = raw ? Number(raw) : NaN
-            return Number.isFinite(value) && value > 0 ? value : undefined
-        } catch {
-            return undefined
-        }
-    }
-
     // undefined means "auto" - the top section sizes to its own content, exactly like before
     // this feature existed. Once a player drags the handle it becomes a fixed pixel height
     // (with its own scrollbar if content no longer fits) until they double-click the handle to
-    // go back to auto.
-    let topSectionHeightPx: number | undefined = $state(loadSavedTopSectionHeight())
+    // go back to auto - or until the action content itself changes size (a new step, a bid
+    // control appearing...), which snaps it back to auto so the actions are never left clipped
+    // (see the ResizeObserver effect below). A dragged height is therefore per-step only and is
+    // deliberately not remembered across page loads, so a stale height can't hide the actions.
+    let topSectionHeightPx: number | undefined = $state(undefined)
     let layoutColumnEl: HTMLDivElement | undefined
     let topSectionEl: HTMLDivElement | undefined
     let resizeDragStartY = 0
     let resizeDragStartHeightPx = 0
+    let topContentEl: HTMLDivElement | undefined = $state()
     let resizingTopSection = $state(false)
 
     function clampTopSectionHeight(candidatePx: number) {
@@ -153,14 +147,6 @@
         window.removeEventListener('pointermove', onResizeHandlePointerMove)
         window.removeEventListener('pointerup', onResizeHandlePointerUp)
         window.removeEventListener('pointercancel', onResizeHandlePointerUp)
-        try {
-            if (topSectionHeightPx !== undefined) {
-                localStorage.setItem(TOP_SECTION_HEIGHT_STORAGE_KEY, String(topSectionHeightPx))
-            }
-        } catch {
-            // Best-effort only - a private window or blocked storage just means this doesn't
-            // stick around for next time, same as DebouncedLayout's own localStorage backup.
-        }
     }
 
     function resetTopSectionHeight() {
@@ -171,6 +157,29 @@
             // Best-effort only, see above.
         }
     }
+
+    // Whenever the Header/Action content changes size on its own, drop any dragged height so the
+    // whole action is visible again. Watches the content's natural height (which doesn't depend on
+    // the fixed height above), skips the very first measurement, and never fires mid-drag.
+    $effect(() => {
+        const el = topContentEl
+        if (!el || typeof ResizeObserver === 'undefined') return
+        let lastHeight: number | undefined
+        const observer = new ResizeObserver(() => {
+            const height = el.getBoundingClientRect().height
+            if (
+                lastHeight !== undefined &&
+                Math.abs(height - lastHeight) > 1 &&
+                !resizingTopSection &&
+                topSectionHeightPx !== undefined
+            ) {
+                resetTopSectionHeight()
+            }
+            lastHeight = height
+        })
+        observer.observe(el)
+        return () => observer.disconnect()
+    })
 </script>
 
 <div class="bg-[#0b0e1a]">
@@ -219,12 +228,14 @@
                         ? `height: ${topSectionHeightPx}px;`
                         : undefined}
                 >
-                    <Header />
-                    {#if gameSession.gameState.result}
-                        <GameEndPanel />
-                    {:else}
-                        <ActionPanel />
-                    {/if}
+                    <div bind:this={topContentEl}>
+                        <Header />
+                        {#if gameSession.gameState.result}
+                            <GameEndPanel />
+                        {:else}
+                            <ActionPanel />
+                        {/if}
+                    </div>
                 </div>
 
                 <!-- Drag to trade vertical space between the Header/Action area above and the

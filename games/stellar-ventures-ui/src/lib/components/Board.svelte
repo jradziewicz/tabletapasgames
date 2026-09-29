@@ -566,6 +566,30 @@
         !(activeBoardActionMode === ActionType.CreateWormhole && gameSession.wormholeSelectedHexId)
     )
 
+    // While the player is choosing where to build an Outpost (Expand Network, Create Wormhole,
+    // Jerry-Rig, Private Contractor), every hex that isn't a legal target is dimmed under a mask
+    // and stops taking clicks, so the only thing left to click is somewhere that can actually be
+    // built on - rather than the old "highlight the legal hexes but still let a bad click fail
+    // with an error". Uses the same validHexIds the highlight is drawn from.
+    const maskUnbuildableHexes = $derived(
+        canClickHex &&
+            (activeBoardActionMode === ActionType.ExpandNetwork ||
+                activeBoardActionMode === ActionType.CreateWormhole ||
+                activeBoardActionMode === ActionType.JerryRig ||
+                activeBoardActionMode === ActionType.PrivateContractor)
+    )
+    // Hexes that stay unmasked even though they're not in validHexIds: the picked Wormhole target,
+    // its nearest Outpost, and the path between them (see wormholePathHexIds).
+    function isMaskedHex(hexId: string): boolean {
+        return (
+            maskUnbuildableHexes &&
+            !validHexIds.has(hexId) &&
+            !wormholePathHexIds.has(hexId) &&
+            gameSession.wormholeSelectedHexId !== hexId &&
+            wormholeNearestOutpostHex?.id !== hexId
+        )
+    }
+
     // While a Corporation is being offered Sign The Agreement (OfferSignTheAgreementPanel.svelte,
     // in the action sidebar), pulse-highlight the Alien Planet hexes it actually holds an Outpost
     // on right here on the board - the same hexes counted in that panel's planet-count preview -
@@ -827,8 +851,8 @@
                         points={hexPoints}
                         fill="transparent"
                         stroke="none"
-                        pointer-events={canClickHex ? 'all' : 'none'}
-                        class="{canClickHex ? 'expandable-hex' : ''} {showAllValidHexHighlight &&
+                        pointer-events={canClickHex && !isMaskedHex(hex.id) ? 'all' : 'none'}
+                        class="{canClickHex && !isMaskedHex(hex.id) ? 'expandable-hex' : ''} {showAllValidHexHighlight &&
                         validHexIds.has(hex.id)
                             ? 'valid-expansion-hex'
                             : ''} {wormholePathHexIds.has(hex.id) &&
@@ -924,6 +948,16 @@
                             points={hexPoints}
                             pointer-events="none"
                             class="auction-home-planet-highlight"
+                        ></polygon>
+                    {/if}
+                    {#if isMaskedHex(hex.id)}
+                        <!-- Mask over a hex that can't be built on right now (see
+                             maskUnbuildableHexes) - drawn last so it dims the tile art and any
+                             Outposts on it, and lets clicks fall through to nothing. -->
+                        <polygon
+                            points={hexPoints}
+                            pointer-events="none"
+                            class="unbuildable-hex-mask"
                         ></polygon>
                     {/if}
                 </g>
@@ -1164,6 +1198,11 @@
        rather than green so it reads as "you may place here" distinctly from
        .selected-develop-hex's green "already placed here" below, and so it doesn't get lost
        against the board's own greens/blues. */
+    /* The dimming mask over hexes that can't be built on while choosing where to build. */
+    .unbuildable-hex-mask {
+        fill: rgba(6, 9, 20, 0.62);
+        stroke: none;
+    }
     .valid-expansion-hex {
         fill: rgba(251, 191, 36, 0.3);
     }

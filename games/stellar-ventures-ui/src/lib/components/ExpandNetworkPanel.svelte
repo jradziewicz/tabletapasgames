@@ -508,10 +508,10 @@
                         class="rounded-md border border-[#3a4166] bg-[#1a1f38] px-2.5 py-1.5 text-xs hover:border-[#2f6fed] hover:bg-[#212845]"
                     >
                         <!-- Create Wormhole only ever builds 1 Outpost per action (unlike Expand
-                             Network's multi-hex builtCount), so "Stop Expanding" - worded for
+                             Network's multi-hex builtCount), so "Done Expanding" - worded for
                              backing out of an in-progress multi-build - never applies here; it's
                              always plainly "Decline" in Wormhole mode. -->
-                        {isWormholeMode || builtCount === 0 ? 'Decline' : 'Stop Expanding'}
+                        {isWormholeMode || builtCount === 0 ? 'Decline' : 'Done Expanding'}
                     </button>
                 {/if}
                 {#if canAlienAlchemist}

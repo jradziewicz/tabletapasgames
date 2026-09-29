@@ -15,6 +15,7 @@
     } from '$lib/utils/corporatePowerImages.js'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import CreditsIcon from './CreditsIcon.svelte'
+    import BidStepper from './BidStepper.svelte'
 
     const gameSession = getGameSession()
 
@@ -82,13 +83,13 @@
     const minimumBid = $derived((auction?.highBid ?? -1) + 1)
     const isOpeningBid = $derived(auction?.highBid === undefined)
 
-    let bidInput = $state('0')
+    let bidInput = $state(0)
 
     // Keep the suggested bid sensible as the high bid changes from turn to turn - re-derive
     // whenever it becomes my turn again or the high bid moves.
     $effect(() => {
         if (myTurn) {
-            bidInput = String(minimumBid)
+            bidInput = minimumBid
         }
     })
 
@@ -97,7 +98,7 @@
     }
 
     async function submitBid() {
-        const amount = Number.parseInt(bidInput, 10)
+        const amount = bidInput
         if (!Number.isFinite(amount)) {
             return
         }
@@ -167,13 +168,8 @@
             </div>
 
             {#if myTurn && (canBid || canPass)}
-                <div class="flex items-center gap-2 pt-1">
-                    <input
-                        type="number"
-                        min={minimumBid}
-                        bind:value={bidInput}
-                        class="w-24 rounded-md border border-[#3a4166] bg-[#10142a] px-2 py-1 font-mono text-xs text-[#e6e9f5]"
-                    />
+                <div class="flex flex-wrap items-center gap-2 pt-1">
+                    <BidStepper bind:value={bidInput} min={minimumBid} disabled={!canBid} />
                     <button
                         type="button"
                         onclick={submitBid}
