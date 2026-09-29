@@ -57,6 +57,10 @@
     // pastes its URL here; the server posts turn/invite messages to it. No bot, no linking.
     let webhookUrlInput = $state('')
     let connectedWebhookUrl: string | undefined = $state(undefined)
+    // Optional Discord user id so the webhook messages @mention (ping) the user.
+    let discordUserIdInput = $state('')
+    let connectedDiscordUserId: string | undefined = $state(undefined)
+    let showUserIdSteps = $state(false)
     let webhookLoading = $state(true)
     let webhookSaving = $state(false)
     let webhookError: string | undefined = $state(undefined)
@@ -65,7 +69,10 @@
 
     onMount(async () => {
         try {
-            connectedWebhookUrl = (await api.getDiscordWebhookStatus()).webhookUrl
+            const status = await api.getDiscordWebhookStatus()
+            connectedWebhookUrl = status.webhookUrl
+            connectedDiscordUserId = status.discordUserId
+            discordUserIdInput = status.discordUserId ?? ''
         } catch (e) {
             console.log('Could not load Discord webhook status', e)
         } finally {
@@ -78,16 +85,25 @@
         webhookError = undefined
         webhookSaved = false
         const url = webhookUrlInput.trim()
-        if (!url) {
+        const userId = discordUserIdInput.trim() || undefined
+        const mentionChanged = userId !== connectedDiscordUserId
+        if (!url && !(connectedWebhookUrl && mentionChanged)) {
             webhookError = 'Paste your webhook URL first.'
             return
         }
         webhookSaving = true
         try {
-            connectedWebhookUrl = (await api.subscribeDiscordWebhook(url)).webhookUrl
+            // A pasted URL (re)connects the webhook; otherwise only the @mention is changing.
+            const result = url
+                ? await api.subscribeDiscordWebhook(url, userId)
+                : await api.setDiscordWebhookMention(userId)
+            connectedWebhookUrl = result.webhookUrl
+            connectedDiscordUserId = result.discordUserId
+            discordUserIdInput = result.discordUserId ?? ''
             webhookUrlInput = ''
             webhookSaved = true
             showWebhookSteps = false
+            showUserIdSteps = false
         } catch (e) {
             console.log(e)
             webhookError =
@@ -106,6 +122,8 @@
         try {
             await api.unsubscribeDiscordWebhook()
             connectedWebhookUrl = undefined
+            connectedDiscordUserId = undefined
+            discordUserIdInput = ''
         } catch (e) {
             console.log(e)
             webhookError = 'Could not disconnect the webhook. Please try again.'
@@ -139,7 +157,15 @@
             {:else if connectedWebhookUrl}
                 <Alert class="dark:bg-green-200 dark:text-green-700">
                     <span class="font-bold">Discord notifications are on.</span><br />
-                    <span class="break-all text-xs">Posting to {connectedWebhookUrl}</span>
+                    <span class="break-all text-xs">Posting to {connectedWebhookUrl}</span><br />
+                    {#if connectedDiscordUserId}
+                        <span class="text-xs">Messages @mention you (user ID {connectedDiscordUserId}).</span>
+                    {:else}
+                        <span class="text-xs font-semibold"
+                            >Messages don't @mention you yet - add your Discord user ID below so
+                            Discord actually pings you.</span
+                        >
+                    {/if}
                 </Alert>
                 <div class="text-white-600 text-sm dark:text-gray-300">
                     To switch to a different channel, paste a new webhook URL below and save it.
@@ -149,7 +175,7 @@
             {#if webhookSaved}
                 <Alert class="dark:bg-green-200 dark:text-green-700">
                     Saved! A test message was just posted to your Discord channel - go check that
-                    it arrived.
+                    it arrived{connectedDiscordUserId ? ', and that it pinged you' : ''}.
                 </Alert>
             {/if}
             {#if webhookError}
@@ -191,11 +217,9 @@
                             message right away so you know it worked.
                         </li>
                         <li>
-                            <span class="font-semibold">Tip:</span> so Discord actually pings you,
-                            right-click the channel, choose
-                            <span class="font-semibold">Notification Settings</span>, and set it to
-                            <span class="font-semibold">All Messages</span>. On mobile the same
-                            settings are under the channel's name at the top.
+                            <span class="font-semibold">Tip:</span> a webhook on its own just drops
+                            a message in the channel. To get an actual ping, also add your Discord
+                            user ID in the second box below - then every message @mentions you.
                         </li>
                     </ol>
                     <div class="mt-3 text-xs dark:text-gray-400">
@@ -217,6 +241,51 @@
                     bind:value={webhookUrlInput}
                     disabled={webhookSaving}
                 />
+                <Label for="discord-user-id"
+                    >Your Discord user ID <span class="font-normal dark:text-gray-400"
+                        >(optional - so messages @mention you)</span
+                    ></Label
+                >
+                <Input
+                    id="discord-user-id"
+                    type="text"
+                    inputmode="numeric"
+                    autocomplete="off"
+                    spellcheck={false}
+                    placeholder="e.g. 123456789012345678"
+                    bind:value={discordUserIdInput}
+                    disabled={webhookSaving}
+                />
+                <button
+                    type="button"
+                    class="text-left text-sm font-semibold text-blue-700 dark:text-blue-400 hover:underline"
+                    onclick={() => (showUserIdSteps = !showUserIdSteps)}
+                >
+                    {showUserIdSteps ? '▾' : '▸'} How do I find my Discord user ID?
+                </button>
+                {#if showUserIdSteps}
+                    <div
+                        class="dark:bg-gray-700 bg-gray-100 p-4 rounded-sm text-sm dark:text-gray-200"
+                    >
+                        <ol class="list-decimal list-outside ml-5 space-y-2">
+                            <li>
+                                In Discord, open <span class="font-semibold">Settings</span> (the
+                                gear by your name), go to <span class="font-semibold">Advanced</span
+                                >, and turn on <span class="font-semibold">Developer Mode</span>.
+                            </li>
+                            <li>
+                                Click your avatar at the bottom-left (on mobile, open your profile)
+                                and choose <span class="font-semibold">Copy User ID</span>. It's a
+                                long number, not your username.
+                            </li>
+                            <li>
+                                Paste it in the box above and hit Save. You'll get a test ping so
+                                you know it worked. Leave the box empty (and save) to stop
+                                mentioning.
+                            </li>
+                        </ol>
+                    </div>
+                {/if}
                 <div class="flex flex-row gap-2 justify-end">
                     {#if connectedWebhookUrl}
                         <Button
@@ -228,8 +297,23 @@
                             Turn off
                         </Button>
                     {/if}
-                    <Button type="submit" disabled={webhookSaving || !webhookUrlInput.trim()}>
-                        {webhookSaving ? 'Saving…' : connectedWebhookUrl ? 'Save new URL' : 'Save'}
+                    <Button
+                        type="submit"
+                        disabled={webhookSaving ||
+                            !(
+                                webhookUrlInput.trim() ||
+                                (connectedWebhookUrl &&
+                                    (discordUserIdInput.trim() || undefined) !==
+                                        connectedDiscordUserId)
+                            )}
+                    >
+                        {webhookSaving
+                            ? 'Saving…'
+                            : webhookUrlInput.trim()
+                              ? connectedWebhookUrl
+                                  ? 'Save new URL'
+                                  : 'Save'
+                              : 'Save mention'}
                     </Button>
                 </div>
             </form>

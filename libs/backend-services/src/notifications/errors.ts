@@ -2,7 +2,18 @@ import { BaseError } from '@tabletop/common'
 
 enum NotificationError {
     InvalidDiscordWebhookUrl = 'InvalidDiscordWebhookUrlError',
-    DiscordWebhookRejected = 'DiscordWebhookRejectedError'
+    DiscordWebhookRejected = 'DiscordWebhookRejectedError',
+    InvalidDiscordUserId = 'InvalidDiscordUserIdError'
+}
+
+export class InvalidDiscordUserIdError extends BaseError {
+    constructor() {
+        super({
+            name: NotificationError.InvalidDiscordUserId,
+            message:
+                "That doesn't look like a Discord user ID. It's a long number (17-20 digits) - in Discord, turn on Developer Mode under Settings > Advanced, then click your avatar and choose Copy User ID."
+        })
+    }
 }
 
 export class InvalidDiscordWebhookUrlError extends BaseError {

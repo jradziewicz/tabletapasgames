@@ -9,6 +9,9 @@
     const TOUCH_INERTIA_DECAY_PER_FRAME = 0.92
     const TOUCH_INERTIA_MIN_VELOCITY = 0.02
     const TOUCH_INERTIA_MAX_VELOCITY = 2.5
+    // How far the mouse must travel with the button held before it counts as a drag rather
+    // than a click, so clicking a hex/piece inside the content never turns into a tiny pan.
+    const MOUSE_DRAG_THRESHOLD_PX = 4
 
     type FocusRect = {
         x: number
@@ -56,12 +59,17 @@
         children,
         justify = 'center',
         controls = 'top-left',
-        expandable = false
+        expandable = false,
+        dragToPan = false
     }: {
         children: Snippet
         justify?: 'center' | 'left' | 'right'
         controls: 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right' | 'none'
         expandable?: boolean
+        // Lets mouse (and pen) users click-and-drag the content to pan it while zoomed in,
+        // the way touch users already can. Off by default because some game boards have their
+        // own in-content interactions; a plain click (no movement) is never affected.
+        dragToPan?: boolean
     } = $props()
 
     let baseScale = $state(1)
@@ -103,6 +111,16 @@
     let scrollVelocityY = 0
     let scrollInertiaFrame: number | undefined
     let gestureStartScale: number | null = null
+    let mouseDrag: {
+        pointerId: number
+        lastX: number
+        lastY: number
+        startX: number
+        startY: number
+        active: boolean
+    } | null = null
+    let suppressNextClick = false
+    let isDraggingView = $state(false)
 
     $effect(() => {
         wrapperWidth
@@ -656,6 +674,107 @@
         zoomToScaleKeepingCenter(targetScale, true)
     }
 
+    // Whether the content is currently larger than the viewport in either direction. When the
+    // whole thing is visible there is nothing to pan, so no grab cursor and no drag handling.
+    const isPannable = $derived.by(() => {
+        const metrics = getMetrics(currentScale)
+        return (
+            metrics.minTranslateX !== metrics.maxTranslateX ||
+            metrics.minTranslateY !== metrics.maxTranslateY
+        )
+    })
+
+    function removeMouseDragListeners() {
+        window.removeEventListener('pointermove', handleWindowPointerMove)
+        window.removeEventListener('pointerup', handleWindowPointerUp)
+        window.removeEventListener('pointercancel', handleWindowPointerUp)
+    }
+
+    function handleScrollerPointerDown(event: PointerEvent) {
+        // Touch already has its own pan/pinch/inertia handling above.
+        if (!dragToPan || event.pointerType === 'touch' || event.button !== 0 || !isPannable) {
+            return
+        }
+
+        removeMouseDragListeners()
+        mouseDrag = {
+            pointerId: event.pointerId,
+            lastX: event.clientX,
+            lastY: event.clientY,
+            startX: event.clientX,
+            startY: event.clientY,
+            active: false
+        }
+        // Listen on the window (not pointer capture) so the eventual click still reaches the
+        // element under the cursor and a drag can leave the wrapper without being dropped.
+        window.addEventListener('pointermove', handleWindowPointerMove)
+        window.addEventListener('pointerup', handleWindowPointerUp)
+        window.addEventListener('pointercancel', handleWindowPointerUp)
+    }
+
+    function handleWindowPointerMove(event: PointerEvent) {
+        if (!mouseDrag || event.pointerId !== mouseDrag.pointerId) {
+            return
+        }
+
+        if (!mouseDrag.active) {
+            const travelled = Math.hypot(
+                event.clientX - mouseDrag.startX,
+                event.clientY - mouseDrag.startY
+            )
+            if (travelled < MOUSE_DRAG_THRESHOLD_PX) {
+                return
+            }
+            mouseDrag.active = true
+            isDraggingView = true
+            cancelViewAnimation()
+            cancelPanInertia()
+            // Don't leave a text selection behind from the press that started the drag.
+            window.getSelection()?.removeAllRanges()
+        }
+
+        event.preventDefault()
+        const deltaX = event.clientX - mouseDrag.lastX
+        const deltaY = event.clientY - mouseDrag.lastY
+        mouseDrag.lastX = event.clientX
+        mouseDrag.lastY = event.clientY
+
+        const nextView = clampTranslation(
+            currentScale,
+            currentTranslateX + deltaX,
+            currentTranslateY + deltaY
+        )
+        applyView(currentScale, nextView.translateX, nextView.translateY)
+    }
+
+    function handleWindowPointerUp(event: PointerEvent) {
+        if (!mouseDrag || event.pointerId !== mouseDrag.pointerId) {
+            return
+        }
+
+        const wasDragging = mouseDrag.active
+        mouseDrag = null
+        isDraggingView = false
+        removeMouseDragListeners()
+
+        if (wasDragging) {
+            // The browser fires a click right after this pointerup on whatever is under the
+            // cursor; a drag must not select a hex or press a button by accident.
+            suppressNextClick = true
+            setTimeout(() => {
+                suppressNextClick = false
+            }, 0)
+        }
+    }
+
+    function handleScrollerClickCapture(event: MouseEvent) {
+        if (suppressNextClick) {
+            suppressNextClick = false
+            event.stopPropagation()
+            event.preventDefault()
+        }
+    }
+
     function setExpanded(nextExpanded: boolean) {
         isExpanded = nextExpanded
         requestAnimationFrame(() => {
@@ -1036,6 +1155,7 @@
     })
 
     onDestroy(() => {
+        removeMouseDragListeners()
         cancelViewAnimation()
         cancelPinchAnimation()
         cancelPanInertia()
@@ -1087,13 +1207,21 @@
         ? 'position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(1px);'
         : undefined}
 >
+    <!-- The scroller is a pure layout viewport, not a control: the pointer/click handlers only
+         implement mouse drag-to-pan (keyboard users have the zoom buttons and normal scrolling),
+         so it deliberately has no role. -->
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
         bind:this={scroller}
         class="overflow-hidden box-border"
         class:w-full={!isExpanded}
         class:h-full={!isExpanded}
+        class:sw-pannable={dragToPan && isPannable}
+        class:sw-dragging={isDraggingView}
         style={`${isExpanded ? 'width: 100%; height: 100%; padding: 8px;' : ''} touch-action: none;`}
         onwheel={handleWheel}
+        onpointerdown={handleScrollerPointerDown}
+        onclickcapture={handleScrollerClickCapture}
     >
         <div bind:this={viewport} bind:clientWidth={wrapperWidth} bind:clientHeight={wrapperHeight} class="relative w-full h-full">
             <div
@@ -1191,3 +1319,17 @@
         {/if}
     </div>
 </div>
+
+<style>
+    .sw-pannable {
+        cursor: grab;
+    }
+
+    /* While dragging, every descendant shows the grabbing cursor (hexes and pieces set their
+       own pointer cursor) and nothing under the cursor gets text-selected. */
+    .sw-dragging,
+    .sw-dragging :global(*) {
+        cursor: grabbing !important;
+        user-select: none;
+    }
+</style>

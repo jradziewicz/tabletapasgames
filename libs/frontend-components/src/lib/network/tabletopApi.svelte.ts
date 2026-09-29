@@ -65,6 +65,8 @@ export type GetGameOptions = {
     hostView?: boolean
 }
 
+export type DiscordWebhookStatus = { webhookUrl?: string; discordUserId?: string }
+
 export class TabletopApi {
     readonly supportsReproductionSeed?: boolean = true
     readonly supportsHostView?: boolean = true
@@ -804,21 +806,36 @@ export class TabletopApi {
 
     // Discord webhook notifications (a webhook the user created in their own channel).
     // The URL that comes back is always the token-masked form, never the full secret.
-    async getDiscordWebhookStatus(): Promise<{ webhookUrl?: string }> {
+    async getDiscordWebhookStatus(): Promise<DiscordWebhookStatus> {
         const response = await this.wretch
             .get('/notification/discordwebhook/status')
             .unauthorized(this.on401)
             .badRequest(this.handleError)
-            .json<{ payload: { webhookUrl?: string } }>()
+            .json<{ payload: DiscordWebhookStatus }>()
         return response.payload
     }
 
-    async subscribeDiscordWebhook(webhookUrl: string): Promise<{ webhookUrl: string }> {
+    async subscribeDiscordWebhook(
+        webhookUrl: string,
+        discordUserId?: string
+    ): Promise<DiscordWebhookStatus & { webhookUrl: string }> {
         const response = await this.wretch
-            .post({ webhookUrl }, '/notification/discordwebhook/subscribe')
+            .post({ webhookUrl, discordUserId }, '/notification/discordwebhook/subscribe')
             .unauthorized(this.on401)
             .badRequest(this.handleError)
-            .json<{ payload: { webhookUrl: string } }>()
+            .json<{ payload: DiscordWebhookStatus & { webhookUrl: string } }>()
+        return response.payload
+    }
+
+    // Set (or clear, with undefined) the @mention on the already-connected webhook.
+    async setDiscordWebhookMention(
+        discordUserId?: string
+    ): Promise<DiscordWebhookStatus & { webhookUrl: string }> {
+        const response = await this.wretch
+            .post({ discordUserId }, '/notification/discordwebhook/mention')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<{ payload: DiscordWebhookStatus & { webhookUrl: string } }>()
         return response.payload
     }
 

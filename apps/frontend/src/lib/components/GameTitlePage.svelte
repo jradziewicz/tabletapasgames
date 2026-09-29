@@ -8,10 +8,21 @@
         type HydratedGameState
     } from '@tabletop/common'
     import { Modal } from 'flowbite-svelte'
-    import { ArrowLeftOutline, ArrowRightOutline, UsersOutline } from 'flowbite-svelte-icons'
+    import {
+        ArrowLeftOutline,
+        ArrowRightOutline,
+        BookOpenOutline,
+        UsersOutline
+    } from 'flowbite-svelte-icons'
     import TitleGames from '$lib/components/TitleGames.svelte'
 
+    // Rules pages for titles that have one, keyed by game id.
+    const RULES_URLS: Record<string, string> = {
+        stellarventures: 'https://tabletapasgames.com/resources'
+    }
+
     let { title }: { title: GameUiDefinition<GameState, HydratedGameState> } = $props()
+    const rulesUrl = $derived(RULES_URLS[title.info.id])
     let creating = $state(false)
     let created = $state(false)
     let gamesSection: ReturnType<typeof TitleGames> | undefined = $state()
@@ -55,9 +66,17 @@
             <div class="description">
                 {#each paragraphs as paragraph, index (index)}<p>{paragraph}</p>{/each}
             </div>
-            <button class="start-game" onclick={() => (creating = true)}
-                >Start a game <ArrowRightOutline class="h-4 w-4" /></button
-            >
+            <div class="actions">
+                <button class="start-game" onclick={() => (creating = true)}
+                    >Start a game <ArrowRightOutline class="h-4 w-4" /></button
+                >
+                {#if rulesUrl}
+                    <a class="rules-link" href={rulesUrl} target="_blank" rel="noreferrer">
+                        <BookOpenOutline class="h-4 w-4" /> Rules
+                        <span class="sr-only">(opens in a new tab)</span>
+                    </a>
+                {/if}
+            </div>
         </div>
     </section>
     {#if created}<p class="created" role="status">
@@ -165,12 +184,37 @@
     .description p + p {
         margin-top: 12px;
     }
+    .actions {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+        margin-top: 28px;
+    }
+    .rules-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        min-height: 48px;
+        padding: 0 22px;
+        border: 1px solid #7165ad;
+        border-radius: 8px;
+        color: var(--color-gray-200);
+        font-size: 14px;
+        font-weight: 600;
+        transition:
+            background-color 200ms,
+            border-color 200ms;
+    }
+    .rules-link:hover {
+        background: rgb(113 101 173 / 0.18);
+        border-color: #8d82c7;
+    }
     .start-game {
         display: inline-flex;
         align-items: center;
         gap: 18px;
         min-height: 48px;
-        margin-top: 28px;
         padding: 0 22px;
         background: #7165ad;
         color: white;

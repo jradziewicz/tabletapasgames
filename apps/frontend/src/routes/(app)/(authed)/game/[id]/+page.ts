@@ -11,6 +11,12 @@ export const load: PageLoad = async ({ params, url }) => {
         intendedUrl: url
     })
 
+    // "Next game" needs to know which of the user's other games are waiting on them, even when
+    // they landed here directly (a notification link, a bookmark) rather than via the dashboard.
+    void appContext.gameService.loadGames().catch((error) => {
+        console.error('Error loading games for next-game navigation', error)
+    })
+
     const { id } = params
 
     // ?admin=1 is how the Admin "all games" list opens a game it isn't the viewer's own -

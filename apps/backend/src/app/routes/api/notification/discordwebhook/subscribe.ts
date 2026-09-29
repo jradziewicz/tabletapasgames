@@ -5,7 +5,9 @@ import { DiscordWebhookTransport } from '@tabletop/backend-services'
 type SubscribeDiscordWebhook = Static<typeof SubscribeDiscordWebhook>
 const SubscribeDiscordWebhook = Type.Object(
     {
-        webhookUrl: Type.String({ maxLength: 512 })
+        webhookUrl: Type.String({ maxLength: 512 }),
+        // Optional Discord user id so messages @mention the user; validated in the transport.
+        discordUserId: Type.Optional(Type.String({ maxLength: 64 }))
     },
     { additionalProperties: false }
 )
@@ -28,9 +30,13 @@ export default async function (fastify: FastifyInstance) {
 
             const subscription = DiscordWebhookTransport.subscriptionForUser(
                 request.user.id,
-                request.body.webhookUrl
+                request.body.webhookUrl,
+                request.body.discordUserId
             )
-            await fastify.discordWebhookTransport.sendTestMessage(subscription.webhookUrl)
+            await fastify.discordWebhookTransport.sendTestMessage(
+                subscription.webhookUrl,
+                subscription.discordUserId
+            )
 
             // The store never overwrites an existing subscription's data, so swapping URLs is
             // an explicit remove-then-add of the user's single webhook document.
@@ -45,7 +51,8 @@ export default async function (fastify: FastifyInstance) {
             return {
                 status: 'ok',
                 payload: {
-                    webhookUrl: DiscordWebhookTransport.maskWebhookUrl(subscription.webhookUrl)
+                    webhookUrl: DiscordWebhookTransport.maskWebhookUrl(subscription.webhookUrl),
+                    discordUserId: subscription.discordUserId
                 }
             }
         }

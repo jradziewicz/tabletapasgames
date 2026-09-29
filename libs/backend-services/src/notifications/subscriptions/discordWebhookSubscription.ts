@@ -12,7 +12,11 @@ export const DiscordWebhookSubscription = Type.Evaluate(
         Type.Omit(NotificationSubscriptionIdentifier, ['transport']),
         Type.Object({
             transport: Type.Literal(TransportType.DiscordWebhook),
-            webhookUrl: Type.String()
+            webhookUrl: Type.String(),
+            // The user's own Discord user id (a 17-20 digit snowflake). When present, every
+            // message starts with <@id> so Discord actually pings them rather than just
+            // dropping a message in the channel. Optional: without it, messages still post.
+            discordUserId: Type.Optional(Type.String({ pattern: '^\\d{17,20}$' }))
         })
     ])
 )

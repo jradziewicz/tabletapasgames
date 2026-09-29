@@ -14,6 +14,7 @@
     } from '@tabletop/stellar-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import {
+        CorporationColors,
         CorporationDisplayNames,
         CorporationLogoIcons,
         CorporationLogoAspect,
@@ -362,10 +363,14 @@
                 {@const taxDue = gameSession.gameState.usesTaxes
                     ? taxDueForCorporation(gameSession.gameState, corporation.id)
                     : undefined}
+                <!-- Border takes the Corporation's own color; the operating Corporation is
+                     marked by a soft glow in that same color (plus the "Active" badge). -->
                 <div
-                    class="overflow-hidden rounded-lg border {corporation.id === operatingCorpId
-                        ? 'border-[#4f7cf2]'
-                        : 'border-[#2a3155]'} bg-[#12162b] text-sm"
+                    class="overflow-hidden rounded-lg border bg-[#12162b] text-sm"
+                    style:border-color={CorporationColors[corporation.id]}
+                    style:box-shadow={corporation.id === operatingCorpId
+                        ? `0 0 0 1px ${CorporationColors[corporation.id]}, 0 0 12px ${CorporationColors[corporation.id]}66`
+                        : undefined}
                 >
                     <!-- Header - same layout as a Player card's header (identity marker, not a
                          paint job): logo + name on the left, an "Active" badge here (in place of

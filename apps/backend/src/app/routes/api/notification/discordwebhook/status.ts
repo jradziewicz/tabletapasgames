@@ -27,7 +27,9 @@ export default async function (fastify: FastifyInstance) {
                     webhookUrl:
                         webhook && 'webhookUrl' in webhook
                             ? DiscordWebhookTransport.maskWebhookUrl(webhook.webhookUrl)
-                            : undefined
+                            : undefined,
+                    discordUserId:
+                        webhook && 'discordUserId' in webhook ? webhook.discordUserId : undefined
                 }
             }
         }

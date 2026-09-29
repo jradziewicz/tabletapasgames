@@ -36,6 +36,7 @@
     import { toast } from 'svelte-sonner'
     import { onceMounted } from '$lib/components/RunOnceMounted.svelte'
     import { BellSolid } from 'flowbite-svelte-icons'
+    import { nextTurnGame, otherTurnGames } from '$lib/utils/dashboardGames'
 
     let {
         api,
@@ -52,6 +53,26 @@
     let { children } = $props()
 
     let sessionUser = $derived(authorizationService.getSessionUser())
+    // While a game is open: how many of the user's OTHER games are waiting on them, and which
+    // one "Next turn" should jump to.
+    let otherTurnCount = $derived(
+        gameService.currentGameSession
+            ? otherTurnGames(
+                  gameService.activeGames,
+                  gameService.currentGameSession.primaryGame.id,
+                  sessionUser?.id
+              ).length
+            : 0
+    )
+    let nextGame = $derived(
+        gameService.currentGameSession
+            ? nextTurnGame(
+                  gameService.activeGames,
+                  gameService.currentGameSession.primaryGame.id,
+                  sessionUser?.id
+              )
+            : undefined
+    )
     let showCreateGameModel = $state(false)
     let showCancelPrompt = $state(false)
     let showLoginModal = $state(false)
@@ -402,7 +423,22 @@
                                         >{sessionUser.username || 'username not assigned'}</span
                                     >
                                 </DropdownHeader>
-                                <DropdownDivider />
+                                <DropdownDivider class={nextGame ? 'mb-0' : ''} />
+                                {#if nextGame}
+                                    <DropdownItem
+                                        href={`/game/${nextGame.id}`}
+                                        class="w-full text-left bg-[#7165ad]/10 hover:bg-[#7165ad]/20"
+                                    >
+                                        <span class="inline-flex items-center gap-2 whitespace-nowrap">
+                                            Next turn
+                                            <span
+                                                class="inline-flex min-w-5 items-center justify-center rounded-full bg-[#7165ad] px-1.5 py-0.5 text-xs font-semibold tabular-nums text-white"
+                                                >{otherTurnCount}</span
+                                            >
+                                        </span>
+                                    </DropdownItem>
+                                    <DropdownDivider class="mt-0" />
+                                {/if}
                                 <DropdownItem class="w-full text-left" onclick={gotoProfile}
                                     >Profile</DropdownItem
                                 >
