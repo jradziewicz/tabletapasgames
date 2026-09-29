@@ -1,6 +1,8 @@
 <script module lang="ts">
-    import { PUBLIC_ENABLE_DISCORD_LOGIN } from '$env/static/public'
-    export const isEnabled: boolean = !!PUBLIC_ENABLE_DISCORD_LOGIN
+    import { PUBLIC_DISCORD_CLIENT_ID } from '$env/static/public'
+    // Discord login is on whenever this site's own Discord application ID is configured (the
+    // backend's DISCORD_CLIENT_ID must be the same application).
+    export const isEnabled: boolean = !!PUBLIC_DISCORD_CLIENT_ID
 </script>
 
 <script lang="ts">
@@ -15,9 +17,9 @@
         const encodedHost = encodeURIComponent(FRONTEND_HOST ?? '')
         let url = ''
         if (mode === 'bot') {
-            url = `https://discord.com/oauth2/authorize?client_id=1260059992589865133`
+            url = `https://discord.com/oauth2/authorize?client_id=${PUBLIC_DISCORD_CLIENT_ID}`
         } else {
-            url = `https://discord.com/oauth2/authorize?client_id=1260059992589865133&response_type=code&redirect_uri=${encodedHost}%2Foauth%2Fdiscord${mode === 'login' ? '' : '%2Flink'}&scope=identify+email`
+            url = `https://discord.com/oauth2/authorize?client_id=${PUBLIC_DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${encodedHost}%2Foauth%2Fdiscord${mode === 'login' ? '' : '%2Flink'}&scope=identify+email`
         }
         window.open(
             url,
