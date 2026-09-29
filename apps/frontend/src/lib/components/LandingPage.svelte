@@ -136,9 +136,33 @@
             </div>
         </div>
     </section>
+
+    {#if !signedIn}
+        <footer class="legal-footer">
+            <span>© TableTapas Games</span>
+            <a href="/privacy">Privacy Policy</a>
+            <a href="/terms">Terms of Service</a>
+        </footer>
+    {/if}
 </main>
 
 <style>
+    .legal-footer {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 20px;
+        padding: 32px 0 40px;
+        color: var(--color-gray-500);
+        font-size: 13px;
+    }
+    .legal-footer a {
+        color: var(--color-gray-400);
+    }
+    .legal-footer a:hover {
+        color: var(--color-blue-300);
+        text-decoration: underline;
+        text-underline-offset: 4px;
+    }
     @media (prefers-reduced-motion: no-preference) {
         :global(html:has(.landing)) {
             scroll-behavior: smooth;
