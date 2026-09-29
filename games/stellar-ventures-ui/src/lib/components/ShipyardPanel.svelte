@@ -13,42 +13,30 @@
 
     // When set, this Shipyard render is being used as the interactive picker for the Order Ships
     // step (see OrderShipPanel.svelte) rather than as the plain reference tab in the workspace:
-    // orderableLevel names the one section that can actually be ADDED TO right now (Ships can
+    // orderableLevel names the one section that can actually be ORDERED FROM right now (Ships can
     // only ever be Ordered from the Shipyard's current lowest available level - the "Lowest Level
-    // First" restriction - recomputed client-side as picks are staged, since more than one can be
-    // queued before anything is actually submitted), whose Ships become clickable; onSelectShip
-    // fires when the player clicks any of them. Clicking only STAGES that choice - see
-    // OrderShipPanel.svelte's own queue-then-"Purchase Ships" flow, which is what actually
-    // submits the real OrderShip actions - because a real Order Ship is real money and, for a
-    // section's first-ever Ship, an irreversible Alien Tile flip revealing secret information,
-    // neither of which should happen before the President has finished picking everything they
-    // want and explicitly pulled the trigger. `stagedCountByLevel` gives, per Ship level, how
-    // many are currently queued but not yet submitted - draws that many fewer Ships here (they
-    // read as having moved to the Charter instead). Rather than ringing the WHOLE orderable
-    // section's box (which used to include a lot of empty box padding, its cost ribbon, and the
-    // Alien Tile corner - none of which is actually what's being bought), only the single
-    // topmost-leftmost remaining Ship icon in that section - the one that would actually move to
-    // the Charter next - gets a pulsing green glow shaped to its own silhouette (see
-    // .shipyard-orderable-ship below), per the co-designer's own preference.
-    // `sectionsOverride`, when given, is drawn instead of the live Shipyard - used to freeze this
-    // view during Purchase Ships' own multi-action submission (see OrderShipPanel.svelte) so nothing
-    // here appears to change - in particular no Alien Tile flips - until the whole purchase
-    // finishes and the real (by-then-matching) state takes back over. compact drops the tab's own
-    // heading/scroll chrome and renders at 100% of whatever width its own container gives it
-    // (rather than a fixed fraction of its own root), since OrderShipPanel places it in a sized
-    // wrapper alongside the Charter rather than as its own full-size tab.
+    // First" restriction). That whole section is highlighted as one group (a pulsing green frame,
+    // .shipyard-orderable-group below) and a click ANYWHERE in it orders one Ship immediately -
+    // onSelectShip is what actually submits the order (see OrderShipPanel.svelte). The one
+    // exception is a click that would flip a still-hidden Alien Shipyard tile (an irreversible
+    // reveal Undo can't take back): needsConfirmation says so for a level, and then this only
+    // calls onSelectShip (which asks the player to confirm) without removing any Ship yet.
+    // The Ship that visibly leaves is the one nearest the click (the one actually clicked when the
+    // click lands on a Ship), it fades out, and the rest glide into their new places (a FLIP
+    // animation - see the layout effects below). compact drops the tab's own heading/scroll
+    // chrome and renders at 100% of whatever width its own container gives it (rather than a
+    // fixed fraction of its own root), since OrderShipPanel places it in a sized wrapper alongside
+    // the Charter rather than as its own full-size tab.
     let {
         orderableLevel,
-        stagedCountByLevel = {},
         onSelectShip,
-        compact = false,
-        sectionsOverride
+        needsConfirmation,
+        compact = false
     }: {
         orderableLevel?: number
-        stagedCountByLevel?: Record<number, number>
-        onSelectShip?: () => void
+        onSelectShip?: () => void | Promise<void>
+        needsConfirmation?: (level: number) => boolean
         compact?: boolean
-        sectionsOverride?: ShipyardSection[]
     } = $props()
 
     // Each level's box on the printed Shipyard track, as a percentage of the banner image's own
@@ -165,9 +153,171 @@
         return Math.min(...fits)
     }
 
-    const shipIndices = (n: number) => Array.from({ length: n }, (_, i) => i)
+    // ---- Which specific Ship leaves when one is ordered ----
+    // Each section's Ships have stable ids (shipIds, in layout order), so clicking one removes
+    // THAT Ship rather than always the last one in the layout. A clicked Ship is hidden at once
+    // (pendingIds) while its order goes through; when the real supply then drops, the hidden Ship
+    // is the one that gets dropped from shipIds, so nothing visibly jumps. When the supply changes
+    // some other way (another player's order, an Undo), Ships are dropped from / added to the end.
+    // If an order fails, the hidden Ship comes back once the attempt has settled.
+    let shipIds = $state<Record<number, number[]>>({})
+    let pendingIds = $state<Record<number, number[]>>({})
 
-    const sections = $derived(sectionsOverride ?? gameSession.gameState.shipyard.sections)
+    function reconciledIds(level: number, supply: number): number[] {
+        const current = shipIds[level] ?? Array.from({ length: supply }, (_, index) => index)
+        if (current.length === supply) return current
+        const ids = [...current]
+        if (ids.length > supply) {
+            const pending = [...(pendingIds[level] ?? [])].reverse()
+            while (ids.length > supply) {
+                const pendingIndex = pending.findIndex((id) => ids.includes(id))
+                const removeId = pendingIndex >= 0 ? pending.splice(pendingIndex, 1)[0]! : ids[ids.length - 1]!
+                ids.splice(ids.indexOf(removeId), 1)
+            }
+        } else {
+            let next = Math.max(-1, ...ids) + 1
+            while (ids.length < supply) ids.push(next++)
+        }
+        return ids
+    }
+
+    function visibleIdsFor(level: number, supply: number): number[] {
+        const pending = new Set(pendingIds[level] ?? [])
+        return reconciledIds(level, supply).filter((id) => !pending.has(id))
+    }
+
+    // Persist the reconciled lists (and forget pending ids that are gone) before the DOM updates.
+    $effect.pre(() => {
+        for (const section of sections) {
+            const ids = reconciledIds(section.level, supplyFor(section))
+            const stored = shipIds[section.level]
+            if (!stored || stored.length !== ids.length || stored.some((id, i) => id !== ids[i])) {
+                shipIds[section.level] = ids
+            }
+            const pending = pendingIds[section.level]
+            if (pending && pending.some((id) => !ids.includes(id))) {
+                pendingIds[section.level] = pending.filter((id) => ids.includes(id))
+            }
+        }
+    })
+
+    let bannerEl: HTMLDivElement | undefined = $state()
+    const prefersReducedMotion = () =>
+        typeof window !== 'undefined' &&
+        window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
+
+    // The Ship that leaves: the one whose box is nearest the click (distance 0 when the click is
+    // on a Ship), falling back to the last remaining Ship when none is on screen to measure (e.g.
+    // the phone's "N [icon]" view).
+    function orderFromGroup(
+        event: MouseEvent | KeyboardEvent,
+        level: number,
+        visibleIds: number[]
+    ) {
+        if (visibleIds.length === 0) return
+        if (needsConfirmation?.(level)) {
+            void onSelectShip?.()
+            return
+        }
+        let id = visibleIds[visibleIds.length - 1]!
+        let element: Element | undefined
+        if (bannerEl && 'clientX' in event) {
+            let best = Infinity
+            for (const candidate of bannerEl.querySelectorAll(`[data-ship^="${level}:"]`)) {
+                const rect = candidate.getBoundingClientRect()
+                if (rect.width === 0) continue
+                const dx = Math.max(rect.left - event.clientX, 0, event.clientX - rect.right)
+                const dy = Math.max(rect.top - event.clientY, 0, event.clientY - rect.bottom)
+                const distance = Math.hypot(dx, dy)
+                if (distance < best) {
+                    best = distance
+                    element = candidate
+                    id = Number((candidate as HTMLElement).dataset.ship!.split(':')[1])
+                }
+            }
+        }
+        if (element) spawnGhost(element)
+        pendingIds[level] = [...(pendingIds[level] ?? []), id]
+        void Promise.resolve(onSelectShip?.()).finally(() => {
+            // Still hidden once the attempt has settled means the order didn't go through.
+            if (pendingIds[level]?.includes(id)) {
+                pendingIds[level] = pendingIds[level]!.filter((pendingId) => pendingId !== id)
+            }
+        })
+    }
+
+    // A fading copy of the Ship that was just ordered, left behind for a moment where it was.
+    function spawnGhost(element: Element) {
+        if (!bannerEl || prefersReducedMotion()) return
+        const banner = bannerEl.getBoundingClientRect()
+        const rect = element.getBoundingClientRect()
+        const ghost = element.cloneNode(true) as HTMLElement
+        ghost.removeAttribute('data-ship')
+        Object.assign(ghost.style, {
+            position: 'absolute',
+            left: `${rect.left - banner.left}px`,
+            top: `${rect.top - banner.top}px`,
+            width: `${rect.width}px`,
+            height: `${rect.height}px`,
+            margin: '0',
+            pointerEvents: 'none',
+            zIndex: '5'
+        })
+        bannerEl.appendChild(ghost)
+        const animation = ghost.animate(
+            [
+                { opacity: 1, transform: 'translateY(0) scale(1)' },
+                { opacity: 0, transform: 'translateY(-14px) scale(0.6)' }
+            ],
+            { duration: 260, easing: 'ease-out' }
+        )
+        animation.onfinish = () => ghost.remove()
+    }
+
+    const sections = $derived(gameSession.gameState.shipyard.sections)
+
+    function supplyFor(section: ShipyardSection): number {
+        return section.unlimited ? UNLIMITED_DISPLAY_COUNT : section.remainingShips
+    }
+
+    // ---- Reflow animation (FLIP) ----
+    // layoutKey changes whenever any section's set of visible Ships does. Just before the DOM
+    // updates for that, remember where every Ship is on screen; right after, slide each Ship
+    // that moved from its old spot to its new one.
+    const layoutKey = $derived(
+        sections
+            .map((section) => visibleIdsFor(section.level, supplyFor(section)).join('.'))
+            .join('|')
+    )
+    let previousRects = new Map<string, DOMRect>()
+
+    $effect.pre(() => {
+        void layoutKey
+        const rects = new Map<string, DOMRect>()
+        for (const element of bannerEl?.querySelectorAll<HTMLElement>('[data-ship]') ?? []) {
+            rects.set(element.dataset.ship!, element.getBoundingClientRect())
+        }
+        previousRects = rects
+    })
+
+    $effect(() => {
+        void layoutKey
+        if (bannerEl && !prefersReducedMotion()) {
+            for (const element of bannerEl.querySelectorAll<HTMLElement>('[data-ship]')) {
+                const before = previousRects.get(element.dataset.ship!)
+                if (!before) continue
+                const now = element.getBoundingClientRect()
+                const dx = before.left - now.left
+                const dy = before.top - now.top
+                if (Math.abs(dx) < 0.5 && Math.abs(dy) < 0.5) continue
+                element.animate(
+                    [{ transform: `translate(${dx}px, ${dy}px)` }, { transform: 'none' }],
+                    { duration: 280, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }
+                )
+            }
+        }
+        previousRects = new Map()
+    })
 </script>
 
 <div class={compact ? 'text-[#e6e9f5]' : 'h-full overflow-y-auto p-4 text-[#e6e9f5]'}>
@@ -185,7 +335,11 @@
          controls sizing via a wrapper - see OrderShipPanel.svelte) rather than sizing itself
          against its own root element's width, which is otherwise indeterminate once this
          component sits inside a flex layout alongside other content. -->
-    <div class="relative mb-3" style="aspect-ratio: 4409 / 741; width: 100%; container-type: inline-size;">
+    <div
+        bind:this={bannerEl}
+        class="relative mb-3"
+        style="aspect-ratio: 4409 / 741; width: 100%; container-type: inline-size;"
+    >
         <img
             src={shipyardBanner}
             alt="The Shipyard track, as printed on the board"
@@ -196,13 +350,9 @@
             {@const box = SectionBoxLayout[section.level]}
             {#if box}
                 {@const isOrderable = onSelectShip !== undefined && section.level === orderableLevel}
-                {@const stagedCount = stagedCountByLevel[section.level] ?? 0}
-                {@const rawCount = section.unlimited ? UNLIMITED_DISPLAY_COUNT : section.remainingShips}
-                <!-- Every Ship from this section that's currently staged (queued but not yet
-                     submitted - see OrderShipPanel.svelte) draws one fewer here, so it visually
-                     reads as having moved out to the Corporation Charter's Ordered Ships tracker
-                     rather than still sitting in the Shipyard twice at once. -->
-                {@const displayCount = Math.max(0, rawCount - stagedCount)}
+                {@const rawCount = supplyFor(section)}
+                {@const visibleIds = visibleIdsFor(section.level, rawCount)}
+                {@const displayCount = visibleIds.length}
                 {@const hasTile = section.alienTileChevrons !== undefined}
                 {@const rowCounts = splitRows(displayCount, hasTile)}
                 {@const iconHeightPct = sectionIconHeightPct(rowCounts, section.level, hasTile)}
@@ -232,30 +382,16 @@
                                 class="flex w-full items-end justify-start"
                                 style="height: {iconHeightPct}%; column-gap: {ICON_GAP_PCT}%;"
                             >
-                                {#each shipIndices(rowCount) as shipIndex (shipIndex)}
-                                    <!-- The very first remaining Ship overall in this section (top
-                                         row, leftmost - the one a player would naturally reach
-                                         for first) is the one that would actually move to the
-                                         Charter next - only it gets the pulsing highlight, not
-                                         the whole box (see this component's own top comment). A
-                                         plain ring would draw a rectangle around this
-                                         Ship icon's bounding box, leaving an obviously generic
-                                         gap in its transparent corners - drop-shadow instead
-                                         follows the icon's own alpha silhouette exactly, so the
-                                         glow actually hugs the Ship's shape (see
-                                         .shipyard-orderable-ship below). -->
-                                    {@const isNextToBuy = isOrderable && rowStart + shipIndex === 0}
-                                    <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-                                    <!-- svelte-ignore a11y_no_static_element_interactions -->
-                                    <!-- svelte-ignore a11y_click_events_have_key_events -->
+                                {#each visibleIds.slice(rowStart, rowStart + rowCount) as slot (slot)}
+                                    <!-- data-ship identifies this Ship for the reflow animation and
+                                         for picking which one leaves; clicks are handled by the
+                                         group overlay drawn over the whole section (below). -->
                                     <img
+                                        data-ship="{section.level}:{slot}"
                                         src={ShipLevelIcons[section.level]}
                                         alt="Level {section.level} Ship"
-                                        class="{isNextToBuy ? '' : 'drop-shadow'} {isOrderable
-                                            ? 'origin-bottom cursor-pointer transition-transform hover:scale-110'
-                                            : ''} {isNextToBuy ? 'shipyard-orderable-ship' : ''}"
+                                        class="drop-shadow"
                                         style="height: 100%; width: auto;"
-                                        onclick={isOrderable ? () => onSelectShip?.() : undefined}
                                     />
                                 {/each}
                             </div>
@@ -276,15 +412,11 @@
                                 class="font-semibold leading-none text-[#e6e9f5]"
                                 style="font-size: 4.2cqw; padding-bottom: 1%;"
                             >{section.unlimited ? '∞' : displayCount}</span>
-                            <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-                            <!-- svelte-ignore a11y_no_static_element_interactions -->
-                            <!-- svelte-ignore a11y_click_events_have_key_events -->
                             <img
                                 src={ShipLevelIcons[section.level]}
                                 alt="Level {section.level} Ship"
-                                class="{isOrderable ? 'shipyard-orderable-ship cursor-pointer' : 'drop-shadow'}"
+                                class="drop-shadow"
                                 style="height: 70%; width: auto;"
-                                onclick={isOrderable ? () => onSelectShip?.() : undefined}
                             />
                         </div>
                     {/if}
@@ -309,6 +441,26 @@
                             style="left: {AlienTileBox.left}%; top: {AlienTileBox.top}%; width: {AlienTileBox.width}%; height: {AlienTileBox.height}%;"
                         />
                     {/if}
+
+                    {#if isOrderable && displayCount > 0}
+                        <!-- The orderable section is highlighted as one group, and a click
+                             anywhere in it orders a Ship (see orderFromGroup). Drawn last so it
+                             sits over the Ships and the Alien Tile. -->
+                        <div
+                            class="shipyard-orderable-group absolute inset-[2px] cursor-pointer rounded-md"
+                            role="button"
+                            tabindex="0"
+                            aria-label="Order a Level {section.level} Ship"
+                            onclick={(event) =>
+                                orderFromGroup(event, section.level, visibleIds)}
+                            onkeydown={(event) => {
+                                if (event.key === 'Enter' || event.key === ' ') {
+                                    event.preventDefault()
+                                    orderFromGroup(event, section.level, visibleIds)
+                                }
+                            }}
+                        ></div>
+                    {/if}
                 </div>
             {/if}
         {/each}
@@ -320,24 +472,32 @@
     /* A gentle pulse on the currently-orderable section's highlight ring during the Order Ships
        picker (see the orderableLevel prop) - just enough motion to draw the eye to it without
        being distracting while the player is deciding. */
-    /* A pulsing glow around the single next-to-buy Ship icon (see isNextToBuy above) - using
-       drop-shadow rather than box-shadow/ring specifically because drop-shadow follows an
-       image's own alpha channel (its actual silhouette) rather than its rectangular bounding
-       box, so this hugs the Ship's real outline instead of drawing a generic rectangle around
-       it. Layering two drop-shadows (a tight one plus a softer, wider one) reads as a solid
-       outline with a glow behind it, rather than just a blurry halo. Replaces this icon's
-       ordinary drop-shadow (see the drop-shadow/shipyard-orderable-ship class toggle above) so
-       the two effects never stack redundantly. */
-    .shipyard-orderable-ship {
-        animation: shipyard-orderable-ship-pulse 1.8s ease-in-out infinite;
+    /* The orderable section as one highlighted group: a pulsing green frame with a faint fill
+       (the whole group is the click target - see orderFromGroup). */
+    .shipyard-orderable-group {
+        border: 2px solid rgba(61, 220, 132, 0.95);
+        background: rgba(61, 220, 132, 0.06);
+        animation: shipyard-orderable-group-pulse 1.8s ease-in-out infinite;
+        transition: background-color 150ms;
     }
-    @keyframes shipyard-orderable-ship-pulse {
+    .shipyard-orderable-group:hover {
+        background: rgba(61, 220, 132, 0.16);
+    }
+    .shipyard-orderable-group:focus-visible {
+        outline: 2px solid #ffffff;
+        outline-offset: 1px;
+    }
+    @keyframes shipyard-orderable-group-pulse {
         0%,
         100% {
-            filter: drop-shadow(0 0 2px rgba(61, 220, 132, 0.95)) drop-shadow(0 0 5px rgba(61, 220, 132, 0.6));
+            box-shadow:
+                0 0 4px rgba(61, 220, 132, 0.55),
+                inset 0 0 6px rgba(61, 220, 132, 0.25);
         }
         50% {
-            filter: drop-shadow(0 0 3px rgba(61, 220, 132, 1)) drop-shadow(0 0 9px rgba(61, 220, 132, 0.85));
+            box-shadow:
+                0 0 12px rgba(61, 220, 132, 0.95),
+                inset 0 0 12px rgba(61, 220, 132, 0.5);
         }
     }
 </style>

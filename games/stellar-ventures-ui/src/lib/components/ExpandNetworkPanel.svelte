@@ -360,13 +360,17 @@
             <!-- Per the co-designer: a quick confirmation preview before this Corporation's
                  turn actually ends - see confirmingEndOperations' own comment above. No text -
                  the highlighted chart already says what's about to be paid. -->
+            <!-- Chart and buttons share one centered column (30rem = the chart's own max-w-md
+                 plus DividendChartPanel's p-4), so the buttons sit centered directly under the
+                 chart instead of hugging the far left of a wide action bar. -->
+            <div class="mx-auto w-full max-w-[30rem] space-y-2">
             <div class="h-72">
                 <DividendChartPanel
                     onlyCorporationId={corporationId}
                     payoutHighlight={endOperationsPayoutHighlight}
                 />
             </div>
-            <div class="flex gap-1.5">
+            <div class="flex justify-center gap-1.5">
                 <button
                     type="button"
                     onclick={stopExpanding}
@@ -381,6 +385,7 @@
                 >
                     Back
                 </button>
+            </div>
             </div>
         {:else}
         <div class="text-sm">

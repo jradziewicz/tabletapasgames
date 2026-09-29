@@ -1,6 +1,5 @@
 <script lang="ts">
     import { PlayerName } from '@tabletop/frontend-components'
-    import type { ShipyardSection } from '@tabletop/stellar-ventures'
     import {
         ActionType,
         TOTAL_SHIP_COLUMNS,
@@ -137,42 +136,31 @@
         await gameSession.submitGenericAction(actionType, payload)
     }
 
-    // Clicking a Ship in the Shipyard picker only QUEUES it - it doesn't submit anything yet.
-    // The President can keep clicking to queue several Ships in a row (up to the Charter's own
-    // empty-column limit), each one immediately "moving over" to the Charter as a staged preview
-    // (see the Charter markup below), and only when they click "Purchase Ships" does anything
-    // actually get submitted - as one real OrderShip action per queued Ship, in the order they
-    // were picked. A real Order Ship is real money, and for a section's first-ever Ship it also
-    // flips that section's Alien Shipyard Tile (irreversibly revealing secret information), so
-    // neither should happen while the President might still change their mind about the rest of
-    // the queue.
-    let selectedLevels: number[] = $state([])
-
-    // Declared up here (rather than alongside frozenSections/frozenStagedCountByLevel, below,
-    // next to purchaseShips itself) purely so canQueueAnother above can reference it - a $derived
-    // callback only actually runs after the whole component has finished setting up, so this
-    // ordering makes no difference at runtime, but svelte-check's TypeScript analysis still flags
-    // a `let` referenced above its textual declaration as used-before-assignment regardless.
-    let purchasing = $state(false)
+    // Clicking a Ship in the Shipyard picker orders it immediately - one real OrderShip action per
+    // click (the engine has no bulk "order several" action - see actions/orderShip.ts), which the
+    // President can Undo like any other action. The one thing Undo can't take back is a section's
+    // first-ever Ship flipping its still-hidden Alien Shipyard tile face up (secret information -
+    // see resolveFirstShipOrderedEffects, which flags that action as beyond Undo), so ONLY that
+    // click asks for a confirmation first (confirmingFlipLevel below).
+    let ordering = $state(false)
+    let confirmingFlipLevel: number | undefined = $state()
 
     // CARGO still incoming - every Ship level currently sitting in Ordered but not yet
-    // Delivered (deliverOrderedShips only runs at the next Administration Round), plus whatever
-    // this President is queuing up right now (selectedLevels, below) - clamped exactly like
-    // deliverOrderedShips itself clamps CARGO at MAX_CARGO, so this never promises more than
+    // Delivered (deliverOrderedShips only runs at the next Administration Round), clamped exactly
+    // like deliverOrderedShips itself clamps CARGO at MAX_CARGO, so this never promises more than
     // Delivery will actually pay out.
     const pendingCargoLevelsSum = $derived(
-        (corporation?.orderedShipLevels.reduce((sum, level) => sum + level, 0) ?? 0) +
-            selectedLevels.reduce((sum, level) => sum + level, 0)
+        corporation?.orderedShipLevels.reduce((sum, level) => sum + level, 0) ?? 0
     )
     const incomingCargo = $derived(
         corporation ? Math.min(MAX_CARGO, corporation.cargo + pendingCargoLevelsSum) - corporation.cargo : 0
     )
 
     // Dividend preview: what this Corporation pays per Share right now vs. what it would pay
-    // once every Ship in the queue above actually gets Delivered next Administration Round.
-    // Mining Capacity doesn't move from ordering Ships, so only Cargo's side of the comparison
-    // changes here - futureCargo is the same clamped total incomingCargo is built from, just
-    // expressed as an absolute Cargo value instead of a delta.
+    // once every Ship already Ordered gets Delivered next Administration Round. Mining Capacity
+    // doesn't move from ordering Ships, so only Cargo's side of the comparison changes here -
+    // futureCargo is the same clamped total incomingCargo is built from, just expressed as an
+    // absolute Cargo value instead of a delta.
     const miningCapacity = $derived(
         corporationId ? effectiveMiningCapacityForCorporation(gameSession.gameState, corporationId) : 0
     )
@@ -186,151 +174,74 @@
         corporation ? dividendPayoutPerShare(futureCargo, miningCapacity, corporation.status) : 0
     )
 
-    // How much of each Ship level's own supply the current queue has already spoken for, and
-    // what the Shipyard's own treasury has left to spend on the rest of it - both computed
-    // entirely client-side from the REAL (not-yet-submitted-against) Shipyard/treasury, since
-    // nothing in the queue is real until Purchase Ships runs. Mirrors
-    // shipyard.lowestAvailableSection()/canOrderAnotherShip() exactly, just against these
-    // simulated numbers instead of the live ones.
-    const realSections = $derived(gameSession.gameState.shipyard.sections)
-    const stagedCountByLevel = $derived.by(() => {
-        const counts: Record<number, number> = {}
-        for (const level of selectedLevels) {
-            counts[level] = (counts[level] ?? 0) + 1
-        }
-        return counts
-    })
-    const simulatedTreasury = $derived(
-        (corporation?.treasury ?? 0) - selectedLevels.reduce((sum, level) => sum + shipCost(level), 0)
-    )
-    const simulatedLowestLevel = $derived.by(() => {
-        for (const section of realSections) {
-            if (section.unlimited) return section.level
-            const staged = stagedCountByLevel[section.level] ?? 0
-            if (section.remainingShips - staged > 0) return section.level
-        }
-        return undefined
-    })
-    // How many more Ships the queue has room for - the Charter's 3 columns, minus whatever's
-    // already really Ordered/Delivered, minus whatever's already queued.
-    const queueRoomLeft = $derived(
-        corporation ? TOTAL_SHIP_COLUMNS - totalShipCount(corporation) - selectedLevels.length : 0
-    )
-    const canQueueAnother = $derived(
-        !purchasing &&
-            isMe &&
+    // Ships can only be Ordered from the Shipyard's current lowest available level, while the
+    // Charter still has an empty column and the Treasury covers it - mirrors
+    // shipyard.lowestAvailableSection()/canOrderAnotherShip().
+    const lowestSection = $derived(gameSession.gameState.shipyard.lowestAvailableSection())
+    const canOrderMore = $derived(
+        isMe &&
             canOrder &&
-            queueRoomLeft > 0 &&
-            simulatedLowestLevel !== undefined &&
-            simulatedTreasury >= shipCost(simulatedLowestLevel)
+            !!corporation &&
+            TOTAL_SHIP_COLUMNS - totalShipCount(corporation) > 0 &&
+            lowestSection !== undefined &&
+            corporation.treasury >= shipCost(lowestSection.level)
     )
+    const canOrderAnother = $derived(!ordering && canOrderMore)
+
+    // True when ordering the Ship at this level would flip a still-hidden Alien Shipyard tile.
+    function wouldFlipHiddenTile(level: number): boolean {
+        const section = gameSession.gameState.shipyard.sectionForLevel(level)
+        return (
+            !!section && !section.firstShipOrdered && section.alienTileChevrons !== undefined
+        )
+    }
 
     function selectShip() {
-        if (!canQueueAnother || simulatedLowestLevel === undefined) return
-        selectedLevels = [...selectedLevels, simulatedLowestLevel]
-    }
-
-    function clearQueue() {
-        if (purchasing) return
-        selectedLevels = []
-    }
-
-    // Submitting the queue is a real OrderShip action per queued Ship, one at a time (the engine
-    // has no bulk "order several" action - see actions/orderShip.ts) - awaited in order so each
-    // one lands against the Shipyard/treasury state the previous one just left behind. While this
-    // runs, the Shipyard picker is fed a frozen snapshot of its pre-purchase self (frozenSections)
-    // rather than the live, updating-mid-batch one, so nothing - in particular no Alien Tile flip
-    // - visibly changes there until the whole queue has gone through; only then does the real
-    // (by-then-matching) live state take back over. If a submission ever fails partway (a race
-    // against some other change), stop rather than keep firing the rest of a now-stale queue.
-    //
-    // frozenStagedCountByLevel freezes alongside frozenSections, for the same reason: selectedLevels
-    // itself shrinks as each queued Ship's real OrderShip action lands (see the loop below), so the
-    // LIVE stagedCountByLevel derived from it shrinks right along with it. Feeding that shrinking
-    // count against the frozen (unchanging) section count would make a Ship that was just bought -
-    // and had already visually "moved" to the Charter while queued - appear to jump back into the
-    // Shipyard the instant its purchase confirms (remainingShips - stagedCount ticking back up
-    // before the real, by-then-lower remainingShips ever takes back over), reading as though the
-    // Shipyard had spawned an extra copy of the Ship just bought. Freezing both together keeps the
-    // Shipyard's displayed count rock steady for the whole purchase, exactly as the comment above
-    // promises.
-    let frozenSections: ShipyardSection[] | undefined = $state(undefined)
-    let frozenStagedCountByLevel: Record<number, number> | undefined = $state(undefined)
-
-    // The queue must only ever grow from an explicit Shipyard click (selectShip, below) - it is
-    // never legal for it to reflect anything else. An Undo is the one event that can invalidate
-    // it out from under the President without their say-so: it can change the real Shipyard's
-    // remaining stock, the real Treasury, or the real Charter's own empty-column room that the
-    // queue's simulated numbers (stagedCountByLevel/simulatedTreasury/queueRoomLeft, above) were
-    // computed against. Rather than try to reconcile a stale queue against a reality that moved
-    // out from under it, drop it entirely the instant an Undo is detected and make the President
-    // re-pick from the (by-then up to date) Shipyard - state.actionCount only ever grows during
-    // normal play (gameState.ts's own applyAction), so it going backwards is Undo's own signature
-    // (see gameEngine.ts's action loop / GameUndo's popAction-based reversal). This also covers a
-    // teammate acting as this Corporation's President concurrently undoing on another device.
-    let lastSeenActionCount = $state(gameSession.gameState.actionCount)
-    let queueDroppedByUndo = false
-
-    $effect(() => {
-        const currentActionCount = gameSession.gameState.actionCount
-        if (currentActionCount < lastSeenActionCount && selectedLevels.length > 0) {
-            selectedLevels = []
-            queueDroppedByUndo = true
+        if (!canOrderAnother || !lowestSection) return
+        const level = lowestSection.level
+        if (wouldFlipHiddenTile(level)) {
+            confirmingFlipLevel = level
+            return
         }
-        lastSeenActionCount = currentActionCount
-    })
+        return orderNow(level)
+    }
 
-    async function purchaseShips() {
-        if (selectedLevels.length === 0 || purchasing) return
-        purchasing = true
-        frozenSections = JSON.parse(JSON.stringify(realSections))
-        frozenStagedCountByLevel = { ...stagedCountByLevel }
-        queueDroppedByUndo = false
+    async function confirmFlipOrder() {
+        const level = confirmingFlipLevel
+        confirmingFlipLevel = undefined
+        if (level === undefined || !canOrderAnother || lowestSection?.level !== level) return
+        await orderNow(level)
+    }
 
-        while (selectedLevels.length > 0) {
-            const level = selectedLevels[0]!
+    // Once nothing more can be ordered (no Charter column left, or no Ship the Treasury covers)
+    // there's nothing left to confirm - move straight on to Declining (ending this step) rather
+    // than making the President click "Done Ordering Ships" separately.
+    async function orderNow(level: number) {
+        if (ordering) return
+        ordering = true
+        try {
             const beforeCount = corporation ? totalShipCount(corporation) : 0
             await gameSession.orderShip(level)
             const afterCount = corporation ? totalShipCount(corporation) : 0
             // Confirm the order actually landed (rather than trusting the absence of
             // lastActionError alone - a silently-ignored, no-longer-valid action leaves it
-            // untouched) before treating this queued Ship as done and moving to the next one.
-            // An Undo landing mid-loop (queueDroppedByUndo, above) already empties selectedLevels
-            // itself, so the while condition below stops on its own the next time it's checked -
-            // this just also skips the auto-Decline afterwards, since an Undo-emptied queue was
-            // never actually finished by the President.
-            if (gameSession.lastActionError || afterCount <= beforeCount || queueDroppedByUndo) {
-                break
+            // untouched) before deciding whether the step is finished.
+            if (!gameSession.lastActionError && afterCount > beforeCount && !canOrderMore && canDecline) {
+                await gameSession.declineOrderShips()
             }
-            selectedLevels = selectedLevels.slice(1)
+        } finally {
+            ordering = false
         }
-
-        // Once every queued Ship has actually gone through, there's nothing left to confirm -
-        // move straight on to Declining (ending this step) rather than making the President
-        // click "Done Ordering Ships" separately afterwards. Skipped when the queue was instead
-        // emptied out from under us by an Undo (queueDroppedByUndo) - that's not "done", it's the
-        // queue being invalidated, and auto-Declining on top of that would end the step the
-        // President never actually finished.
-        if (
-            selectedLevels.length === 0 &&
-            !queueDroppedByUndo &&
-            !gameSession.lastActionError &&
-            canDecline
-        ) {
-            await gameSession.declineOrderShips()
-        }
-
-        frozenSections = undefined
-        frozenStagedCountByLevel = undefined
-        purchasing = false
     }
 
-    // If the President's own turn ends (a different Corporation comes up, or they're no longer
-    // the one ordering) before Purchase Ships was ever clicked, drop anything still just queued -
-    // nothing real was ever submitted for it.
+    // The confirmation only makes sense for the Ship it was asked about - drop it if the situation
+    // moved on (turn ended, or a different level is now the orderable one).
     $effect(() => {
-        if (!purchasing && selectedLevels.length > 0 && (!isMe || !canOrder)) {
-            selectedLevels = []
+        if (
+            confirmingFlipLevel !== undefined &&
+            (!canOrderMore || lowestSection?.level !== confirmingFlipLevel)
+        ) {
+            confirmingFlipLevel = undefined
         }
     })
 
@@ -360,16 +271,46 @@
             <div class="w-full sm:w-[75%] space-y-2">
                 <ShipyardPanel
                     compact
-                    orderableLevel={canQueueAnother ? simulatedLowestLevel : undefined}
-                    stagedCountByLevel={frozenStagedCountByLevel ?? stagedCountByLevel}
-                    sectionsOverride={frozenSections}
+                    orderableLevel={canOrderAnother ? lowestSection?.level : undefined}
                     onSelectShip={selectShip}
+                    needsConfirmation={wouldFlipHiddenTile}
                 />
 
-                <!-- Same Treasury-with-a-live-cost-preview card Expand Network shows -
-                     pendingCost here is the still-queued total (see
-                     selectedLevels/purchaseShips above), not yet actually spent until Purchase
-                     Ships runs. No Mining Capacity here - Ships don't affect it, but CARGO does:
+                {#if confirmingFlipLevel !== undefined}
+                    <!-- The one purchase Undo can't take back: the first Ship out of a section
+                         flips that section's hidden Alien Shipyard tile face up for everyone. -->
+                    <div
+                        class="space-y-1.5 rounded-md border border-[#e0b23d] bg-[#2a2410] p-2 text-xs"
+                        role="alertdialog"
+                        aria-label="Confirm buying a Ship that reveals an Alien Shipyard tile"
+                    >
+                        <div>
+                            Buying the first Level {confirmingFlipLevel} Ship flips its Alien Shipyard tile
+                            face up for everyone.
+                            <span class="font-semibold">This can't be undone.</span>
+                        </div>
+                        <div class="flex gap-1.5">
+                            <button
+                                type="button"
+                                onclick={confirmFlipOrder}
+                                class="rounded-md bg-[#2f6fed] px-3 py-1 text-xs font-semibold hover:bg-[#3f7dfa]"
+                            >
+                                Buy Ship
+                            </button>
+                            <button
+                                type="button"
+                                onclick={() => (confirmingFlipLevel = undefined)}
+                                class="rounded-md border border-[#3a4166] bg-[#1a1f38] px-2.5 py-1 text-xs hover:border-[#2f6fed] hover:bg-[#212845]"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </div>
+                {/if}
+
+                <!-- Same Treasury card Expand Network shows (each Ship is paid for the moment it
+                     is clicked, so there is no pending cost to preview). No Mining Capacity
+                     here - Ships don't affect it, but CARGO does:
                      cargoGain previews what Delivery will eventually add (see incomingCargo
                      above). Sized to match the Shipyard above it (both share this 75% column)
                      rather than the full width of the panel, so it reads as belonging to the
@@ -378,16 +319,14 @@
                     <CorporationInfoBox
                         {corporationId}
                         treasury={corporation.treasury}
-                        pendingCost={selectedLevels.reduce((sum, level) => sum + shipCost(level), 0)}
                         cargo={corporation.cargo}
                         cargoGain={incomingCargo}
                         {currentPayout}
                         {futurePayout}
                     >
                         <!-- Forced Purchase's own "No Credits?" Loans (rulebook pages 16-17 &
-                             25) replaces Purchase Ships/Clear entirely here, per the co-designer
-                             - this Corporation has no Ships and can't afford one outright, so
-                             there's nothing queued to Purchase or Clear in the first place. -->
+                             25) - this Corporation has no Ships and can't afford one outright,
+                             so clicking a Ship can't buy anything; this button does instead. -->
                         {#if canForcePurchase}
                             <button
                                 type="button"
@@ -398,23 +337,6 @@
                                 Force Purchase{#if forcePurchaseLoans > 0}
                                     ({forcePurchaseLoans} Loan{forcePurchaseLoans === 1 ? '' : 's'})
                                 {/if}
-                            </button>
-                        {:else}
-                            <button
-                                type="button"
-                                disabled={purchasing || selectedLevels.length === 0}
-                                onclick={purchaseShips}
-                                class="rounded-md bg-[#2f6fed] px-2.5 py-1 text-xs font-semibold hover:bg-[#3f7dfa] disabled:opacity-50"
-                            >
-                                {purchasing ? 'Purchasing…' : 'Purchase Ships'}
-                            </button>
-                            <button
-                                type="button"
-                                disabled={purchasing || selectedLevels.length === 0}
-                                onclick={clearQueue}
-                                class="rounded-md border border-[#3a4166] bg-[#1a1f38] px-2.5 py-1 text-xs hover:border-[#2f6fed] hover:bg-[#212845] disabled:opacity-50"
-                            >
-                                Clear
                             </button>
                         {/if}
                     </CorporationInfoBox>
@@ -458,10 +380,9 @@
             <!-- A small Corporation Charter, showing this Corporation's own Ordered Ships
                  tracker - so ordering a Ship visually reads as moving it from the Shipyard here,
                  into the first open column's ordered (top-row) slot, rather than just vanishing
-                 into an abstract count. queuedLevels previews Ships clicked but not yet submitted
-                 (see selectedLevels/purchaseShips above). -->
+                 into an abstract count. -->
             <div class="relative" style="width: 25%; aspect-ratio: {CHARTER_ASPECT};">
-                <CorporationCharterWithPowers {corporationId} queuedLevels={selectedLevels} />
+                <CorporationCharterWithPowers {corporationId} />
             </div>
         </div>
 
@@ -472,11 +393,10 @@
             </div>
         {/if}
 
-        <!-- Hidden while purchasing (which now includes an auto-Decline as soon as the queue
-             clears, below) - otherwise this would flash on screen and be clickable during that
-             brief round-trip right after Purchase Ships, forcing a redundant confirmation the
-             President just gave by clicking Purchase Ships in the first place. -->
-        {#if isMe && canDecline && selectedLevels.length === 0 && !purchasing}
+        <!-- Hidden while an order is going through (which can end in an auto-Decline once nothing
+             more can be ordered) - otherwise this would flash on screen and be clickable during
+             that brief round-trip. -->
+        {#if isMe && canDecline && !ordering}
             <button
                 type="button"
                 onclick={stopOrdering}
@@ -486,7 +406,7 @@
             </button>
         {/if}
 
-        {#if isMe && canLeakedResearch && !purchasing && !leakedResearchConfirming}
+        {#if isMe && canLeakedResearch && !ordering && !leakedResearchConfirming}
             <button
                 type="button"
                 onclick={() => (leakedResearchConfirming = true)}
@@ -504,7 +424,7 @@
             />
         {/if}
 
-        {#if isMe && selectedLevels.length === 0 && otherActionTypes.length > 0 && !purchasing}
+        {#if isMe && otherActionTypes.length > 0 && !ordering}
             <div class="border-t border-[#232945] pt-2">
                 {#if !chosenActionType}
                     <div class="flex flex-wrap gap-1.5">
