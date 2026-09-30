@@ -127,43 +127,36 @@ export class StellarVenturesGameSession extends GameSession<
     investorPickerOpen: InvestorActionId | undefined = $state()
     alienTechPickerOpen: AlienTechActionId | undefined = $state()
 
-    // Sign The Agreement's post-decision reveal (flip the Alien Explorers power to its "Sign
-    // The Agreement" face; flip the Alien Planet's own tile, revealing its chevrons and the
-    // Alien Corporation's Mining Capacity gain; then Issue Share, moving a Share into Alien
-    // Shareholdings and placing the Agreement Token on its track) is purely a client-side pacing
-    // gate, not a second (or third, or fourth) server round-trip - signTheAgreement.ts already
-    // resolves everything atomically the instant the action is submitted (tile revealed AND
-    // removed from the board, Mining Capacity increased, Share issued, Agreement Token placed,
-    // Bonus Dividend paid, Power discarded, all in one step). The trouble is that the very same
-    // action also immediately advances machineState away from OfferSignTheAgreement (to
-    // DraftPower, to let the Corporation pick a replacement Power) - and ActionPanel.svelte
-    // ordinarily swaps panels the instant machineState changes, which would yank
-    // OfferSignTheAgreementPanel off-screen before the deciding player ever sees any of this.
-    // Setting this field (right after a successful sign()) tells ActionPanel to keep showing
-    // OfferSignTheAgreementPanel regardless of what machineState has moved on to, for as long as
-    // this stays set - see ActionPanel.svelte's top-level check. corporationId/hexId snapshot the
-    // same IDs signTheAgreementCorporationId/signTheAgreementHexId held right before they
-    // cleared, and availableShareCountBeforeIssue snapshots the Corporation's available Share
-    // count from before that same atomic apply() already deducted 1 - so the panel can keep
-    // showing the pre-issue count through the 'power'/'hex' stages and only reveal the drop once
-    // the President actually clicks "Issue Share" (stage advances to 'shares'). Everything else
-    // revealed along the way (chevrons, the Mining Capacity gain, the Agreement Track placement)
-    // reads straight off already-current game state, needing no snapshot of its own. Not reset in
-    // beforeNewState - same reasoning as investorBuildCorporationId, it very much needs to
-    // survive the state update it itself triggers - cleared explicitly by
-    // OfferSignTheAgreementPanel once the player finishes clicking through the whole reveal.
+    // Sign The Agreement is walked through in this order: Sign (the Alien Explorers Power flips to
+    // its "Sign The Agreement" face), Issue Share (a Share moves into Alien Shareholdings and the
+    // Agreement Token lands on its track), then Flip the Alien Planet Tile. The first two steps are
+    // local-only previews (signTheAgreementStaged, below) so the President can still walk back with
+    // Back or Undo - nothing is submitted until the tile flip, since flipping reveals hidden
+    // information and signTheAgreement.ts marks the action revealsInfo (no Undo past it). Issuing
+    // the Share before the flip is purely a practical ordering for the table; the engine still
+    // resolves everything atomically in one action.
+    //
+    // Once submitted, the same action immediately advances machineState away from
+    // OfferSignTheAgreement (to DraftPower) - and ActionPanel.svelte ordinarily swaps panels the
+    // instant machineState changes, which would yank OfferSignTheAgreementPanel off-screen before
+    // the President sees the flipped tile. signTheAgreementReveal (set right after a successful
+    // submit) tells ActionPanel to keep showing OfferSignTheAgreementPanel regardless of
+    // machineState for as long as it stays set. corporationId/hexId snapshot the IDs
+    // signTheAgreementCorporationId/signTheAgreementHexId held right before they cleared. Not reset
+    // in beforeNewState - it has to survive the state update it itself triggers - cleared by
+    // OfferSignTheAgreementPanel once the President clicks Continue.
+    signTheAgreementStaged: 'power' | 'shares' | undefined = $state()
+
     signTheAgreementReveal:
         | {
               corporationId: CorporationId
               hexId: string
               // 'taxFraud' (Borders & Taxes only, and only when Committing Tax Fraud actually
               // took something from the Tax Box - see corporation.agreement.taxFraudAmount) is
-              // an extra beat after 'shares', gated behind its own "Commit Tax Fraud" button
-              // rather than appearing automatically - same click-to-reveal pacing as the rest of
-              // this sequence, just themed as the President choosing to reveal the crime rather
-              // than a rule step they're merely watching resolve.
-              stage: 'power' | 'hex' | 'shares' | 'taxFraud'
-              availableShareCountBeforeIssue: number
+              // an extra beat after the tile flip ('hex'), gated behind its own "Commit Tax
+              // Fraud" button - themed as the President choosing to reveal the crime rather than
+              // a rule step they're merely watching resolve.
+              stage: 'hex' | 'taxFraud'
           }
         | undefined = $state()
 
@@ -210,6 +203,7 @@ export class StellarVenturesGameSession extends GameSession<
         this.taxLoanHexIds = []
         this.wormholeSelectedHexId = undefined
         this.testingLiquidationRedoAction = undefined
+        this.signTheAgreementStaged = undefined
         // NOT reset here - a Private Contractor build spans several state updates (one per
         // Outpost placed) and needs to keep pointing at the same Corporation throughout. It's
         // cleared explicitly instead: right after a Jerry-Rig one-shot, and by finishExpansion.
@@ -244,7 +238,9 @@ export class StellarVenturesGameSession extends GameSession<
             // A tentative Create Wormhole hex pick (see wormholeSelectedHexId above) hasn't been
             // submitted either - Undo should just clear the highlight/preview, not fall through
             // to reverting some earlier, unrelated action.
-            this.wormholeSelectedHexId !== undefined
+            this.wormholeSelectedHexId !== undefined ||
+            // Sign / Issue Share are local previews until the tile flip submits the real action.
+            this.signTheAgreementStaged !== undefined
         ) {
             this.investorPickerOpen = undefined
             this.alienTechPickerOpen = undefined
@@ -252,6 +248,7 @@ export class StellarVenturesGameSession extends GameSession<
             this.developPlanetsHexIds = []
             this.boardActionMode = undefined
             this.wormholeSelectedHexId = undefined
+            this.signTheAgreementStaged = undefined
             return
         }
         await super.undo()

@@ -48,19 +48,23 @@
     // signTheAgreementHexId straight off game state), so the whole decision is just these two
     // buttons.
     //
-    // Once signed, gameSession.signTheAgreementReveal (see session.svelte.ts) pins this exact
-    // panel on screen for a short, 3-step local reveal - flip the Alien Explorers Power to its
-    // "Sign The Agreement" face; flip the Alien Planet's own tile (revealing its chevrons and the
-    // Alien Corporation's Mining Capacity gain); then Issue Share (a Share moves into Alien
-    // Shareholdings and the Agreement Token lands on its track) - even though the real action
-    // already fully resolved atomically the instant it was submitted, and machineState has
-    // already moved on to DraftPower. Falling back to reveal.corporationId/reveal.hexId below
-    // whenever the live signTheAgreement* fields have cleared is what lets every derived value in
-    // this file keep resolving correctly all the way through that reveal, with no separate
-    // "reveal mode" copy of any of them.
+    // Signing is walked through in three steps (see session.svelte.ts): Sign flips the Alien
+    // Explorers Power to its "Sign The Agreement" face, Issue Share moves a Share into Alien
+    // Shareholdings and places the Agreement Token, and Flip the Alien Planet Tile reveals the
+    // chevrons and the Alien Corporation's Mining Capacity gain. The first two are local previews
+    // (gameSession.signTheAgreementStaged) with a Back button; only the tile flip submits the real
+    // action. After that, gameSession.signTheAgreementReveal pins this panel on screen until the
+    // President clicks Continue, even though machineState has already moved on to DraftPower.
+    // Falling back to reveal.corporationId/reveal.hexId below whenever the live signTheAgreement*
+    // fields have cleared keeps every derived value resolving through that final step.
     const gameSession = getGameSession()
 
     const reveal = $derived(gameSession.signTheAgreementReveal)
+    const staged = $derived(gameSession.signTheAgreementStaged)
+    // Where the walkthrough is, whether previewed locally or already submitted.
+    const powerFlipped = $derived(!!reveal || staged !== undefined)
+    const shareIssued = $derived(!!reveal || staged === 'shares')
+    const tileFlipped = $derived(!!reveal)
     const corporationId = $derived(
         reveal?.corporationId ?? gameSession.gameState.signTheAgreementCorporationId
     )
@@ -92,7 +96,7 @@
     // Power itself has already been discarded from corporation.powers by that same atomic apply().
     const alienExplorersImage = $derived(
         corporationId
-            ? reveal
+            ? powerFlipped
                 ? alienExplorersSignTheAgreementImage(corporationId)
                 : activePowerCardImageForSide(corporationId, CorporatePowerId.AlienExplorers, 'back')
             : undefined
@@ -107,45 +111,36 @@
 
     // Shares still sitting on the Charter, unissued (Corporation.availableShareCount - same
     // field CorporationCharter.svelte's own Share stack uses) - shown as a small fanned stack of
-    // the real Share Certificate art next to the Alien Planet count. The live figure is already
-    // 1 lower than before signing (Issue Share To Aliens happened as part of the same atomic
-    // apply() that started this reveal), but the stack keeps showing the pre-issue count
-    // (reveal.availableShareCountBeforeIssue) through the 'power'/'hex' stages, only dropping to
-    // the real count once the President actually clicks "Issue Share" (stage 'shares') - so that
-    // moment reads as the Share actually leaving, not something that already silently happened.
+    // the real Share Certificate art next to the Alien Planet count. Once submitted, the live
+    // figure already reflects the issued Share; during the local Issue Share preview it's shown
+    // one lower so that moment reads as the Share actually leaving.
     const availableShareCount = $derived(corporation?.availableShareCount ?? 0)
     const displayedShareCount = $derived(
-        reveal && reveal.stage !== 'shares' ? reveal.availableShareCountBeforeIssue : availableShareCount
+        !reveal && staged === 'shares' ? Math.max(availableShareCount - 1, 0) : availableShareCount
     )
     const SHARE_STACK_FAN_OFFSET_PX = 14
 
-    // The Alien Planet's own tile - kept face down throughout the offer AND the reveal's first
-    // ('power') stage (echoing how it actually sits on the real board right up until the
-    // President flips it here), then its real, already-known chevron count once they choose to
-    // flip it themselves.
+    // The Alien Planet's own tile - face down until the President flips it (the step that
+    // actually submits the signing), then its real chevron count.
     const chevrons = $derived(hex?.alienAgreementTileChevrons)
     const alienTileImage = $derived(
-        reveal && reveal.stage !== 'power' && chevrons !== undefined
+        tileFlipped && chevrons !== undefined
             ? (AlienAgreementTileRevealedIcons[chevrons] ?? AlienAgreementTileHiddenIcon)
             : AlienAgreementTileHiddenIcon
     )
 
     // Flipping the tile also reveals the Alien Corporation's Mining Capacity gain from it (rule-
-    // book: "+3 Mining Capacity per chevron" - already applied for real by signTheAgreement.ts
-    // step 1, alongside the flip itself) - shown together with the chevrons, from the 'hex' stage
-    // onward, rather than held back for the later Issue Share step, since both are the same rule
-    // step.
-    const alienMiningCapacityGain = $derived(
-        reveal && reveal.stage !== 'power' && chevrons !== undefined ? chevrons * 3 : 0
-    )
+    // book: "+3 Mining Capacity per chevron" - applied by signTheAgreement.ts step 1).
+    const alienMiningCapacityGain = $derived(tileFlipped && chevrons !== undefined ? chevrons * 3 : 0)
 
     // Where the Agreement Token lands on the Agreement Track art once Issue Share is clicked -
     // same bucket-by-planet-count lookup AgreementPanel.svelte uses for its own copy of this
-    // track, keyed off corporation.agreement.planetCountAtSigning (set for real back in the
-    // 'power' stage's own atomic apply(), just not shown here until 'shares').
+    // track. Before submitting (the local Issue Share preview) that's the current Alien Planet
+    // count, which is exactly what signing will record; afterwards, the recorded
+    // corporation.agreement.planetCountAtSigning.
     const agreementTrackColumnIndex = $derived.by(() => {
-        const planetCountAtSigning = corporation?.agreement?.planetCountAtSigning
-        if (planetCountAtSigning === undefined) {
+        const planetCountAtSigning = corporation?.agreement?.planetCountAtSigning ?? planetCount
+        if (!planetCountAtSigning) {
             return undefined
         }
         const bucket = Math.min(planetCountAtSigning, AgreementTrackMaxPlanets)
@@ -189,7 +184,7 @@
     // The Agreement Track shown here should read the same as the Agreement tab's own copy of it
     // (AgreementPanel.svelte) - if some other Corporation already signed earlier, its Token and
     // Share belong on this art from the moment this panel opens, not just once this Corporation
-    // reaches its own 'shares' reveal stage. "Other" excludes corporationId itself, since that
+    // clicks Issue Share. "Other" excludes corporationId itself, since that
     // one Corporation's own Token/Share are already handled separately below, paced behind its
     // own reveal rather than shown immediately just because signTheAgreement.ts already resolved
     // it for real.
@@ -215,51 +210,51 @@
     // Whether THIS Corporation's own Share has reached the reveal - a plain $derived instead of
     // a markup {@const} since this one isn't an immediate child of a block ({#each}/{#if}/etc,
     // which {@const} requires), just a bare child of the wrapping <div>.
-    const showOwnShare = $derived(reveal?.stage === 'shares')
+    const showOwnShare = $derived(shareIssued)
 
-    // Commit Tax Fraud (Borders & Taxes only) - half the Tax Box, already taken into this
-    // Corporation's Treasury for real by the same atomic apply() that started this whole reveal
+    // Commit Tax Fraud (Borders & Taxes only) - half the Tax Box, taken into this
+    // Corporation's Treasury for real when the tile flip submits the signing
     // (actions/signTheAgreement.ts), and recorded permanently on the Agreement Token itself
     // (corporation.agreement.taxFraudAmount) precisely so it can be dramatized here after the
     // fact. Alpha never sets this at all (undefined); Borders & Taxes sets it to 0 when the Tax
     // Box happened to be empty at signing time, in which case there's nothing to dramatize - the
-    // 'shares' stage's button stays a plain "Continue" and this extra beat is skipped entirely.
+    // button after the tile flip stays a plain "Continue" and this extra beat is skipped.
     const taxFraudAmount = $derived(corporation?.agreement?.taxFraudAmount)
     const showCommitTaxFraud = $derived(
-        reveal?.stage === 'shares' && taxFraudAmount !== undefined && taxFraudAmount > 0
+        reveal?.stage === 'hex' && taxFraudAmount !== undefined && taxFraudAmount > 0
     )
 
 
 
-    async function sign() {
-        // Snapshot before submitting - a successful sign() clears/changes these live fields as
-        // part of the same state update, so they need to be captured now to seed
-        // signTheAgreementReveal.
-        const hexIdToSign = gameSession.gameState.signTheAgreementHexId
-        const corporationIdToSign = corporationId
-        const availableShareCountBeforeIssue = corporation?.availableShareCount ?? 0
-        await gameSession.signTheAgreement()
-        if (!gameSession.lastActionError && corporationIdToSign && hexIdToSign) {
-            gameSession.signTheAgreementReveal = {
-                corporationId: corporationIdToSign,
-                hexId: hexIdToSign,
-                stage: 'power',
-                availableShareCountBeforeIssue
-            }
-        }
+    // Sign and Issue Share are local previews only - Back (or Undo) returns to the offer.
+    function sign() {
+        gameSession.signTheAgreementStaged = 'power'
+    }
+    function issueShare() {
+        gameSession.signTheAgreementStaged = 'shares'
+    }
+    function backToOffer() {
+        gameSession.signTheAgreementStaged = undefined
     }
     async function decline() {
         await gameSession.declineSignTheAgreement()
     }
 
-    function flipHexTile() {
-        if (gameSession.signTheAgreementReveal) {
-            gameSession.signTheAgreementReveal = { ...gameSession.signTheAgreementReveal, stage: 'hex' }
-        }
-    }
-    function issueShare() {
-        if (gameSession.signTheAgreementReveal) {
-            gameSession.signTheAgreementReveal = { ...gameSession.signTheAgreementReveal, stage: 'shares' }
+    // Flipping the tile is the point of no return: this is where the real Sign The Agreement
+    // action is submitted (it reveals the tile, so it can't be undone).
+    async function flipHexTile() {
+        // Snapshot before submitting - a successful sign clears these live fields as part of the
+        // same state update, so they're captured now to seed signTheAgreementReveal.
+        const hexIdToSign = gameSession.gameState.signTheAgreementHexId
+        const corporationIdToSign = corporationId
+        await gameSession.signTheAgreement()
+        if (!gameSession.lastActionError && corporationIdToSign && hexIdToSign) {
+            gameSession.signTheAgreementStaged = undefined
+            gameSession.signTheAgreementReveal = {
+                corporationId: corporationIdToSign,
+                hexId: hexIdToSign,
+                stage: 'hex'
+            }
         }
     }
     function commitTaxFraud() {
@@ -301,15 +296,14 @@
              Alien Planets actually count toward THIS Corporation's own signing is highlighted
              directly on the board instead (Board.svelte pulses those hexes while this panel is
              up) - this art is for the track's actual state, not a highlight target of its own.
-             This Corporation's own Token/Share only join it once Issue Share is clicked (reveal
-             stage 'shares'), same paced reveal as everywhere else in this panel. Full width on
+             This Corporation's own Token/Share only join it once Issue Share is clicked, same paced reveal as everywhere else in this panel. Full width on
              mobile - at 50% of an already-narrow phone sidebar the 4 tiny reference tiles plus
              Alien Shareholdings box were illegible; it only needs to shrink back to half-width
              once there's a wide enough action panel (sm:) for that to still read clearly. -->
         <div class="w-full sm:w-1/2">
             <div class="relative overflow-hidden rounded-lg">
                 <img src={agreementTrackArt} alt="The Agreement" class="block w-full" />
-                {#if !reveal && livePlanetCountColumnIndex !== undefined}
+                {#if !shareIssued && livePlanetCountColumnIndex !== undefined}
                     {@const tag = AGREEMENT_BONUS_TAG_HIGHLIGHT[livePlanetCountColumnIndex]}
                     <!-- Pulsing highlight over the printed "instant" Bonus Dividend figure for
                          THIS Corporation's current planet count - see
@@ -325,7 +319,7 @@
                 {/if}
                 {#each AGREEMENT_TRACK_PLANET_COUNTS as _count, index (index)}
                     {@const otherSigned = otherSignedCorporationsByPlanetCount.get(_count) ?? []}
-                    {@const showOwnToken = reveal?.stage === 'shares' && index === agreementTrackColumnIndex}
+                    {@const showOwnToken = shareIssued && index === agreementTrackColumnIndex}
                     {#if otherSigned.length > 0 || showOwnToken}
                         <div
                             class="absolute flex flex-wrap items-center justify-center gap-1"
@@ -344,7 +338,7 @@
                                 />
                             {/each}
                             {#if showOwnToken}
-                                {#key reveal?.stage}
+                                {#key shareIssued}
                                     <img
                                         src={CorporationAgreementTokenIcons[corporationId]}
                                         alt="{CorporationDisplayNames[corporationId]} Agreement Token"
@@ -374,7 +368,7 @@
                             />
                         {/each}
                         {#if showOwnShare}
-                            {#key reveal?.stage}
+                            {#key shareIssued}
                                 <img
                                     src={CorporationShareCertificateIcons[corporationId]}
                                     alt="{CorporationDisplayNames[corporationId]} Share Certificate - Alien Shareholdings"
@@ -400,7 +394,7 @@
                     <img
                         src={alienExplorersImage}
                         alt="Alien Explorers"
-                        class="w-auto shrink-0 rounded-sm object-contain drop-shadow {reveal
+                        class="w-auto shrink-0 rounded-sm object-contain drop-shadow {powerFlipped
                             ? 'reveal-flip'
                             : ''}"
                         style="height: {PIECE_HEIGHT_PX}px; aspect-ratio: {POWER_CARD_ASPECT};"
@@ -437,7 +431,7 @@
                     {/each}
                 </div>
             {/if}
-            {#if CorporationAgreementTokenIcons[corporationId] && !corporation?.agreement}
+            {#if CorporationAgreementTokenIcons[corporationId] && !corporation?.agreement && !shareIssued}
                 <!-- The same handshake token AgreementPanel/CorporationStatsTable use for "has
                      not signed yet" - stops being accurate (and so stops rendering) the moment
                      corporation.agreement is set, which Sign The Agreement's own apply() does as
@@ -452,28 +446,26 @@
             {/if}
         </div>
 
-        {#if reveal}
-            <!-- The local reveal sequence itself - a client-side pacing gate only, since the real
-                 tile flip/removal, Mining Capacity gain, Share issue and Agreement Token
-                 placement all already happened the instant Sign The Agreement was submitted (see
-                 signTheAgreementReveal's comment in session.svelte.ts). Only the deciding
-                 President gets the buttons; everyone else just watches. -->
+        {#if reveal || staged}
+            <!-- The walkthrough: Sign -> Issue Share -> Flip the Alien Planet Tile. The first two
+                 are local previews with a Back button; Flip submits the real action. Only the
+                 deciding President gets the buttons; everyone else just watches the result. -->
             <div class="flex flex-wrap items-center gap-3 rounded-lg border border-[#2a3155] bg-[#12162b] p-3">
                 {#key alienTileImage}
                     <img
                         src={alienTileImage}
-                        alt={reveal.stage !== 'power' && chevrons !== undefined
+                        alt={tileFlipped && chevrons !== undefined
                             ? `Alien Agreement Tile - ${chevrons} chevron${chevrons === 1 ? '' : 's'}`
                             : 'Alien Agreement Tile - hidden'}
-                        class="h-16 w-16 shrink-0 rounded-sm object-contain drop-shadow reveal-flip"
+                        class="h-16 w-16 shrink-0 rounded-sm object-contain drop-shadow {tileFlipped
+                            ? 'reveal-flip'
+                            : ''}"
                     />
                 {/key}
-                {#if reveal.stage !== 'power'}
+                {#if tileFlipped}
                     <!-- Same "(+X)" gain treatment CorporationInfoBox.svelte uses for a
                          Corporation's own live Mining Capacity gain, here for the Alien
-                         Corporation's - revealed the instant the tile is flipped, since that's
-                         the same rule step ("Flip the Alien Agreement Tile: reveal its chevrons
-                         and increase the Alien Corporation's Mining Capacity by 3 per chevron"). -->
+                         Corporation's - revealed the instant the tile is flipped. -->
                     <div class="flex items-center gap-1.5 text-xs text-[#c3c9e6]">
                         <img
                             src={alienMarker}
@@ -487,15 +479,7 @@
                     </div>
                 {/if}
                 {#if isMe}
-                    {#if reveal.stage === 'power'}
-                        <button
-                            type="button"
-                            onclick={flipHexTile}
-                            class="rounded-md bg-[#2f6fed] px-3 py-1.5 text-xs font-semibold hover:bg-[#3f7dfa]"
-                        >
-                            Flip the Alien Planet Tile
-                        </button>
-                    {:else if reveal.stage === 'hex'}
+                    {#if staged === 'power'}
                         <button
                             type="button"
                             onclick={issueShare}
@@ -503,12 +487,20 @@
                         >
                             Issue Share
                         </button>
-                    {:else if reveal.stage === 'shares' && showCommitTaxFraud}
+                    {:else if staged === 'shares'}
+                        <button
+                            type="button"
+                            onclick={flipHexTile}
+                            disabled={!canSign || gameSession.busy}
+                            class="rounded-md bg-[#2f6fed] px-3 py-1.5 text-xs font-semibold hover:bg-[#3f7dfa] disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            Flip the Alien Planet Tile
+                        </button>
+                    {:else if showCommitTaxFraud}
                         <!-- Themed as the President's own choice to reveal the crime, not a rule
                              step they're merely watching resolve - the Tax Box was already halved
-                             into this Corporation's Treasury for real the instant Sign The
-                             Agreement was submitted (actions/signTheAgreement.ts); clicking this
-                             just dramatizes exactly how much. -->
+                             into this Corporation's Treasury for real when the tile was flipped
+                             (actions/signTheAgreement.ts); clicking this just dramatizes how much. -->
                         <button
                             type="button"
                             onclick={commitTaxFraud}
@@ -525,6 +517,20 @@
                             Continue
                         </button>
                     {/if}
+                    {#if staged}
+                        <button
+                            type="button"
+                            onclick={backToOffer}
+                            class="rounded-md border border-[#3a4166] bg-[#1a1f38] px-3 py-1.5 text-xs font-semibold hover:bg-[#262c4d]"
+                        >
+                            Back
+                        </button>
+                        <span class="text-xs text-[#7f88ad]">
+                            {staged === 'power'
+                                ? 'Nothing is final until the tile is flipped.'
+                                : 'Flipping the tile signs for real and cannot be undone.'}
+                        </span>
+                    {/if}
                 {:else}
                     <div class="text-xs text-[#7f88ad]">
                         {#if presidentId}<PlayerName playerId={presidentId} />{:else}The President{/if}
@@ -532,7 +538,7 @@
                     </div>
                 {/if}
             </div>
-            {#if reveal.stage === 'taxFraud' && taxFraudAmount !== undefined}
+            {#if reveal?.stage === 'taxFraud' && taxFraudAmount !== undefined}
                 <!-- The dramatic payoff itself, once the President clicks "Commit Tax Fraud"
                      above - a single pop-in line rather than a full card, in the same red/green
                      "ill-gotten gain" palette as the button that revealed it. -->

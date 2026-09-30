@@ -107,30 +107,6 @@
         onlyCorporationId?: CorporationId
     } = $props()
 
-    // Sign The Agreement's reveal (OfferSignTheAgreementPanel.svelte / session.svelte.ts's
-    // signTheAgreementReveal) paces the Alien Corporation's own Mining Capacity gain behind the
-    // President actually clicking "Flip the Alien Planet Tile" - even though
-    // state.alienCorporation.miningCapacity itself already jumped for real the instant Sign The
-    // Agreement was submitted (signTheAgreement.ts step 1, atomic). Left unaddressed, the alien
-    // marker on this chart (below) would still visibly jump the moment the President merely
-    // clicked Sign, on a completely different tab, well before that reveal's own "Flip the Alien
-    // Planet Tile" moment - undercutting the whole point of pacing it there. Rather than
-    // snapshotting the pre-reveal figure separately, it's reconstructed here: the reveal's own
-    // hex still carries the real, already-known chevron count, and "+3 Mining Capacity per
-    // chevron" is the whole rule (signTheAgreement.ts step 1), so subtracting that back out of
-    // the current live total recovers exactly what it was before this specific reveal's gain -
-    // correct regardless of what else may have changed alienCorporation.miningCapacity before or
-    // after (Alien Shipyard Tiles, Backroom Deal), since only this reveal's own contribution is
-    // being held back.
-    const pendingAlienMiningCapacityReveal = $derived.by(() => {
-        const reveal = gameSession.signTheAgreementReveal
-        if (!reveal || reveal.stage !== 'power') {
-            return undefined
-        }
-        const chevrons = gameSession.gameState.board.hexes[reveal.hexId]?.alienAgreementTileChevrons
-        return chevrons === undefined ? undefined : chevrons * 3
-    })
-
     // Real wooden-piece renders (SV_WOODEN_01, pages 12-17 for the Corporations, page 18 for the
     // Alien Corporation), one marker design per Corporation - the same design is used for both
     // its Cargo and Mining Capacity token, since the physical pieces are identical.
@@ -408,8 +384,7 @@
         if (!onlyCorporationId) {
             const alienMiningCapacity =
                 alienMiningCapacityOverride ??
-                gameSession.gameState.alienCorporation.miningCapacity -
-                    (pendingAlienMiningCapacityReveal ?? 0)
+                gameSession.gameState.alienCorporation.miningCapacity
             const wrappedAlienMiningCapacity = wrapMiningCapacityForDisplay(alienMiningCapacity)
             const alienRow = dividendRowForMiningCapacity(wrappedAlienMiningCapacity)
             const alienSubIndex =
