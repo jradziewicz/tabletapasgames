@@ -1,8 +1,8 @@
 <script lang="ts">
     // Full-screen cinematic that plays for EVERY player the moment any Corporation Signs The
-    // Agreement (actions/signTheAgreement.ts) - the signer included, where it plays first and
-    // then hands off to OfferSignTheAgreementPanel's own click-through reveal underneath. Purely
-    // spectacle: nothing here is a decision.
+    // Agreement (actions/signTheAgreement.ts) - the signer included, for whom it waits until
+    // they've clicked through OfferSignTheAgreementPanel's own reveal steps. Purely spectacle:
+    // nothing here is a decision.
     //
     // Same approach as FirstShipOrderedRevealOverlay: derived straight from permanent game state
     // (corporation.agreement is set once, forever, by signing) rather than from a live event, so
@@ -63,8 +63,11 @@
         }
     }
 
+    // The signer sees this only after finishing their own click-through walkthrough
+    // (OfferSignTheAgreementPanel, driven by session.signTheAgreementReveal) - it waits until
+    // that clears. Everyone else has no walkthrough, so it plays for them straight away.
     const pendingCorporation = $derived(
-        gameSession.isViewingHistory
+        gameSession.isViewingHistory || gameSession.signTheAgreementReveal !== undefined
             ? undefined
             : signedCorporations.find((corporation) => !seen.has(corporation.id))
     )
