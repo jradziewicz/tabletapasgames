@@ -326,6 +326,16 @@ export class FirestoreUserStore implements UserStore {
                 updatedFields.push('preferences')
             }
 
+            // Only the admin roles route passes roles; the self-service user update never does
+            if (
+                fieldsToUpdate.roles &&
+                (fieldsToUpdate.roles.length !== existingUser.roles.length ||
+                    fieldsToUpdate.roles.some((role, index) => role !== existingUser.roles[index]))
+            ) {
+                updatedUser.roles = fieldsToUpdate.roles
+                updatedFields.push('roles')
+            }
+
             if (
                 fieldsToUpdate.emailVerified !== undefined &&
                 existingUser.emailVerified !== fieldsToUpdate.emailVerified

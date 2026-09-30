@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { randomUUID } from 'node:crypto'
 import { Firestore } from '@google-cloud/firestore'
 import { createClient, SocketClosedUnexpectedlyError, type RedisClientType } from 'redis'
-import { GameStatus, PlayerStatus, UserStatus, type Game, type Bookmark } from '@tabletop/common'
+import { GameStatus, PlayerStatus, Role, UserStatus, type Game, type Bookmark } from '@tabletop/common'
 import { cacheFixture } from '../../cache/tests/cacheFixture.js'
 import { FirestoreGameStore } from './gameStore.js'
 import { FirestoreChatStore } from './chatStore.js'
@@ -122,6 +122,27 @@ describe.skipIf(!process.env.CACHE_TEST_REDIS_HOST || !process.env.FIRESTORE_EMU
             if (typeof hash !== 'string') throw new Error('Expected password hash')
             expect(await users.validatePassword('synthetic password', hash)).toBe(true)
             expect(await client.get(key)).not.toContain(hash)
+        }, 20_000)
+
+        it('persists admin-assigned roles and refreshes the cached user', async () => {
+            await users.createUser({
+                id: prefix,
+                status: UserStatus.Active,
+                roles: [Role.User],
+                externalIds: []
+            })
+            await prime(`user-${prefix}`, () => users.findById(prefix))
+            const [updated, updatedFields] = await users.updateUser({
+                userId: prefix,
+                fields: { roles: [Role.User, Role.AlphaTester] }
+            })
+            expect(updatedFields).toContain('roles')
+            expect(updated.roles).toEqual([Role.User, Role.AlphaTester])
+            expect((await users.findById(prefix))?.roles).toEqual([Role.User, Role.AlphaTester])
+            expect((await db.doc(`users/${prefix}`).get()).get('roles')).toEqual([
+                Role.User,
+                Role.AlphaTester
+            ])
         }, 20_000)
 
         it('does not write a password when Account cache protection fails', async () => {
