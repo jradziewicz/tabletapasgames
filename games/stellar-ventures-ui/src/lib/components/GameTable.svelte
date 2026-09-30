@@ -27,6 +27,7 @@
     import BorderClosedRevealOverlay from '$lib/components/BorderClosedRevealOverlay.svelte'
     import PayTaxesRevealOverlay from '$lib/components/PayTaxesRevealOverlay.svelte'
     import SignTheAgreementCinematicOverlay from '$lib/components/SignTheAgreementCinematicOverlay.svelte'
+    import PowerCardZoom from '$lib/components/PowerCardZoom.svelte'
 
     import type { StellarVenturesGameSession } from '$lib/model/session.svelte'
     import type {
@@ -187,6 +188,7 @@
     <FirstShipOrderedRevealOverlay />
     <HostileTakeoverRevealOverlay />
     <SignTheAgreementCinematicOverlay />
+    <PowerCardZoom />
     {#if gameSession.gameState.usesTaxes}
         <BorderClosedRevealOverlay />
         <PayTaxesRevealOverlay />

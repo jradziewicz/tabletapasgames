@@ -195,3 +195,57 @@ export function alienExplorersSignTheAgreementImage(
 ): string | undefined {
     return AlienExplorersSignTheAgreementImageByCorporation[corporationId]
 }
+
+// Every Corporate Power card face this game has art for - PowerCardZoom.svelte uses it to
+// recognize a power card image anywhere on screen (by its src) and pop out a larger copy on
+// hover, without each panel having to opt in.
+export const AllPowerCardImages: ReadonlySet<string> = new Set([
+    accountingGimmickFront,
+    accountingGimmickBack,
+    leakedResearchFront,
+    leakedResearchBack,
+    alienEngineeringFront,
+    alienEngineeringBack,
+    cloakingDevicesFront,
+    cloakingDevicesBack,
+    deepSpaceSmugglingFront,
+    deepSpaceSmugglingBack,
+    finePrintFront,
+    finePrintBack,
+    icarusExperimentFront,
+    icarusExperimentBack,
+    alienAlchemistFront,
+    alienAlchemistBack,
+    backroomDealFront,
+    backroomDealBack,
+    deepSpacePiratesFront,
+    deepSpacePiratesBack,
+    dismantlingOutpostsFront,
+    dismantlingOutpostsBack,
+    hyperdriveFront,
+    hyperdriveBack,
+    stalledIPOFront,
+    stalledIPOBack,
+    sparePartsFront,
+    sparePartsBack,
+    oreRefinementFront,
+    oreRefinementBack,
+    quantumPropulsionFront,
+    quantumPropulsionBack,
+    nebularExplorersFront,
+    nebularExplorersBack,
+    windfallFront,
+    windfallBack,
+    alienExplorersPinkInc,
+    alienExplorersFrostFederated,
+    alienExplorersScarletSyndicate,
+    alienExplorersCeruleanCouncil,
+    alienExplorersGambogeGuild,
+    secretAgentsAmethystAgency,
+    taxAgentsAmethystAgency,
+    alienExplorersPinkIncSignTheAgreement,
+    alienExplorersFrostFederatedSignTheAgreement,
+    alienExplorersScarletSyndicateSignTheAgreement,
+    alienExplorersCeruleanCouncilSignTheAgreement,
+    alienExplorersGambogeGuildSignTheAgreement
+])
