@@ -32,6 +32,7 @@ import {
     PlayerJoinedNotification,
     PlayerStatus,
     Role,
+    canDiscoverTitle,
     User,
     UserNotification,
     UserNotificationAction,
@@ -62,6 +63,7 @@ import {
     GameUpdateCollisionError,
     InvalidPlayerIdError,
     InvalidPlayerUserError,
+    PlayersWithoutTitleAccessError,
     PlayersNotFoundError,
     PrivateGameNotFullError,
     UnauthorizedAccessError,
@@ -121,6 +123,27 @@ export class GameService {
         return Object.values(this.availableTitles)
     }
 
+    // Alpha/beta titles are only playable by users who could discover them in the library
+    // (see site/titleVisibility.ts) - admins plus the matching tester role
+    canPlayTitle(user: User, definition: GameDefinition): boolean {
+        return canDiscoverTitle(definition.info.metadata, user.roles)
+    }
+
+    // Every seated user in a restricted title needs access, not just the owner
+    private assertPlayersCanPlayTitle(
+        definition: GameDefinition,
+        players: Player[],
+        usersByPlayerId: Record<string, User>
+    ) {
+        const blocked = players.filter((player) => {
+            const user = usersByPlayerId[player.id]
+            return user && !this.canPlayTitle(user, definition)
+        })
+        if (blocked.length > 0) {
+            throw new PlayersWithoutTitleAccessError({ players: blocked })
+        }
+    }
+
     async createGame({
         definition,
         game,
@@ -136,6 +159,9 @@ export class GameService {
             throw new TournamentGameError('Tournament membership cannot be supplied by clients')
         assertExists(game.id, 'Game id is required')
         if (options?.masterSeed !== undefined && !owner.roles.includes(Role.Admin)) {
+            throw new UnauthorizedAccessError({ user: owner, gameId: game.id })
+        }
+        if (!this.canPlayTitle(owner, definition)) {
             throw new UnauthorizedAccessError({ user: owner, gameId: game.id })
         }
         assert(
@@ -155,6 +181,7 @@ export class GameService {
 
         // Check the specified players and populate them with user data
         const usersByPlayerId = await this.validateAndPopulatePlayers(newGame.players, owner)
+        this.assertPlayersCanPlayTitle(definition, newGame.players, usersByPlayerId)
 
         this.checkForDuplicatePlayers(newGame.players)
 
@@ -575,6 +602,7 @@ export class GameService {
             this.validatePlayerCount(gameId, fields.players, definition)
 
             usersByPlayerId = await this.validateAndPopulatePlayers(fields.players, owner)
+            this.assertPlayersCanPlayTitle(definition, fields.players, usersByPlayerId)
             if (fields.isPublic === false) {
                 if (fields.players.find((p) => !p.userId)) {
                     throw new PrivateGameNotFullError({ id: gameId })
@@ -683,6 +711,10 @@ export class GameService {
             throw new GameNotFoundError({ id: gameId })
         }
         assertOrdinaryGame(game)
+        const definition = this.getTitle(game.typeId)
+        if (definition && !this.canPlayTitle(user, definition)) {
+            throw new UserIsNotAllowedPlayerError({ user, gameId })
+        }
 
         const [updatedGame, updatedFields] = await this.gameStore.updateGame({
             game,

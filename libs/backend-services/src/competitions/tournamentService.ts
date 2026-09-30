@@ -6,6 +6,8 @@ import {
     Role,
     TournamentDraft,
     UserStatus,
+    GameVisibility,
+    getTitleVisibility,
     type GameDefinition,
     type Tournament,
     type TournamentDetail,
@@ -405,6 +407,10 @@ export class TournamentService {
         const gamesPerEntrant = draft.format.stages[0].gamesPerEntrant
         const title = this.titles[rules.titleId]
         if (!title) throw new TournamentError('This game title is unavailable', 400)
+        // Tournaments seat whoever registers, which would bypass the every-player-is-a-tester
+        // rule for alpha/beta titles (see GameService.canPlayTitle)
+        if (getTitleVisibility(title.info.metadata) !== GameVisibility.Public)
+            throw new TournamentError('Tournaments are not available for alpha or beta games', 400)
         rules.gameConfig = normalizeGameConfig({
             ...defaultGameConfig(title.info.configurator?.options ?? []),
             ...rules.gameConfig

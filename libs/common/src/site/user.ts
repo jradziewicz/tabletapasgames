@@ -7,8 +7,8 @@ export enum Role {
     Developer = 'developer',
     Admin = 'admin',
     BetaTester = 'betatester',
-    // Assignable from the /admin page (brought over from upstream). Upstream gates alpha-only
-    // titles on it; here it does nothing until that title-visibility work is synced.
+    // Assignable from the /admin page. Grants access to alpha-visibility titles
+    // (see site/titleVisibility.ts)
     AlphaTester = 'alphatester'
 }
 
