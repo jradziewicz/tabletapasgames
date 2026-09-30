@@ -12,6 +12,8 @@
     } from 'flowbite-svelte'
     import {
         normalizeMasterSeed,
+        GameVisibility,
+        getTitleVisibility,
         defaultGameConfig,
         normalizeGameConfig,
         type GameCreationOptions,
@@ -249,6 +251,12 @@
                         errors[player.id] = ['This player was not found']
                     }
                     unexpectedError = false
+                } else if (e.name === 'PlayersWithoutTitleAccessError') {
+                    let metadata = e.metadata as { players: Player[] }
+                    for (const player of metadata.players) {
+                        errors[player.id] = ['This player is not a tester for this game']
+                    }
+                    unexpectedError = false
                 } else if (e.name === 'DuplicatePlayerError') {
                     let metadata = e.metadata as { username: string; userId: string }
                     for (const player of players) {
@@ -468,7 +476,7 @@
             {/if}
         {/each}
     </div>
-    {#if !gameTitle.info.metadata.beta && mode === EditMode.Create}
+    {#if getTitleVisibility(gameTitle.info.metadata) === GameVisibility.Public && mode === EditMode.Create}
         <Toggle bind:checked={isPublic}>Public</Toggle>
     {/if}
     {#if gameTitle.info.configurator && gameTitle.info.configurator.options.length > 0}

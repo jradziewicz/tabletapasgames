@@ -10,6 +10,7 @@ enum GameServiceError {
     GameAlreadyStarted = 'GameAlreadyStartedError',
     GameUpdateCollisionError = 'GameUpdateCollisionError',
     PlayersNotFound = 'PlayersNotFoundError',
+    PlayersWithoutTitleAccess = 'PlayersWithoutTitleAccessError',
     PrivateGameNotFull = 'PrivateGameNotFullError',
     InvalidPlayerUser = 'InvalidPlayerUserError',
     InvalidPlayerId = 'InvalidPlayerIdError',
@@ -116,6 +117,16 @@ export class PlayersNotFoundError extends BaseError {
         super({
             name: GameServiceError.PlayersNotFound,
             message: `Players were not found`,
+            metadata: { players }
+        })
+    }
+}
+
+export class PlayersWithoutTitleAccessError extends BaseError {
+    constructor({ players }: { players: Player[] }) {
+        super({
+            name: GameServiceError.PlayersWithoutTitleAccess,
+            message: `Players do not have access to this alpha or beta title`,
             metadata: { players }
         })
     }

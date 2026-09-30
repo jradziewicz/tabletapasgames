@@ -71,6 +71,7 @@ export * from './site/chat/gameChat.js'
 export * from './site/chat/gameChatMessage.js'
 export * from './site/chat/bookmark.js'
 export * from './site/user.js'
+export * from './site/titleVisibility.js'
 export * from './site/tournament.js'
 export * from './site/tournamentSchedule.js'
 export * from './site/notifications/tournamentNotification.js'
@@ -101,3 +102,5 @@ export * from './site/gameHistory.js'
 export * from './site/adminGames.js'
 
 export * from './preferences/preferences.js'
+
+export * from './game/definition/gameMetadata.js'
