@@ -179,13 +179,13 @@
                             {/if}
                         </div>
                     </div>
-                    <div class="parties flex items-center gap-6 sm:gap-10">
+                    <div class="parties flex items-center gap-3 sm:gap-5">
                         <img class="logo" src={reveal.logo} alt="{reveal.name} logo" />
+                        {#if reveal.token}
+                            <img class="token" src={reveal.token} alt="{reveal.name} Agreement Token" />
+                        {/if}
                         <img class="alien" src={alienHead} alt="The Aliens" />
                     </div>
-                    {#if reveal.token}
-                        <img class="token" src={reveal.token} alt="{reveal.name} Agreement Token" />
-                    {/if}
                 </div>
 
                 <div class="title-block">
@@ -323,7 +323,8 @@
     }
 
     .emblem {
-        width: 20rem;
+        width: 24rem;
+        max-width: 100%;
         height: 11rem;
     }
     .tile {
@@ -368,10 +369,7 @@
         animation: slam-alien 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) 2.55s both;
     }
     .token {
-        position: absolute;
-        left: 50%;
-        bottom: -1rem;
-        margin-left: -2.25rem;
+        flex-shrink: 0;
         width: 4.5rem;
         height: 4.5rem;
         object-fit: contain;
@@ -523,7 +521,7 @@
         }
         100% {
             opacity: 1;
-            transform: scale(1) rotate(-8deg);
+            transform: scale(1) rotate(0deg);
         }
     }
     @keyframes title-in {
@@ -557,6 +555,20 @@
         to {
             opacity: 1;
             transform: scale(1);
+        }
+    }
+
+    @media (max-width: 480px) {
+        .logo {
+            max-width: 6rem;
+            max-height: 6rem;
+        }
+        .alien {
+            max-height: 6rem;
+        }
+        .token {
+            width: 3.25rem;
+            height: 3.25rem;
         }
     }
 
