@@ -59,8 +59,16 @@ export class DraftPowerStateHandler
         const state = context.gameState
 
         // End-of-Initial-Auction reveal (rulebook page 11) - see class docs above. A no-op once
-        // the pile has already been emptied by an earlier draft.
-        if (state.initialAuctionQueue.length === 0 && state.corporatePowerDrawPileIds.length > 0) {
+        // the pile has already been emptied by an earlier draft. New Investor Setup has no
+        // Initial Auction and so no reveal; games created before its setup stopped dealing a draw
+        // pile still carry one, which must stay out of play rather than join the row here.
+        const usesNewInvestorSetup =
+            (context.gameConfig as { useNewInvestorSetup?: boolean }).useNewInvestorSetup === true
+        if (
+            !usesNewInvestorSetup &&
+            state.initialAuctionQueue.length === 0 &&
+            state.corporatePowerDrawPileIds.length > 0
+        ) {
             state.availableCorporatePowerIds.push(...state.corporatePowerDrawPileIds)
             state.corporatePowerDrawPileIds = []
         }

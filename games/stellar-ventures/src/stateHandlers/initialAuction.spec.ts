@@ -314,6 +314,122 @@ describe('InitialAuctionStateHandler', () => {
         }
     })
 
+    it('New Investor Setup puts only 11 Corporate Powers in play: 5 on Charters, 6 face up, no draw pile', () => {
+        const players: Player[] = Array.from({ length: 4 }, (_, index) => ({
+            id: `p${index + 1}`,
+            isHuman: true,
+            userId: `u${index + 1}`,
+            name: `Player ${index + 1}`,
+            status: PlayerStatus.Joined
+        }))
+        const game: Game = {
+            id: 'game-1',
+            typeId: 'stellar-ventures',
+            status: GameStatus.Started,
+            isPublic: false,
+            deleted: false,
+            ownerId: 'u1',
+            name: 'Stellar Ventures Test',
+            players,
+            config: { useNewInvestorSetup: true },
+            hotseat: false,
+            winningPlayerIds: [],
+            seed: 123,
+            createdAt: new Date(),
+            storage: GameStorage.Local,
+            category: GameCategory.Standard
+        }
+        const state: UninitializedGameState = {
+            id: 'state-1',
+            gameId: game.id,
+            activePlayerIds: [],
+            actionCount: 0,
+            actionChecksum: 0,
+            prng: { seed: 123, invocations: 0 },
+            winningPlayerIds: []
+        }
+
+        const initialState = new StellarVenturesGameInitializer().initializeGameState(game, state)
+
+        const onCharters = initialState.corporations.flatMap((corporation) =>
+            corporation.powers
+                .map((power) => power.id)
+                .filter(
+                    (id) =>
+                        id !== CorporatePowerId.AlienExplorers &&
+                        id !== CorporatePowerId.SecretAgents &&
+                        id !== CorporatePowerId.TaxAgents
+                )
+        )
+        expect(onCharters).toHaveLength(5)
+        expect(initialState.availableCorporatePowerIds).toHaveLength(6)
+        expect(initialState.corporatePowerDrawPileIds).toEqual([])
+        for (const id of onCharters) {
+            expect(initialState.availableCorporatePowerIds).not.toContain(id)
+        }
+    })
+
+    it('Draft Power never reveals a leftover draw pile into the row in a New Investor Setup game', () => {
+        const players: Player[] = Array.from({ length: 4 }, (_, index) => ({
+            id: `p${index + 1}`,
+            isHuman: true,
+            userId: `u${index + 1}`,
+            name: `Player ${index + 1}`,
+            status: PlayerStatus.Joined
+        }))
+        const game: Game = {
+            id: 'game-1',
+            typeId: 'stellar-ventures',
+            status: GameStatus.Started,
+            isPublic: false,
+            deleted: false,
+            ownerId: 'u1',
+            name: 'Stellar Ventures Test',
+            players,
+            config: { useNewInvestorSetup: true },
+            hotseat: false,
+            winningPlayerIds: [],
+            seed: 123,
+            createdAt: new Date(),
+            storage: GameStorage.Local,
+            category: GameCategory.Standard
+        }
+        const state: UninitializedGameState = {
+            id: 'state-1',
+            gameId: game.id,
+            activePlayerIds: [],
+            actionCount: 0,
+            actionChecksum: 0,
+            prng: { seed: 123, invocations: 0 },
+            winningPlayerIds: []
+        }
+
+        const initialState = new StellarVenturesGameInitializer().initializeGameState(game, state)
+
+        // A game created before New Investor Setup stopped dealing a draw pile still carries one.
+        initialState.corporatePowerDrawPileIds = [CorporatePowerId.Windfall, CorporatePowerId.SpareParts]
+        const rowBefore = [...initialState.availableCorporatePowerIds]
+        initialState.draftPowerCorporationId = CorporationId.PinkInc
+        initialState.draftPowerResumeState = MachineState.IssueShare
+        const context = new MachineContext({
+            gameConfig: { useNewInvestorSetup: true },
+            gameState: initialState as HydratedStellarVenturesGameState
+        })
+        const presidentPlayerId = initialState.getCorporation(CorporationId.PinkInc).getPresidentPlayerId()!
+        const draft = new HydratedDraftPower({
+            id: 'draft-new-investor',
+            gameId: initialState.gameId,
+            source: ActionSource.User,
+            type: ActionType.DraftPower,
+            playerId: presidentPlayerId,
+            powerId: rowBefore[0]!
+        } as DraftPower)
+        draft.apply(initialState as HydratedStellarVenturesGameState, context)
+        new DraftPowerStateHandler().onAction(draft, context)
+
+        expect(initialState.availableCorporatePowerIds).toEqual(rowBefore.slice(1))
+    })
+
     it('deals 3 of the 5 Alien Shipyard Tiles onto Levels 2, 3 and 5, hidden until revealed', () => {
         const state = createTestState(4)
 

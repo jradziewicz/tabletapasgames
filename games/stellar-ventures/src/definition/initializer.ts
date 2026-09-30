@@ -324,7 +324,11 @@ export class StellarVenturesGameInitializer
         // Setup hands 5 specific physical tiles directly to Charters instead (see
         // NEW_INVESTOR_SETUP_BY_PLAYER_COUNT above) - those 5 have to come out of this shuffle
         // pool first, or the same physical tile could end up on a Charter AND in the visible row
-        // or draw pile at once.
+        // or draw pile at once. Those 5 also count toward the 11 tiles used this game, so New
+        // Investor Setup leaves 6 face up and no hidden draw pile - the same 6 a standard game
+        // shows once its Initial Auction drafts are done. (Dealing a full 6 + 5 on top of the 5
+        // assigned tiles put 16 Powers into play and grew the row to 10 after the first Sign The
+        // Agreement draft.)
         const corporatePowerPool = skipInitialAuction
             ? NeutralCorporatePowerIds.filter((id) => !NEW_INVESTOR_SETUP_ASSIGNED_POWER_IDS.includes(id))
             : NeutralCorporatePowerIds
@@ -334,10 +338,12 @@ export class StellarVenturesGameInitializer
             0,
             INITIAL_AVAILABLE_CORPORATE_POWER_COUNT
         )
-        const corporatePowerDrawPileIds = shuffledCorporatePowerIds.slice(
-            INITIAL_AVAILABLE_CORPORATE_POWER_COUNT,
-            INITIAL_AVAILABLE_CORPORATE_POWER_COUNT + CORPORATE_POWER_DRAW_PILE_COUNT
-        )
+        const corporatePowerDrawPileIds = skipInitialAuction
+            ? []
+            : shuffledCorporatePowerIds.slice(
+                  INITIAL_AVAILABLE_CORPORATE_POWER_COUNT,
+                  INITIAL_AVAILABLE_CORPORATE_POWER_COUNT + CORPORATE_POWER_DRAW_PILE_COUNT
+              )
 
         // Confirmed by the game's co-designer: the Corporation Round's turn order should run in
         // the OPPOSITE order from the Initial Auction queue, not the same order. Whichever
