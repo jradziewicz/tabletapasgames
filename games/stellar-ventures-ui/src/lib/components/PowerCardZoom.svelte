@@ -115,13 +115,16 @@
         src={zoom.src}
         alt=""
         aria-hidden="true"
-        class="power-zoom pointer-events-none fixed z-[70] rounded-xl"
+        class="power-zoom rounded-xl"
         style="left: {zoom.left}px; top: {zoom.top}px; width: {zoom.width}px; aspect-ratio: {POWER_CARD_ASPECT};"
     />
 {/if}
 
 <style>
     .power-zoom {
+        position: fixed;
+        z-index: 70;
+        pointer-events: none;
         object-fit: contain;
         filter: drop-shadow(0 18px 40px rgba(0, 0, 0, 0.75));
         animation: zoom-in 0.14s ease-out both;

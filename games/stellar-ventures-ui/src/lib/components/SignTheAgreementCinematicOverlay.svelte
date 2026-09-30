@@ -160,7 +160,7 @@
     {#key reveal.corporationId}
         <!-- svelte-ignore a11y_click_events_have_key_events -->
         <div
-            class="cinematic fixed inset-0 z-[60] flex items-center justify-center overflow-hidden"
+            class="cinematic flex items-center justify-center overflow-hidden"
             style="--corp: {reveal.color};"
             role="dialog"
             aria-modal="true"
@@ -250,7 +250,12 @@
 {/if}
 
 <style>
+    /* Positioning and layering live here rather than in Tailwind classes so the overlay stays a
+       full-screen top layer even if a utility class is missing from the page's CSS. */
     .cinematic {
+        position: fixed;
+        inset: 0;
+        z-index: 60;
         color: #e6e9f5;
     }
     .backdrop {

@@ -1,6 +1,10 @@
 import tailwindcss from '@tailwindcss/postcss'
 
-const scopePrefix = '[data-game-ui="stellar-ventures"]'
+// Must match the data-game-ui attribute GameUI.svelte (libs/frontend-components) puts on the
+// game's root element, which is derived from the game's typeId ('stellarventures'), not the
+// package name. With the package name here, none of this bundle's own Tailwind CSS applied on
+// the live site - only classes the site frontend happened to generate itself did.
+const scopePrefix = '[data-game-ui="stellarventures"]'
 
 const scopeGameCssPlugin = {
     postcssPlugin: 'scope-game-css-plugin',
