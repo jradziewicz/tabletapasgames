@@ -242,10 +242,13 @@
                      TabWorkspace below; double-click to go back to the automatic height. A
                      keyboard-focusable separator is the standard accessible pattern for a resize
                      handle, which is exactly what the two ignored a11y rules below object to. -->
+                <!-- Desktop only (sm+): on a phone the action area and the tabs stack in one
+                     scrolling column, so there is nothing sensible for a drag to trade, and the
+                     handle sat where a thumb naturally lands while scrolling. -->
                 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
                 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                 <div
-                    class="group flex h-6 shrink-0 cursor-row-resize touch-none items-center justify-center select-none resize-handle {resizingTopSection ? 'bg-[#2f6fed]/10' : ''}"
+                    class="group max-sm:hidden flex h-6 shrink-0 cursor-row-resize touch-none items-center justify-center select-none resize-handle {resizingTopSection ? 'bg-[#2f6fed]/10' : ''}"
                     role="separator"
                     aria-orientation="horizontal"
                     aria-label="Resize the space above the tabs"

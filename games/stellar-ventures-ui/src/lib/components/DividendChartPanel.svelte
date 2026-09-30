@@ -288,8 +288,9 @@
     // Markers that land on the same cell are grouped and arranged per-track:
     //   - Mining Capacity: they stack directly on top of one another (a small cascade offset so
     //     it reads as a pile rather than one marker), with the most recently added one on top.
-    //     Clicking any marker in a stacked pile splays them apart so all are visible; clicking
-    //     again restacks them. "Most recently added" has no real timestamp in the game state, so
+    //     Hovering any marker in a stacked pile splays them apart so all are visible and they
+    //     restack when the pointer leaves (hover-only, no click, like every other splay in the
+    //     game). "Most recently added" has no real timestamp in the game state, so
     //     this uses each marker's position in `raw` (Corporations in turn order, Alien last) as
     //     a stand-in - the last one built is treated as the newest and drawn on top.
     //   - Cargo: the first two Corporations to land on a cell sit side by side; a third (or
@@ -432,9 +433,28 @@
         return raw
     })
 
-    // Which Mining Capacity pile (if any) is currently splayed open - clicking any marker in a
-    // stacked pile toggles it.
+    // Which Mining Capacity pile (if any) is currently splayed open - hovering any marker in a
+    // stacked pile opens it and leaving closes it, matching MoneyStack.svelte's behavior.
     let splayedCellKey: string | undefined = $state()
+
+    function isSplayablePile(marker: PlacedMarker) {
+        return marker.track === 'mining' && marker.groupSize > 1
+    }
+
+    function onMarkerPointerEnter(marker: PlacedMarker) {
+        if (!isSplayablePile(marker)) return
+        splayedCellKey = marker.cellKey
+    }
+
+    // Splaying moves the markers out from under the cursor, so the marker just hovered fires a
+    // leave the instant it slides away. Only restack when the pointer really left the pile, i.e.
+    // it is not now over another marker of this same cell.
+    function onMarkerPointerLeave(marker: PlacedMarker, e: PointerEvent) {
+        if (!isSplayablePile(marker)) return
+        const next = e.relatedTarget
+        if (next instanceof HTMLElement && next.dataset['cellKey'] === marker.cellKey) return
+        if (splayedCellKey === marker.cellKey) splayedCellKey = undefined
+    }
 
     const markers = $derived(place(rawMarkers, splayedCellKey))
 
@@ -527,8 +547,6 @@
             onSelectDeepSpacePiratesTarget?.(marker.iconKey as CorporationId)
             return
         }
-        if (marker.track !== 'mining' || marker.groupSize <= 1) return
-        splayedCellKey = splayedCellKey === marker.cellKey ? undefined : marker.cellKey
     }
 
     // Per the co-designer: frame the chart on whichever payout cell payoutHighlight is currently
@@ -567,8 +585,7 @@
             <img
                 src={marker.icon}
                 alt={marker.label}
-                class="absolute {(marker.track === 'mining' && marker.groupSize > 1) ||
-                (alienMiningMarkerClickable && marker.key === 'alien-mining') ||
+                class="absolute {(alienMiningMarkerClickable && marker.key === 'alien-mining') ||
                 isDeepSpaceSmugglingTarget ||
                 isDeepSpacePiratesTarget
                     ? 'cursor-pointer'
@@ -580,7 +597,10 @@
                         ? 'deep-space-pirates-target-pulse'
                         : 'drop-shadow-md'}"
                 style="left: {marker.left}%; top: {marker.top}%; height: {heightPct}%; width: {widthPct}%; z-index: {marker.zIndex}; transform: translate(-50%, -50%); transition: left 150ms ease, top 150ms ease;"
+                data-cell-key={marker.cellKey}
                 onclick={() => onMarkerClick(marker)}
+                onpointerenter={() => onMarkerPointerEnter(marker)}
+                onpointerleave={(e) => onMarkerPointerLeave(marker, e)}
             />
         {/each}
 

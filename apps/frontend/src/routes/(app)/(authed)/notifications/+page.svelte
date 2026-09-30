@@ -1,8 +1,11 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { Card, Hr, Label, Input, Button, Alert, Toggle } from 'flowbite-svelte'
-    import { Color, type UserPreferences } from '@tabletop/common'
+    import { Color, ExternalAuthService, type UserPreferences } from '@tabletop/common'
     import { getAppContext } from '@tabletop/frontend-components'
+    import DiscordSignIn, {
+        isEnabled as isDiscordSigninEnabled
+    } from '$lib/components/DiscordSignIn.svelte'
 
     let { api, authorizationService } = getAppContext()
 
@@ -53,6 +56,54 @@
         void saveEmailPreference(enabled)
     }
 
+    // Discord direct messages - the site's own bot DMs the player's linked Discord account.
+    // Linking (on this page or the profile page) also adds the app to their Discord account,
+    // which is what lets the bot message them. Only offered when the site has a bot configured.
+    let discordLinked = $derived(
+        authorizationService
+            .getSessionUser()
+            ?.externalIds?.some((id) => id.startsWith(`${ExternalAuthService.Discord}:`)) ?? false
+    )
+    let dmAvailable = $state(false)
+    let dmEnabled = $state(false)
+    let dmLoading = $state(true)
+    let dmSaving = $state(false)
+    let dmError: string | undefined = $state(undefined)
+    let dmSaved = $state(false)
+
+    async function loadDmStatus() {
+        try {
+            const status = await api.getDiscordDmStatus()
+            dmAvailable = status.available
+            dmEnabled = status.enabled
+        } catch (e) {
+            console.log('Could not load Discord DM status', e)
+        } finally {
+            dmLoading = false
+        }
+    }
+
+    async function setDms(enabled: boolean) {
+        dmError = undefined
+        dmSaved = false
+        dmSaving = true
+        try {
+            const status = enabled
+                ? await api.subscribeDiscordDms()
+                : await api.unsubscribeDiscordDms()
+            dmEnabled = status.enabled
+            dmSaved = enabled
+        } catch (e) {
+            console.log(e)
+            dmError =
+                e instanceof Error && e.message
+                    ? e.message
+                    : 'Something went wrong. Please try again.'
+        } finally {
+            dmSaving = false
+        }
+    }
+
     // Discord webhook notifications - the user makes a webhook in a channel they control and
     // pastes its URL here; the server posts turn/invite messages to it. No bot, no linking.
     let webhookUrlInput = $state('')
@@ -68,6 +119,7 @@
     let showWebhookSteps = $state(false)
 
     onMount(async () => {
+        void loadDmStatus()
         try {
             const status = await api.getDiscordWebhookStatus()
             connectedWebhookUrl = status.webhookUrl
@@ -146,17 +198,80 @@
             <h3 class="text-xl font-medium text-gray-900 dark:text-white">Discord Notifications</h3>
             <div class="text-white-600 text-sm dark:text-gray-300">
                 Get a message in Discord when it's your turn, when you're invited to a game, and
-                when a game you're in starts. This works through a <span class="font-semibold"
-                    >webhook</span
-                > you create in any Discord channel you control - your own private server works
-                great - so nothing needs to be installed or linked.
+                when a game you're in starts.
+            </div>
+
+            {#if !dmLoading && dmAvailable && isDiscordSigninEnabled}
+                <h4 class="text-lg font-medium text-gray-900 dark:text-white">
+                    Direct messages <span class="text-sm font-normal dark:text-gray-400"
+                        >(easiest)</span
+                    >
+                </h4>
+                <div class="text-white-600 text-sm dark:text-gray-300">
+                    Link your Discord account and the TableTapas bot will DM you directly. Nothing
+                    to set up in Discord - linking adds the bot to your account.
+                </div>
+
+                {#if dmEnabled}
+                    <Alert class="dark:bg-green-200 dark:text-green-700">
+                        <span class="font-bold">Discord direct messages are on.</span>
+                        {#if dmSaved}
+                            <br /><span class="text-xs"
+                                >A test message was just sent - check your Discord DMs.</span
+                            >
+                        {/if}
+                    </Alert>
+                {/if}
+                {#if dmError}
+                    <Alert class="dark:bg-red-200 dark:text-red-700">
+                        {dmError}
+                    </Alert>
+                {/if}
+
+                <div class="flex flex-row gap-3 items-center justify-end">
+                    {#if !discordLinked}
+                        <span class="text-sm dark:text-gray-300">Link Discord to get started:</span>
+                        <DiscordSignIn mode={'link'} />
+                    {:else if dmEnabled}
+                        <Button
+                            type="button"
+                            color="alternative"
+                            disabled={dmSaving}
+                            onclick={() => setDms(false)}
+                        >
+                            {dmSaving ? 'Saving…' : 'Turn off'}
+                        </Button>
+                    {:else}
+                        <Button type="button" disabled={dmSaving} onclick={() => setDms(true)}>
+                            {dmSaving ? 'Sending test message…' : 'Turn on direct messages'}
+                        </Button>
+                    {/if}
+                </div>
+
+                <Hr class="my-2" />
+                <h4 class="text-lg font-medium text-gray-900 dark:text-white">
+                    Channel webhook <span class="text-sm font-normal dark:text-gray-400"
+                        >(alternative)</span
+                    >
+                </h4>
+            {/if}
+            <div class="text-white-600 text-sm dark:text-gray-300">
+                {#if !dmLoading && dmAvailable && isDiscordSigninEnabled}
+                    Prefer not to link your account, or want messages in a channel instead? This
+                    works through a
+                {:else}
+                    This works through a
+                {/if}
+                <span class="font-semibold">webhook</span> you create in any Discord channel you
+                control - your own private server works great - so nothing needs to be installed
+                or linked.
             </div>
 
             {#if webhookLoading}
                 <div class="text-sm dark:text-gray-400">Checking your Discord settings…</div>
             {:else if connectedWebhookUrl}
                 <Alert class="dark:bg-green-200 dark:text-green-700">
-                    <span class="font-bold">Discord notifications are on.</span><br />
+                    <span class="font-bold">Webhook notifications are on.</span><br />
                     <span class="break-all text-xs">Posting to {connectedWebhookUrl}</span><br />
                     {#if connectedDiscordUserId}
                         <span class="text-xs">Messages @mention you (user ID {connectedDiscordUserId}).</span>

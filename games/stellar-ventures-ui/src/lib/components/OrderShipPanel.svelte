@@ -323,6 +323,8 @@
                         cargoGain={incomingCargo}
                         {currentPayout}
                         {futurePayout}
+                        shipLevels={corporation.orderedShipLevels}
+                        shipLevelsLabel="Ordered"
                     >
                         <!-- Forced Purchase's own "No Credits?" Loans (rulebook pages 16-17 &
                              25) - this Corporation has no Ships and can't afford one outright,
@@ -380,8 +382,9 @@
             <!-- A small Corporation Charter, showing this Corporation's own Ordered Ships
                  tracker - so ordering a Ship visually reads as moving it from the Shipyard here,
                  into the first open column's ordered (top-row) slot, rather than just vanishing
-                 into an abstract count. -->
-            <div class="relative" style="width: 25%; aspect-ratio: {CHARTER_ASPECT};">
+                 into an abstract count. Desktop only: on a phone it was a thumbnail too small to
+                 read, so there the Ordered Ships row in the info box above stands in for it. -->
+            <div class="relative max-sm:hidden" style="width: 25%; aspect-ratio: {CHARTER_ASPECT};">
                 <CorporationCharterWithPowers {corporationId} />
             </div>
         </div>

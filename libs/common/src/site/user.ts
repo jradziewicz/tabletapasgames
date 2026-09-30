@@ -6,7 +6,10 @@ export enum Role {
     User = 'user',
     Developer = 'developer',
     Admin = 'admin',
-    BetaTester = 'betatester'
+    BetaTester = 'betatester',
+    // Assignable from the /admin page (brought over from upstream). Upstream gates alpha-only
+    // titles on it; here it does nothing until that title-visibility work is synced.
+    AlphaTester = 'alphatester'
 }
 
 export enum UserStatus {
@@ -36,7 +39,8 @@ export const UserPreferences = Type.Object({
     // One-time in-app announcement flags. Each is set true the moment the announcement is
     // shown (not waiting on the user to dismiss it), so it never shows more than once per
     // user - see the "showOnceAnnouncement" effect in the site layout.
-    seenDiscordWebhookAnnouncement: Type.Optional(Type.Boolean())
+    seenDiscordWebhookAnnouncement: Type.Optional(Type.Boolean()),
+    seenDiscordBotAnnouncement: Type.Optional(Type.Boolean())
 })
 
 export type User = Type.Static<typeof User>
@@ -56,3 +60,19 @@ export const User = Type.Object({
     createdAt: Type.Optional(DateType()),
     updatedAt: Type.Optional(DateType())
 })
+
+export const ADMIN_ASSIGNABLE_ROLES = [Role.AlphaTester, Role.BetaTester, Role.Developer] as const
+export type AdminAssignableRole = (typeof ADMIN_ASSIGNABLE_ROLES)[number]
+
+export function isAdminAssignableRole(role: Role): role is AdminAssignableRole {
+    return ADMIN_ASSIGNABLE_ROLES.some((assignable) => assignable === role)
+}
+
+export function withAssignedRoles(
+    existingRoles: readonly Role[],
+    assignedRoles: readonly AdminAssignableRole[]
+): Role[] {
+    const retained = existingRoles.filter((role) => !isAdminAssignableRole(role))
+    const assigned = ADMIN_ASSIGNABLE_ROLES.filter((role) => assignedRoles.includes(role))
+    return [...retained, ...assigned]
+}

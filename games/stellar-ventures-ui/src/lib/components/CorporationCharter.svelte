@@ -83,9 +83,10 @@
     const SHARE_STACK_VERTICAL_OFFSET_RESTING = 3
     const SHARE_STACK_VERTICAL_OFFSET_EXPANDED = 12
 
-    // Toggles between the resting and expanded splay above: hovering the stack (mouse) splays it,
-    // and tap/Enter toggles it for touch and keyboard. The status marker below only toggles on
-    // tap/Enter - it moves out of the way when the stack splays, so a hover trigger there would flicker.
+    // Toggles between the resting and expanded splay above: hovering the stack splays it and
+    // leaving restacks it - no click/tap toggle (per the co-designer, splays are hover-only across
+    // the whole game). The status marker below ignores the pointer entirely so hovering over it
+    // reaches the stack underneath instead of flickering as the marker slides away.
     let shareStackExpanded = $state(false)
     const shareStackFanOffset = $derived(
         shareStackExpanded ? SHARE_STACK_FAN_OFFSET_EXPANDED : SHARE_STACK_FAN_OFFSET_RESTING
@@ -142,14 +143,11 @@
     // Private status except Amethyst Agency's own explicit "PRIVATE" piece (see that map's own
     // doc comment) - everyone else simply shows no marker yet at Private.
     //
-    // Reuses the Share stack's own shareStackExpanded toggle below (rather than tracking its own
+    // Reuses the Share stack's own shareStackExpanded state below (rather than tracking its own
     // separate state) so it slides further up and out of the way in lockstep with the stack's own
     // wider expanded fan, instead of getting buried under it - per the co-designer, "have it move
-    // out with the stack when it is clicked on." The marker is made clickable too (mirroring the
-    // stack container's own onclick/onkeydown) since it visually overlaps part of that stack's
-    // clickable area - without its own handler, a click landing on the marker itself would be a
-    // dead zone that does nothing instead of toggling the expansion like the card underneath it
-    // would.
+    // out with the stack." It is pointer-events-none so the part of the stack it overlaps still
+    // splays on hover (the hover reaches the stack container beneath it).
     const STATUS_MARKER_RESTING = { right: 8, top: 80 }
     const STATUS_MARKER_EXPANDED = { right: 3, top: 72 }
     const STATUS_MARKER_ROTATION_DEG = 30
@@ -237,14 +235,9 @@
 
     {#if remainingShares > 0}
         <div
-            class="absolute cursor-pointer"
-            role="button"
-            tabindex="0"
-            onpointerenter={(e) => e.pointerType === 'mouse' && (shareStackExpanded = true)}
-            onpointerleave={(e) => e.pointerType === 'mouse' && (shareStackExpanded = false)}
-            onclick={(e) =>
-                (e as PointerEvent).pointerType !== 'mouse' && (shareStackExpanded = !shareStackExpanded)}
-            onkeydown={(e) => e.key === 'Enter' && (shareStackExpanded = !shareStackExpanded)}
+            class="absolute"
+            onpointerenter={() => (shareStackExpanded = true)}
+            onpointerleave={() => (shareStackExpanded = false)}
             style="left: {SHARE_STACK_BOX.left}%; top: {SHARE_STACK_BOX.top}%; width: {SHARE_STACK_BOX.width}%;"
         >
             {#each { length: remainingShares } as _, index (index)}
@@ -274,12 +267,7 @@
 
     {#if statusMarkerIcon}
         <div
-            class="absolute cursor-pointer transition-all duration-150"
-            role="button"
-            tabindex="0"
-            onclick={(e) =>
-                (e as PointerEvent).pointerType !== 'mouse' && (shareStackExpanded = !shareStackExpanded)}
-            onkeydown={(e) => e.key === 'Enter' && (shareStackExpanded = !shareStackExpanded)}
+            class="absolute pointer-events-none transition-all duration-150"
             style="right: {statusMarkerPosition.right}%; top: {statusMarkerPosition.top}%; height: {STATUS_MARKER_HEIGHT_PCT}%; transform: rotate({STATUS_MARKER_ROTATION_DEG}deg); transform-origin: 100% 0%; z-index: 10;"
         >
             <img

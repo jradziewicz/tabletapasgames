@@ -6,7 +6,8 @@
     // back out to one image per physical token rather than one per denomination, since the whole
     // point here is a messy stack a player could actually see themselves. Capped at MAX_TOKENS so
     // an unusually large amount still reads as a pile instead of degrading into a wall of icons.
-    // Hovering it (mouse) splays the pile out - tap or Enter toggles it for touch/keyboard - into an orderly, non-overlapping, largest-to-smallest
+    // Hovering it splays the pile out (press-and-hold does the same on touch; no click/tap
+    // toggle anywhere in the game - per the co-designer, splays are hover-only) into an orderly, non-overlapping, largest-to-smallest
     // row so a player can actually count it - same "small resting state, bigger on hover" idea as
     // the Share stack on CorporationCharter.svelte.
     //
@@ -64,13 +65,9 @@
 
 {#if tokens.length > 0}
     <div
-        class="relative h-full w-full cursor-pointer"
-        role="button"
-        tabindex="0"
-        onpointerenter={(e) => e.pointerType === 'mouse' && (expanded = true)}
-        onpointerleave={(e) => e.pointerType === 'mouse' && (expanded = false)}
-        onclick={(e) => (e as PointerEvent).pointerType !== 'mouse' && (expanded = !expanded)}
-        onkeydown={(e) => e.key === 'Enter' && (expanded = !expanded)}
+        class="relative h-full w-full"
+        onpointerenter={() => (expanded = true)}
+        onpointerleave={() => (expanded = false)}
     >
         {#if expanded}
             <!-- Splayed out for counting: plain flex flow (not absolute + top/left%), sorted

@@ -423,13 +423,25 @@ export class FirestoreUserStore implements UserStore {
                 )
             }
 
+            // The userExternalIds doc is the uniqueness guard. It can outlive its owner (an
+            // account deleted while still linked leaves it behind), so only treat it as taken
+            // when some user actually still carries the id; otherwise reclaim the orphan.
+            // Firestore requires all transaction reads before any write, hence the order here.
+            const holders = await transaction.get(
+                this.users.where('externalIds', 'array-contains', compositeId).limit(1)
+            )
+            this.recordRead()
+            if (!holders.empty) {
+                throw new AlreadyExistsError({ type: 'User', id: userId, field: 'externalId' })
+            }
+
             const storedUser = userToUpdate
             storedUser.externalIds.push(compositeId)
 
             const doc = this.users.doc(storedUser.id)
             transaction.update(doc, { externalIds: storedUser.externalIds })
 
-            transaction.create(this.userExternalIds.doc(compositeId), {})
+            transaction.set(this.userExternalIds.doc(compositeId), {})
             return storedUser
         }
 

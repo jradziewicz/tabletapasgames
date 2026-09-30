@@ -1198,9 +1198,11 @@
        rather than green so it reads as "you may place here" distinctly from
        .selected-develop-hex's green "already placed here" below, and so it doesn't get lost
        against the board's own greens/blues. */
-    /* The dimming mask over hexes that can't be built on while choosing where to build. */
+    /* The dimming mask over hexes that can't be built on while choosing where to build. Kept
+       fairly light so the map stays readable underneath; the amber .valid-expansion-hex tint
+       still marks the legal targets on top of it. */
     .unbuildable-hex-mask {
-        fill: rgba(6, 9, 20, 0.62);
+        fill: rgba(6, 9, 20, 0.45);
         stroke: none;
     }
     .valid-expansion-hex {

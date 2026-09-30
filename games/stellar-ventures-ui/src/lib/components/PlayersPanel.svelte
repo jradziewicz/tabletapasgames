@@ -165,7 +165,9 @@
                          same "identity marker, not a paint job" approach used on Corporations.
                          Falls back to a plain color dot for any Color that has no token art. -->
                     <div
-                        class="flex items-center justify-between border-b border-[#2a3155] bg-[#1b2242] px-3 py-2"
+                        class="flex items-center justify-between border-b border-[#2a3155] px-3 py-2"
+                        style:background-color={gameSession.colors.getPlayerBgColorValue(playerState.playerId)}
+                        style:color={gameSession.colors.getPlayerTextColorValue(playerState.playerId)}
                     >
                         <div class="flex items-center gap-2 font-semibold">
                             {#if PlayerSymbolIcons[gameSession.colors.getPlayerColor(playerState.playerId)]}
@@ -182,19 +184,26 @@
                                     )}
                                 ></span>
                             {/if}
-                            <PlayerName playerId={playerState.playerId} />
+                            <!-- Plain text rather than <PlayerName>: the whole header is already
+                                 painted in this player's color, so the pill would just be a
+                                 same-colored box inside it. -->
+                            <span class="capitalize"
+                                >{playerState.playerId === gameSession.myPlayer?.id
+                                    ? 'You'
+                                    : gameSession.getPlayerName(playerState.playerId)}</span
+                            >
                         </div>
                         <div class="flex items-center gap-1">
                             {#if anyShareIssued && playerState.playerId === gameSession.gameState.directorPlayerId}
                                 <span
-                                    class="rounded-full border border-[#e0b23d] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#f0d27a]"
+                                    class="rounded-full border border-current bg-black/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
                                 >
                                     Director
                                 </span>
                             {/if}
                             {#if isTurn(playerState.playerId)}
                                 <span
-                                    class="rounded-full border border-[#4f7cf2] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#9db4f5]"
+                                    class="rounded-full border border-current px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
                                 >
                                     Active
                                 </span>

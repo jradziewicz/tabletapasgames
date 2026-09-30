@@ -26,7 +26,8 @@
     import { onMount } from 'svelte'
     import { PUBLIC_API_HOST } from '$env/static/public'
     import { fromStore } from 'svelte/store'
-    import { UserStatus } from '@tabletop/common'
+    import { UserStatus, Color } from '@tabletop/common'
+    import { PUBLIC_DISCORD_CLIENT_ID } from '$env/static/public'
     import {
         VersionChange,
         GameEditForm,
@@ -199,6 +200,10 @@
         await goto('/dashboard')
     }
 
+    async function gotoAdmin() {
+        await goto('/admin')
+    }
+
     async function gotoAdminGames() {
         await goto('/admin/games')
     }
@@ -278,6 +283,50 @@
         if (/mobile/i.test(navigator.userAgent ?? '') && !location.hash) {
             window.scrollTo(0, 1)
         }
+    })
+
+    // One-time "new feature" nudge toward Discord bot DMs (Notifications page). Fires once per
+    // user: the moment it's shown, seenDiscordBotAnnouncement is saved back as true, so a failed
+    // save is the only way it could ever show twice. discordBotAnnouncementFired guards against
+    // this effect re-running (that same save updates sessionUser) before the flag round-trips.
+    // Only when this site has Discord sign-in configured, since linking is how DMs get set up.
+    let discordBotAnnouncementFired = false
+    $effect(() => {
+        const user = sessionUser
+        if (
+            !PUBLIC_DISCORD_CLIENT_ID ||
+            !user ||
+            user.status !== UserStatus.Active ||
+            discordBotAnnouncementFired ||
+            user.preferences?.seenDiscordBotAnnouncement === true
+        ) {
+            return
+        }
+        discordBotAnnouncementFired = true
+
+        onceMounted(() => {
+            toast.info('New: get a Discord DM when it\'s your turn.', {
+                description:
+                    'The TableTapas bot can message you directly for your turn, game invites, and game starts. Go to Notifications, link your Discord account, and click "Turn on direct messages".',
+                duration: 30000,
+                action: {
+                    label: 'Set it up',
+                    onClick: () => void goto('/notifications')
+                }
+            })
+        })
+
+        const preferences = user.preferences ?? {
+            preventWebNotificationPrompt: false,
+            preferredColors: Object.values(Color),
+            preferredColorsEnabled: false
+        }
+        api.updateUserPreferences(user.id, {
+            ...preferences,
+            seenDiscordBotAnnouncement: true
+        })
+            .then((updatedUser) => authorizationService.setSessionUser(updatedUser))
+            .catch((e) => console.log('Could not record Discord bot announcement as seen', e))
     })
 
     $effect(() => {
@@ -406,6 +455,9 @@
                                     >Notifications</DropdownItem
                                 >
                                 {#if authorizationService.isAdmin}
+                                    <DropdownItem class="w-full text-left" onclick={gotoAdmin}
+                                        >Admin</DropdownItem
+                                    >
                                     <DropdownItem class="w-full text-left" onclick={gotoAdminGames}
                                         >All Games (Admin)</DropdownItem
                                     >

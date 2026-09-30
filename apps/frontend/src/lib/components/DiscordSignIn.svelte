@@ -18,8 +18,13 @@
         let url = ''
         if (mode === 'bot') {
             url = `https://discord.com/oauth2/authorize?client_id=${PUBLIC_DISCORD_CLIENT_ID}`
+        } else if (mode === 'link') {
+            // Linking also adds the site's app to the user's Discord account (a "user install",
+            // integration_type=1 + applications.commands). Without that the bot can't DM them -
+            // Discord only lets a bot message people who share a server with it or have added it.
+            url = `https://discord.com/oauth2/authorize?client_id=${PUBLIC_DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${encodedHost}%2Foauth%2Fdiscord%2Flink&scope=identify+email+applications.commands&integration_type=1`
         } else {
-            url = `https://discord.com/oauth2/authorize?client_id=${PUBLIC_DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${encodedHost}%2Foauth%2Fdiscord${mode === 'login' ? '' : '%2Flink'}&scope=identify+email`
+            url = `https://discord.com/oauth2/authorize?client_id=${PUBLIC_DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${encodedHost}%2Foauth%2Fdiscord&scope=identify+email`
         }
         window.open(
             url,

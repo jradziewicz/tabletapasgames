@@ -29,6 +29,12 @@ export const CorporatePowerDisplayNames: Record<string, string> = {
 }
 
 export const CorporatePowerDescriptions: Record<string, string> = {
+    // Starting/Formation powers show in the same hover box as the drafted ones (PlayersPanel and
+    // CorporationStatsTable), so they need text here too.
+    [CorporatePowerId.AlienExplorers]:
+        'May build Outposts on Alien Planets (the builder gains 1 Alien Tech Cube). Once on 2+ Alien Planets, may Sign The Agreement.',
+    [CorporatePowerId.SecretAgents]:
+        "May build on Alien Planets without gaining Alien Tech. After building on one, either Amethyst's Mining Capacity +3 or the Alien Corporation's Mining Capacity + the tile's chevrons.",
     [CorporatePowerId.TaxAgents]:
         'May build on Alien Planets without gaining Alien Tech. After building on one, either make the other Corporations there pay their Tax, or take ₮3 from the Tax Box. May not Sign The Agreement.',
     [CorporatePowerId.AccountingGimmick]:

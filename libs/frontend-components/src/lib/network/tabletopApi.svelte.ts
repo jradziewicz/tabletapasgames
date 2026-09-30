@@ -8,6 +8,7 @@ import {
     type PreferenceResponse,
     type GameCreationOptions,
     type GameCatalogEntry,
+    type AdminAssignableRole,
     assertExists,
     Bookmark,
     CanonicalActionReplay,
@@ -51,7 +52,8 @@ import type {
     TokenResponse,
     UndoActionResponse,
     UsernameSearchResponse,
-    UserResponse
+    UserResponse,
+    UsersResponse
 } from './responseTypes.js'
 import { APIError } from './errors.js'
 import type { Credentials } from './requestTypes.js'
@@ -66,6 +68,9 @@ export type GetGameOptions = {
 }
 
 export type DiscordWebhookStatus = { webhookUrl?: string; discordUserId?: string }
+// Bot direct messages: whether this site has a bot, the user's linked Discord id (if any), and
+// whether DMs are on for them.
+export type DiscordDmStatus = { available: boolean; discordUserId?: string; enabled: boolean }
 
 export class TabletopApi {
     readonly supportsReproductionSeed?: boolean = true
@@ -806,6 +811,35 @@ export class TabletopApi {
 
     // Discord webhook notifications (a webhook the user created in their own channel).
     // The URL that comes back is always the token-masked form, never the full secret.
+    async getDiscordDmStatus(): Promise<DiscordDmStatus> {
+        const response = await this.wretch
+            .get('/notification/discord/status')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<{ payload: DiscordDmStatus }>()
+        return response.payload
+    }
+
+    // Turns on bot DMs for the linked Discord account; the server sends a test DM first and
+    // rejects (with a user-facing message) if Discord won't deliver it.
+    async subscribeDiscordDms(): Promise<DiscordDmStatus> {
+        const response = await this.wretch
+            .post({}, '/notification/discord/subscribe')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<{ payload: DiscordDmStatus }>()
+        return response.payload
+    }
+
+    async unsubscribeDiscordDms(): Promise<DiscordDmStatus> {
+        const response = await this.wretch
+            .post({}, '/notification/discord/unsubscribe')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<{ payload: DiscordDmStatus }>()
+        return response.payload
+    }
+
     async getDiscordWebhookStatus(): Promise<DiscordWebhookStatus> {
         const response = await this.wretch
             .get('/notification/discordwebhook/status')
@@ -845,6 +879,36 @@ export class TabletopApi {
             .unauthorized(this.on401)
             .badRequest(this.handleError)
             .res()
+    }
+
+    async searchUsers(query: string): Promise<User[]> {
+        const response = await this.wretch
+            .get(`/admin/users/search?query=${encodeURIComponent(query.trim())}`)
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<UsersResponse>()
+
+        return response.payload.users
+    }
+
+    async assignUserRoles(userId: string, roles: AdminAssignableRole[]): Promise<User> {
+        const response = await this.wretch
+            .post({ roles }, `/admin/users/${encodeURIComponent(userId)}/roles`)
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<UserResponse>()
+
+        return response.payload.user
+    }
+
+    async getActiveGamesForTitle(titleId: string): Promise<Game[]> {
+        const response = await this.wretch
+            .get(`/admin/games/active?titleId=${encodeURIComponent(titleId)}`)
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<GamesResponse>()
+
+        return response.payload.games.map((game) => this.validateGame(game))
     }
 
     async setGameState(state: GameState): Promise<void> {

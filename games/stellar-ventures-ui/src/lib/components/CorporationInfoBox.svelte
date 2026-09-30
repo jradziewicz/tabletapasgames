@@ -44,6 +44,7 @@
         statusLabel,
         remainingOutposts,
         shipLevels,
+        shipLevelsLabel = 'Ships',
         voteMarkers,
         showOutpostCostTable = false,
         hasNotSignedAgreement = false,
@@ -104,6 +105,9 @@
         // Issue Share step - ShareAuctionPanel.svelte); undefined skips it entirely for every
         // other caller, same as every other optional row here.
         shipLevels?: number[]
+        // Label for the shipLevels row - "Ships" by default; Order Ships passes "Ordered" since
+        // what it shows there is this Corporation's Ordered (not yet Delivered) Ships.
+        shipLevelsLabel?: string
         // Votes already placed on this Corporation this Boardroom Battle, plus the current
         // voter's own still-queued preview (queued: true, ringed) - one entry per token, each
         // pre-resolved to its player's own vote-token icon by the caller (BoardroomBattlePanel),
@@ -201,6 +205,10 @@
                     <span>Shares Remaining: {availableShareCount}</span>
                 {/if}
                 {#if statusLabel !== undefined}
+                    <!-- Full-width spacer forces Status onto a line of its own in every box, so
+                         the boxes line up with each other instead of Status landing on line one
+                         in a box with fewer stats and on line two in the rest. -->
+                    <span class="basis-full h-0" aria-hidden="true"></span>
                     <span>Status: {statusLabel}</span>
                 {/if}
                 {#if agreementBadgeIcon}
@@ -225,13 +233,15 @@
         {/if}
     </div>
 
-    {#if remainingOutposts !== undefined}
+    {#if remainingOutposts !== undefined || shipLevels !== undefined}
         <!-- One small icon per Outpost still in this Corporation's own physical supply - wraps
              onto as many lines as it needs, since that supply runs 15-25 pieces
              (OutpostSupplyByCorporationId), far more than fits on one line. Ships (shipLevels),
              when given, share this exact same row rather than getting a separate one - see
-             shipLevels' own prop comment. -->
+             shipLevels' own prop comment. Either half can appear on its own (Order Ships passes
+             only shipLevels). -->
         <div class="mt-2 flex flex-wrap items-center gap-1 border-t border-[#232945] pt-2">
+          {#if remainingOutposts !== undefined}
             <span class="mr-1 shrink-0 text-[10px] uppercase tracking-widest text-[#7f88ad]">
                 Outposts:
             </span>
@@ -273,9 +283,12 @@
             {:else}
                 <span class="text-[10px] text-[#7f88ad]">None left</span>
             {/if}
+          {/if}
             {#if shipLevels !== undefined}
-                <span class="ml-3 mr-1 shrink-0 text-[10px] uppercase tracking-widest text-[#7f88ad]">
-                    Ships:
+                <span
+                    class="{remainingOutposts !== undefined ? 'ml-3' : ''} mr-1 shrink-0 text-[10px] uppercase tracking-widest text-[#7f88ad]"
+                >
+                    {shipLevelsLabel}:
                 </span>
                 {#if shipLevels.length > 0}
                     {#each shipLevels as level, index (index)}

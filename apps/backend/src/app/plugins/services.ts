@@ -123,15 +123,16 @@ export default fp(async (fastify: FastifyInstance) => {
         availableTitles
     )
 
-    const discordService = new DiscordService(notificationService, userService)
-
+    // The site bot (DMs to linked accounts) only exists when a bot token is configured.
+    let discordTransport: DiscordTransport | undefined
     if (process.env['DISCORD_BOT_TOKEN']) {
-        const discordTransport = await DiscordTransport.createDiscordTransport(
+        discordTransport = await DiscordTransport.createDiscordTransport(
             secretsService,
             gameService
         )
         notificationService.addTransport(discordTransport)
     }
+    const discordService = new DiscordService(notificationService, userService, discordTransport)
 
     // User-owned Discord webhooks need nothing from us (no bot token / OAuth app), so this is
     // always on. Kept on fastify too so the subscribe route can fire the "connected" test message.
