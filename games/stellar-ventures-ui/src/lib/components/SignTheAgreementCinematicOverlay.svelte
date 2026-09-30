@@ -10,7 +10,7 @@
     // once they queue, one at a time. Suppressed while scrubbing history so stepping through old
     // turns never replays it.
     //
-    // Skippable at any moment: Skip button, Escape, or a click anywhere once the title is up.
+    // Dismissed with Continue, Escape, or a click anywhere once the title is up.
     import {
         ActionType,
         HexType,
@@ -177,16 +177,6 @@
             <div class="ring ring-2"></div>
             <div class="ring ring-3"></div>
 
-            <button
-                type="button"
-                class="skip absolute top-4 right-4 z-10 rounded-full border border-white/30 bg-black/40 px-4 py-1.5 text-xs font-semibold tracking-widest text-white/80 uppercase transition hover:bg-white/10 hover:text-white"
-                onclick={(event) => {
-                    event.stopPropagation()
-                    dismiss()
-                }}
-            >
-                Skip ›
-            </button>
 
             <div class="relative z-[1] flex w-full max-w-3xl flex-col items-center gap-5 px-4 text-center">
                 <div class="emblem relative flex items-center justify-center">
@@ -436,9 +426,6 @@
         background: var(--corp);
         box-shadow: 0 0 24px color-mix(in srgb, var(--corp) 60%, transparent);
         animation: rise 0.5s ease-out 4.4s both;
-    }
-    .skip {
-        animation: fade-in 0.4s ease-out 0.3s both;
     }
 
     @keyframes fade-in {
