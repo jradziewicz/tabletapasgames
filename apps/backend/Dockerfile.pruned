@@ -4,6 +4,9 @@
 FROM docker.io/node:22-bookworm AS builder
 
 ENV HOST=0.0.0.0
+# tsgo (and other Go binaries) can spin forever when this amd64 build runs under Rosetta on
+# Apple Silicon; disabling Go's signal-based async preemption avoids the hang.
+ENV GODEBUG=asyncpreemptoff=1
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y make gcc g++ python3 curl
