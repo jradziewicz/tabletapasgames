@@ -528,7 +528,7 @@
                         <span class="text-xs text-[#7f88ad]">
                             {staged === 'power'
                                 ? 'Nothing is final until the tile is flipped.'
-                                : 'Flipping the tile signs for real and cannot be undone.'}
+                                : 'Flipping the tile cannot be undone.'}
                         </span>
                     {/if}
                 {:else}

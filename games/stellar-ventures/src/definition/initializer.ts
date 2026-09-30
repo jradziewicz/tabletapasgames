@@ -352,10 +352,14 @@ export class StellarVenturesGameInitializer
         // pick, it should be the LAST Corporation to actually take a turn once the Corporation
         // Round begins. This only applies to the standard auction-based Setup - New Investor
         // Setup (skipInitialAuction) never runs an auction or a power draft at all, so there's
-        // no first-pick advantage there to balance; corporationAuctionOrder is reused there only
-        // as an arbitrary base ordering for round-robin President assignment.
+        // no first-pick advantage there to balance. Instead, per the game's designer, Pink Inc.
+        // always operates first in a New Investor game, and the other 4 follow in random order
+        // (the same shuffle, with Pink Inc. pulled to the front).
         const corporationRoundTurnOrder = skipInitialAuction
-            ? corporationAuctionOrder
+            ? [
+                  CorporationId.PinkInc,
+                  ...corporationAuctionOrder.filter((id) => id !== CorporationId.PinkInc)
+              ]
             : [...corporationAuctionOrder].reverse()
 
         const stellarVenturesGameState: StellarVenturesGameState = Object.assign(state, {

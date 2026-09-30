@@ -314,6 +314,55 @@ describe('InitialAuctionStateHandler', () => {
         }
     })
 
+    it('New Investor Setup always has Pink Inc. operate first, with the rest in random order', () => {
+        const players: Player[] = Array.from({ length: 4 }, (_, index) => ({
+            id: `p${index + 1}`,
+            isHuman: true,
+            userId: `u${index + 1}`,
+            name: `Player ${index + 1}`,
+            status: PlayerStatus.Joined
+        }))
+        const game: Game = {
+            id: 'game-1',
+            typeId: 'stellar-ventures',
+            status: GameStatus.Started,
+            isPublic: false,
+            deleted: false,
+            ownerId: 'u1',
+            name: 'Stellar Ventures Test',
+            players,
+            config: { useNewInvestorSetup: true },
+            hotseat: false,
+            winningPlayerIds: [],
+            seed: 123,
+            createdAt: new Date(),
+            storage: GameStorage.Local,
+            category: GameCategory.Standard
+        }
+        const state: UninitializedGameState = {
+            id: 'state-1',
+            gameId: game.id,
+            activePlayerIds: [],
+            actionCount: 0,
+            actionChecksum: 0,
+            prng: { seed: 123, invocations: 0 },
+            winningPlayerIds: []
+        }
+
+        const initialState = new StellarVenturesGameInitializer().initializeGameState(game, state)
+
+        expect(initialState.corporationTurnOrder[0]).toBe(CorporationId.PinkInc)
+        expect([...initialState.corporationTurnOrder].sort()).toEqual(
+            [
+                CorporationId.PinkInc,
+                CorporationId.FrostFederated,
+                CorporationId.ScarletSyndicate,
+                CorporationId.CeruleanCouncil,
+                CorporationId.GambogeGuild
+            ].sort()
+        )
+    })
+
     it('New Investor Setup puts only 11 Corporate Powers in play: 5 on Charters, 6 face up, no draw pile', () => {
         const players: Player[] = Array.from({ length: 4 }, (_, index) => ({
             id: `p${index + 1}`,
