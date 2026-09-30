@@ -4,10 +4,12 @@
     import { gameCardOptions } from '$lib/utils/gameOptions'
     import { playerSortValue, playerStatusDisplay } from '$lib/utils/player'
     import { hasPendingGameInvitation } from '$lib/utils/gameInvitation'
+    import { canShareJoinLink as isShareableForJoining, joinLinkUrl } from '$lib/utils/joinLink'
     import { goto } from '$app/navigation'
     import { fade, slide } from 'svelte/transition'
     import DeleteModal from './DeleteModal.svelte'
     import { createTimeAgo, GameEditForm, getAppContext } from '@tabletop/frontend-components'
+    import { toast } from 'svelte-sonner'
 
     const timeAgo = createTimeAgo()
 
@@ -114,6 +116,11 @@
         game.players.reduce((acc, player) => acc + (player.status === PlayerStatus.Open ? 1 : 0), 0)
     )
     let totalSeats = $derived(game.players.length)
+
+    // Anyone looking at an open public game can copy a link to it (see routes/join/[id]) and
+    // send it to a friend, who lands on a "Join this game?" page.
+    let canShareJoinLink = $derived(isShareableForJoining(game))
+
     let explorations = $derived(gameService.getExplorations(game.id))
 
     let seed = $derived.by(() => {
@@ -148,6 +155,19 @@
         game = await gameService.startGame(game)
         await goto(`/game/${game.id}`)
         onstart?.(game)
+    }
+
+    async function copyJoinLink(event: Event) {
+        event.stopPropagation()
+        const link = joinLinkUrl(game.id, window.location.origin)
+        try {
+            await navigator.clipboard.writeText(link)
+            toast.success('Join link copied. Send it to anyone you want to invite.')
+        } catch {
+            // Clipboard access can be blocked (permissions, insecure context) - show the link so
+            // it can still be copied by hand.
+            toast.info(link, { duration: 15000 })
+        }
     }
 
     function editGame(event: Event) {
@@ -482,7 +502,7 @@
                         </div>
                     {/if}
 
-                    {#if canJoin || canStart || canEdit || canDecline || canLeave || canPlay || canWatch || canRevisit || canDelete}
+                    {#if canJoin || canStart || canEdit || canDecline || canLeave || canPlay || canWatch || canRevisit || canDelete || canShareJoinLink}
                         <Hr class="mt-1 mb-1" />
                         <div class="pt-4 pb-0 flex flex-row justify-center items-middle text-white">
                             {#if canDecline}
@@ -503,6 +523,14 @@
                             {#if canEdit}
                                 <Button size="xs" color="blue" class="mx-2" onclick={editGame}
                                     >Edit Game</Button
+                                >
+                            {/if}
+                            {#if canShareJoinLink}
+                                <Button
+                                    size="xs"
+                                    color="light"
+                                    class="mx-2 dark:text-gray-200"
+                                    onclick={copyJoinLink}>Copy Join Link</Button
                                 >
                             {/if}
                             {#if canStart}
