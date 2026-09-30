@@ -31,6 +31,7 @@
         findSignedAgreementHex
     } from '$lib/utils/agreementTileDisplay.js'
     import CreditsIcon from './CreditsIcon.svelte'
+    import alienHead from '$lib/images/markers/alien.png'
 
     const gameSession = getGameSession()
 
@@ -178,16 +179,16 @@
                             {/if}
                         </div>
                     </div>
-                    <img class="logo" src={reveal.logo} alt="{reveal.name} logo" />
+                    <div class="parties flex items-center gap-6 sm:gap-10">
+                        <img class="logo" src={reveal.logo} alt="{reveal.name} logo" />
+                        <img class="alien" src={alienHead} alt="The Aliens" />
+                    </div>
                     {#if reveal.token}
                         <img class="token" src={reveal.token} alt="{reveal.name} Agreement Token" />
                     {/if}
                 </div>
 
                 <div class="title-block">
-                    <div class="kicker text-xs font-semibold tracking-[0.5em] uppercase sm:text-sm">
-                        First Contact Protocol
-                    </div>
                     <h1 class="title text-4xl font-black uppercase sm:text-6xl">The Agreement</h1>
                     <div class="subtitle text-2xl font-black tracking-[0.3em] uppercase sm:text-3xl">
                         is signed
@@ -322,7 +323,7 @@
     }
 
     .emblem {
-        width: 11rem;
+        width: 20rem;
         height: 11rem;
     }
     .tile {
@@ -354,17 +355,23 @@
         transform: rotateY(180deg);
     }
     .logo {
-        position: absolute;
         max-width: 9rem;
         max-height: 9rem;
         object-fit: contain;
         filter: drop-shadow(0 0 24px var(--corp));
         animation: slam 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) 2.35s both;
     }
+    .alien {
+        max-height: 8.5rem;
+        object-fit: contain;
+        filter: drop-shadow(0 0 24px rgba(125, 255, 178, 0.75));
+        animation: slam-alien 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) 2.55s both;
+    }
     .token {
         position: absolute;
-        right: -1.5rem;
-        bottom: -0.5rem;
+        left: 50%;
+        bottom: -1rem;
+        margin-left: -2.25rem;
         width: 4.5rem;
         height: 4.5rem;
         object-fit: contain;
@@ -372,10 +379,6 @@
         animation: stamp 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) 2.9s both;
     }
 
-    .kicker {
-        color: #7dffb2;
-        animation: rise 0.6s ease-out 1.5s both;
-    }
     .title {
         letter-spacing: 0.08em;
         background: linear-gradient(180deg, #ffffff 0%, #d7dcff 55%, color-mix(in srgb, var(--corp) 70%, white) 100%);
@@ -500,6 +503,17 @@
         100% {
             opacity: 1;
             transform: scale(1);
+        }
+    }
+    @keyframes slam-alien {
+        0% {
+            opacity: 0;
+            transform: translateX(60px) scale(2.2);
+            filter: blur(8px) drop-shadow(0 0 24px rgba(125, 255, 178, 0.75));
+        }
+        100% {
+            opacity: 1;
+            transform: translateX(0) scale(1);
         }
     }
     @keyframes stamp {
