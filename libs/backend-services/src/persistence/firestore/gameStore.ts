@@ -42,9 +42,7 @@ import {
     assert,
     assertExists,
     type GameHistoryPage,
-    type GameHistoryCursor,
-    type AdminGamesPage,
-    type AdminGamesCursor
+    type GameHistoryCursor
 } from '@tabletop/common'
 import {
     AlreadyExistsError,
@@ -690,49 +688,6 @@ export class FirestoreGameStore implements GameStore {
         return {
             games,
             nextCursor: JSON.stringify({ time: last.finishedAt.getTime(), id: last.id })
-        }
-    }
-
-    // Admin-only "every game, any user" listing (games/admin/games.ts route) - unlike
-    // findGamesForUser/findGameHistory above, this has no userIds filter at all. Active games
-    // (anything not yet Finished) are ordered by updatedAt desc, since for that view what an
-    // Admin wants is "which games have gone quiet" - most recently touched first. Finished
-    // games instead order by finishedAt desc, same as queryGameHistory, since "most recently
-    // completed" is what matters once a game is done. Deliberately uncached (unlike the
-    // per-user lists above) - this is a low-traffic Admin-only view, not worth the cache
-    // plumbing findGamesForUser/findGameHistory have for every player's own page loads.
-    async findAllGames(
-        category: GameStatusCategory,
-        before?: AdminGamesCursor
-    ): Promise<AdminGamesPage> {
-        const statuses = getGameStatusesForCategory(category)
-        const orderField = category === GameStatusCategory.Completed ? 'finishedAt' : 'updatedAt'
-
-        let query =
-            statuses.length === 1
-                ? this.games.where('status', '==', statuses[0])
-                : this.games.where('status', 'in', statuses)
-        query = query.orderBy(orderField, 'desc').orderBy(FieldPath.documentId(), 'desc')
-        if (before) query = query.startAfter(new Date(before.time), before.id)
-
-        try {
-            const snapshot = await this.readQuery(query.limit(26))
-            this.recordRead('game', Math.max(1, snapshot.size))
-            const games = snapshot.docs
-                .slice(0, 25)
-                .map((document) => this.normalizeGame(document.data()))
-            const last = games.at(-1)
-            if (snapshot.size <= 25 || !last) return { games }
-            const cursorTime =
-                category === GameStatusCategory.Completed ? last.finishedAt : last.updatedAt
-            assertExists(cursorTime, `Game ${last.id} is missing its ${orderField} timestamp`)
-            return {
-                games,
-                nextCursor: JSON.stringify({ time: cursorTime.getTime(), id: last.id })
-            }
-        } catch (error) {
-            this.handleError(error, category)
-            throw Error('unreachable')
         }
     }
 

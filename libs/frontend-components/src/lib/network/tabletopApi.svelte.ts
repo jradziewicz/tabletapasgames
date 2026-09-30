@@ -21,8 +21,6 @@ import {
     GameSyncStatus,
     GameValidator,
     GameHistoryPage,
-    AdminGamesPage,
-    GameStatusCategory,
     User,
     UserPreferences,
     Visibility,
@@ -368,20 +366,6 @@ export class TabletopApi {
         Value.Assert(Type.Object({ payload: Type.Unknown() }), response)
         Value.Convert(GameHistoryPage, response.payload)
         Value.Assert(GameHistoryPage, response.payload)
-        return response.payload
-    }
-
-    async getAdminGames(category: GameStatusCategory, before?: string): Promise<AdminGamesPage> {
-        const params = new URLSearchParams({ category })
-        if (before) params.set('before', before)
-        const response = await this.wretch
-            .get(`/admin/games?${params}`)
-            .unauthorized(this.on401)
-            .badRequest(this.handleError)
-            .json<unknown>()
-        Value.Assert(Type.Object({ payload: Type.Unknown() }), response)
-        Value.Convert(AdminGamesPage, response.payload)
-        Value.Assert(AdminGamesPage, response.payload)
         return response.payload
     }
 

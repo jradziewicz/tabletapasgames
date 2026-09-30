@@ -23,7 +23,6 @@ import {
     GameStatus,
     GameStatusCategory,
     type GameHistoryCursor,
-    type AdminGamesCursor,
     GameStorage,
     GameSyncStatus,
     IsYourTurnNotification,
@@ -449,13 +448,6 @@ export class GameService {
 
     async getGameHistoryForUser(user: User, before?: GameHistoryCursor) {
         return this.gameStore.findGameHistory(user, before)
-    }
-
-    // Admin-only: every Game across every user, not just the caller's own - see
-    // findAllGames on the store for the ordering/pagination rules. Access is gated at the
-    // route (verifyRoleAdmin), not here, matching every other Admin-only route in this codebase.
-    async getAllGamesForAdmin(category: GameStatusCategory, before?: AdminGamesCursor) {
-        return this.gameStore.findAllGames(category, before)
     }
 
     async setGameState(state: GameState): Promise<void> {

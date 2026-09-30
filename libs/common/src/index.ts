@@ -98,6 +98,5 @@ export * from './util/gameSeeds.js'
 
 export * from './site/tournamentGameReference.js'
 export * from './site/gameHistory.js'
-export * from './site/adminGames.js'
 
 export * from './preferences/preferences.js'

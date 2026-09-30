@@ -204,10 +204,6 @@
         await goto('/admin')
     }
 
-    async function gotoAdminGames() {
-        await goto('/admin/games')
-    }
-
     function setAdminCapabilities(event: Event) {
         if (!(event.currentTarget instanceof HTMLInputElement)) {
             return
@@ -457,9 +453,6 @@
                                 {#if authorizationService.isAdmin}
                                     <DropdownItem class="w-full text-left" onclick={gotoAdmin}
                                         >Admin</DropdownItem
-                                    >
-                                    <DropdownItem class="w-full text-left" onclick={gotoAdminGames}
-                                        >All Games (Admin)</DropdownItem
                                     >
                                 {/if}
                                 <DropdownDivider />

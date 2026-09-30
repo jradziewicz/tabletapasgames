@@ -76,11 +76,12 @@ Which target a change needs:
   `Game` schema, not `GameWithoutState` (`additionalProperties: false`):
   Firestore documents carry storage-only fields (`actionChunkSize`,
   `userIds`) and the client's `Value.Assert` rejects the whole response.
-  `GameHistoryPage` and `AdminGamesPage` both do this.
+  `GameHistoryPage` does this.
 - Firestore `orderBy` on a field silently drops documents missing that
   field; `updatedAt` is set on every game at creation, `finishedAt` only on
   finished games.
 - Brand purple is `#7165ad` (hover `#5b4f95`), sampled from the logo.
-- Admins open any game in host view via `/game/<id>?admin=1`; the admin
-  list lives at `/admin/games` and only appears in the avatar menu for the
-  Admin role.
+- Admins open any game in host view via `/game/<id>?admin=1`. The Admin
+  page (`/admin`: user search, roles, active games per title) is the only
+  admin tool and only appears in the avatar menu for the Admin role; the old
+  "All Games (Admin)" page at `/admin/games` was removed.
