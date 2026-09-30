@@ -29,6 +29,7 @@
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { type CorporationId } from '@tabletop/stellar-ventures'
     import DividendChartPanel from './DividendChartPanel.svelte'
+    import alienTile0 from '$lib/images/shipyard/alienTile0.png'
     import alienTile1 from '$lib/images/shipyard/alienTile1.png'
     import alienTile2 from '$lib/images/shipyard/alienTile2.png'
     import alienTile3 from '$lib/images/shipyard/alienTile3.png'
@@ -39,7 +40,10 @@
     // copy of these same source images for the unrelated Alien Agreement Tile). Chevron count is
     // already always-visible, permanent state the instant a Scrapping Event resolves (see this
     // file's own top comment), so there's nothing to reconstruct - just look it up.
+    // 0 is the alien head with a red X - without it a 0-chevron tile fell back to the face-down
+    // back art, so the reveal looked like nothing had flipped.
     const AlienTileRevealedIcons: Record<number, string> = {
+        0: alienTile0,
         1: alienTile1,
         2: alienTile2,
         3: alienTile3

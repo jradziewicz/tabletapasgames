@@ -1,6 +1,6 @@
 import type { CorporationId, Hex } from '@tabletop/stellar-ventures'
-import alienAgreementTile0 from '$lib/images/agreement/alienAgreementTile0.png'
 import alienAgreementTile4 from '$lib/images/agreement/alienAgreementTile4.png'
+import alienTile0 from '$lib/images/shipyard/alienTile0.png'
 import alienTile1 from '$lib/images/shipyard/alienTile1.png'
 import alienTile2 from '$lib/images/shipyard/alienTile2.png'
 import alienTile3 from '$lib/images/shipyard/alienTile3.png'
@@ -13,11 +13,13 @@ import alienHexBack from '$lib/images/board/alienHexBack.png'
 // artwork and, per the game's co-designer, the literal same face-down back art - reused directly
 // below rather than duplicated as a second binary asset. Distribution
 // (definition/initializer.ts's ALIEN_AGREEMENT_TILE_CHEVRONS = [0,1,1,1,2,2,2,2,3,4]): 1x0, 3x1,
-// 4x2, 1x3, 1x4 - a wider spread than the Shipyard's 5 tiles (which only go 0-3), so 1-3
-// chevrons reuse the Shipyard's own icons (the art is identical either way) while 0 and 4 get
-// their own dedicated renders.
+// 4x2, 1x3, 1x4 - a wider spread than the Shipyard's 5 tiles (which only go 0-3), so 0-3
+// chevrons reuse the Shipyard's own icons (the art is identical either way) while 4 gets its own
+// dedicated render. 0 is the alien head with a red X: the separate alienAgreementTile0.png render
+// is just the bare alien head, indistinguishable from the face-down back, so a revealed 0 tile
+// looked like it had never been flipped.
 export const AlienAgreementTileRevealedIcons: Record<number, string> = {
-    0: alienAgreementTile0,
+    0: alienTile0,
     1: alienTile1,
     2: alienTile2,
     3: alienTile3,
