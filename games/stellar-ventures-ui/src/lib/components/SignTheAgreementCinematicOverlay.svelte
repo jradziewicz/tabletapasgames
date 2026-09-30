@@ -1,8 +1,7 @@
 <script lang="ts">
     // Full-screen cinematic that plays for EVERY player the moment any Corporation Signs The
-    // Agreement (actions/signTheAgreement.ts) - the signer included, for whom it waits until
-    // they've clicked through OfferSignTheAgreementPanel's own reveal steps. Purely spectacle:
-    // nothing here is a decision.
+    // Agreement (actions/signTheAgreement.ts), once the signer has finished the signing
+    // walkthrough (see pendingCorporation below). Purely spectacle: nothing here is a decision.
     //
     // Same approach as FirstShipOrderedRevealOverlay: derived straight from permanent game state
     // (corporation.agreement is set once, forever, by signing) rather than from a live event, so
@@ -63,13 +62,30 @@
         }
     }
 
-    // The signer sees this only after finishing their own click-through walkthrough
-    // (OfferSignTheAgreementPanel, driven by session.signTheAgreementReveal) - it waits until
-    // that clears. Everyone else has no walkthrough, so it plays for them straight away.
+    // Nobody sees this until the signer has finished their walkthrough. On the signer's own
+    // screen that's when session.signTheAgreementReveal clears (they click Continue). Other
+    // players can't see that local click, so they wait until the signer's next real move (the
+    // Draft Power that follows signing) - i.e. while the signing is still the newest action,
+    // hold it back.
+    let walkedThroughHere: Set<CorporationId> = $state(new Set())
+    $effect(() => {
+        const walkthrough = gameSession.signTheAgreementReveal
+        if (walkthrough && !walkedThroughHere.has(walkthrough.corporationId)) {
+            walkedThroughHere = new Set([...walkedThroughHere, walkthrough.corporationId])
+        }
+    })
+    const signingIsNewestAction = $derived(
+        gameSession.actions.at(-1)?.type === ActionType.SignTheAgreement
+    )
+
     const pendingCorporation = $derived(
         gameSession.isViewingHistory || gameSession.signTheAgreementReveal !== undefined
             ? undefined
-            : signedCorporations.find((corporation) => !seen.has(corporation.id))
+            : signedCorporations.find(
+                  (corporation) =>
+                      !seen.has(corporation.id) &&
+                      (walkedThroughHere.has(corporation.id) || !signingIsNewestAction)
+              )
     )
 
     const reveal = $derived.by(() => {
