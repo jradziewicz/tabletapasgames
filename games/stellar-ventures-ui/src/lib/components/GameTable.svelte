@@ -26,6 +26,7 @@
     import HostileTakeoverRevealOverlay from '$lib/components/HostileTakeoverRevealOverlay.svelte'
     import BorderClosedRevealOverlay from '$lib/components/BorderClosedRevealOverlay.svelte'
     import PayTaxesRevealOverlay from '$lib/components/PayTaxesRevealOverlay.svelte'
+    import SignTheAgreementCinematicOverlay from '$lib/components/SignTheAgreementCinematicOverlay.svelte'
 
     import type { StellarVenturesGameSession } from '$lib/model/session.svelte'
     import type {
@@ -185,6 +186,7 @@
 <div class="bg-[#0b0e1a]">
     <FirstShipOrderedRevealOverlay />
     <HostileTakeoverRevealOverlay />
+    <SignTheAgreementCinematicOverlay />
     {#if gameSession.gameState.usesTaxes}
         <BorderClosedRevealOverlay />
         <PayTaxesRevealOverlay />
