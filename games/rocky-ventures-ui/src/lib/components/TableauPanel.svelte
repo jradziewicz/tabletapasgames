@@ -130,6 +130,8 @@
                         class="block w-[150px] shrink-0 overflow-hidden rounded-md border border-[#8a6d3b] shadow-md"
                         title={agreementTooltip(agreement.cityId, agreement.letter)}
                         onclick={() => gameSession.zoomCard(`${agreement.cityId}-${agreement.letter}`, agreementUrl)}
+                        onpointerenter={(event) => gameSession.previewCard(event, `${agreement.cityId}-${agreement.letter}`, agreementUrl)}
+                        onpointerleave={() => gameSession.clearCardPreview()}
                     >
                         <img src={agreementUrl} alt="{agreement.cityId} {agreement.letter}" class="block h-auto w-full" draggable="false" />
                     </button>

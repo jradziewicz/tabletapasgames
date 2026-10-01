@@ -689,6 +689,8 @@
                     role="button"
                     tabindex="0"
                     onclick={() => gameSession.zoomCard(`${cityId} agreement ${topLetter}`, topUrl)}
+                    onpointerenter={(event) => gameSession.previewCard(event, `${cityId} agreement ${topLetter}`, topUrl)}
+                    onpointerleave={() => gameSession.clearCardPreview()}
                     onkeydown={(event) => {
                         if (event.key === 'Enter' || event.key === ' ') {
                             gameSession.zoomCard(`${cityId} agreement ${topLetter}`, topUrl)

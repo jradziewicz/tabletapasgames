@@ -18,7 +18,12 @@
                 {@const url = agreementImageUrl(agreement.cityId, agreement.letter)}
                 <button
                     type="button"
-                    onclick={() => (gameSession.discardPick = { cityId: agreement.cityId, letter: agreement.letter })}
+                    onclick={() => {
+                        gameSession.clearCardPreview()
+                        gameSession.discardPick = { cityId: agreement.cityId, letter: agreement.letter }
+                    }}
+                    onpointerenter={(event) => gameSession.previewCard(event, `${agreement.cityId}-${agreement.letter}`, url)}
+                    onpointerleave={() => gameSession.clearCardPreview()}
                     class="block overflow-hidden rounded border-2 border-[#8a6d3b] hover:border-[#ffd166]"
                     title="Discard for 2 free track — {agreementTooltip(agreement.cityId, agreement.letter)}"
                 >
