@@ -84,7 +84,7 @@
         {/if}
     </div>
     {#if mode === 'market' || mode === 'swap'}
-        <div class="flex flex-wrap items-center gap-1">
+        <div class="flex flex-wrap items-center gap-1 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1 max-sm:*:shrink-0">
             {#each gameState.market.slots as cardId, slotIndex (cardId)}
                 <div class="flex flex-col items-center gap-0.5">
                     <button
@@ -98,7 +98,7 @@
                             : 'border-[#3f7fb8]'}"
                         style="cursor: pointer;"
                     >
-                        <img src={cardImageUrl(cardId)} alt={cardId} class="block h-[200px] w-auto" draggable="false" />
+                        <img src={cardImageUrl(cardId)} alt={cardId} class="block h-[200px] w-auto max-sm:h-[150px]" draggable="false" />
                     </button>
                     {#if mode === 'swap'}
                         <span class="text-xs font-semibold">{priceAt(cardId, slotIndex)}</span>
@@ -119,7 +119,7 @@
             {/each}
         </div>
     {:else if mode === 'movePawn'}
-        <div class="flex flex-wrap items-end gap-2">
+        <div class="flex flex-wrap items-end gap-2 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1 max-sm:*:shrink-0">
             {#each player.tableau as cardId, index (cardId)}
                 <button
                     type="button"
@@ -129,7 +129,7 @@
                     onpointerleave={() => gameSession.clearCardPreview()}
                     class="block overflow-hidden rounded border-2 border-[#3f7fb8] disabled:opacity-40"
                 >
-                    <img src={tableauImage(cardId)} alt={cardId} class="block h-[160px] w-auto" draggable="false" />
+                    <img src={tableauImage(cardId)} alt={cardId} class="block h-[160px] w-auto max-sm:h-[112px]" draggable="false" />
                 </button>
             {/each}
         </div>

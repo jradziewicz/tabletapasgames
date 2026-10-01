@@ -45,7 +45,7 @@
 
 <div
     id="rocky-ventures-header"
-    class="flex min-h-[44px] items-center justify-between gap-x-2 border-b border-[#4a3620] px-4 py-1.5 text-[#f1e6cf] tracking-[0.06em]"
+    class="flex min-h-[44px] items-center justify-between gap-x-2 border-b border-[#4a3620] px-4 py-1.5 max-sm:px-2 text-[#f1e6cf] tracking-[0.06em]"
 >
     <div class="grid min-w-0 text-[13px] sm:text-[15px]">
         {#if gameSession.isViewingHistory}
@@ -55,12 +55,12 @@
         {:else if gameSession.activePlayers.length === 0}
             <div in:fade={{ duration: 200 }} out:fade={{ duration: 120 }}>{phaseText}</div>
         {:else if gameSession.isMyTurn}
-            <div in:fade={{ duration: 200 }} out:fade={{ duration: 120 }} class="inline-flex gap-x-1">
+            <div in:fade={{ duration: 200 }} out:fade={{ duration: 120 }} class="leading-tight">
                 <span>YOUR TURN</span>
                 <span class="text-[#c9a961]">- {phaseText}</span>
             </div>
         {:else}
-            <div in:fade={{ duration: 200 }} out:fade={{ duration: 120 }} class="inline-flex gap-x-1">
+            <div in:fade={{ duration: 200 }} out:fade={{ duration: 120 }} class="inline-flex flex-wrap gap-x-1 leading-tight">
                 {#each gameSession.activePlayers as player, index (player.id)}
                     {#if index > 0}<span>,</span>{/if}
                     <PlayerName playerId={player.id} capitalization="uppercase" />

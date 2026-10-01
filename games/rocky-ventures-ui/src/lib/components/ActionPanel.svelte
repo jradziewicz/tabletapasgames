@@ -236,7 +236,7 @@
                 {/if}
             </span>
         </div>
-        <div class="flex flex-wrap items-end gap-3">
+        <div class="flex flex-wrap items-end gap-3 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1 max-sm:*:shrink-0">
             {#if player.pawnIndex === undefined}
                 <div class="flex flex-col items-center" style="margin-bottom: 26px;">
                     <Pawn fill={playerColor} height={72} />
@@ -266,9 +266,9 @@
                         title={legal ? `Move to ${cardLabel(cardId)}` : 'Not a legal move'}
                     >
                         {#if thumbUrl(cardId)}
-                            <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[160px] w-auto" draggable="false" />
+                            <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[160px] w-auto max-sm:h-[112px]" draggable="false" />
                         {:else}
-                            <div class="flex h-[160px] w-[106px] items-center justify-center bg-[#3d2c1a] font-bold">{cardLabel(cardId)}</div>
+                            <div class="flex h-[160px] w-[106px] max-sm:h-[112px] max-sm:w-[74px] items-center justify-center bg-[#3d2c1a] font-bold">{cardLabel(cardId)}</div>
                         {/if}
                         {#if isSkipped && discarded}
                             <div class="absolute inset-0 flex items-center justify-center bg-red-900/60 text-xs font-bold">DISCARD</div>
@@ -633,7 +633,7 @@
                 <button type="button" onclick={() => gameSession.endTurn()} class="rv-quiet">Pass</button>
             </div>
         {:else if !gameSession.investPickerOpen}
-        <div class="mb-3 flex flex-wrap items-end gap-4">
+        <div class="mb-3 flex flex-wrap items-end gap-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1 max-sm:*:shrink-0">
             {#if gameState.immediateCardId}
                 <div class="flex flex-col items-center gap-1">
                     <button
@@ -641,7 +641,7 @@
                         class="block overflow-hidden rounded border-2 border-[#ffd166] shadow-[0_0_14px_rgba(255,209,102,0.6)]"
                         onclick={() => gameSession.zoomCard(gameState.immediateCardId ?? '', cardImageUrl(gameState.immediateCardId ?? ''))}
                     >
-                        <img src={cardImageUrl(gameState.immediateCardId)} alt={gameState.immediateCardId} class="block h-[160px] w-auto" draggable="false" />
+                        <img src={cardImageUrl(gameState.immediateCardId)} alt={gameState.immediateCardId} class="block h-[160px] w-auto max-sm:h-[112px]" draggable="false" />
                     </button>
                     <span class="text-[11px] font-semibold uppercase tracking-wide text-[#ffd166]">Bonus action</span>
                 </div>
@@ -652,7 +652,7 @@
                         class="block overflow-hidden rounded border-2 border-[#3f7fb8]"
                         onclick={() => gameSession.zoomCard(gameState.borrowedCardId ?? '', cardImageUrl(gameState.borrowedCardId ?? ''))}
                     >
-                        <img src={cardImageUrl(gameState.borrowedCardId)} alt={gameState.borrowedCardId} class="block h-[160px] w-auto" draggable="false" />
+                        <img src={cardImageUrl(gameState.borrowedCardId)} alt={gameState.borrowedCardId} class="block h-[160px] w-auto max-sm:h-[112px]" draggable="false" />
                     </button>
                 </div>
             {/if}
@@ -670,7 +670,7 @@
                                 class="relative z-10 block overflow-hidden rounded border-2 border-[#4a3620]"
                                 onclick={() => gameSession.zoomCard(cardId, thumbUrl(cardId))}
                             >
-                                <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[160px] w-auto" draggable="false" />
+                                <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[160px] w-auto max-sm:h-[112px]" draggable="false" />
                             </button>
                         </div>
                     </div>
@@ -754,7 +754,7 @@
             {/if}
         </div>
         {:else}
-            <div class="flex flex-wrap items-end gap-4">
+            <div class="flex flex-wrap items-end gap-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1 max-sm:*:shrink-0">
                 {#each gameState.market.slots as cardId, slotIndex (cardId)}
                     {@const card = getCard(cardId)}
                     {@const cost = marketCardCost(card, slotIndex)}
@@ -768,7 +768,7 @@
                             class="market-card block overflow-hidden rounded border-2 border-[#8a6d3b] shadow-md"
                             title={affordable ? 'Click to buy' : 'Not enough money'}
                         >
-                            <img src={cardImageUrl(cardId)} alt={cardLabel(cardId)} class="block h-[266px] w-auto" draggable="false" />
+                            <img src={cardImageUrl(cardId)} alt={cardLabel(cardId)} class="block h-[266px] w-auto max-sm:h-[190px]" draggable="false" />
                         </button>
                         <button
                             type="button"
@@ -878,7 +878,7 @@
         {/if}
     {:else if gameState.machineState === MachineState.BonusInvest}
         <SellVictoryPointsControl />
-        <div class="flex flex-wrap items-end gap-4">
+        <div class="flex flex-wrap items-end gap-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1 max-sm:*:shrink-0">
             {#each gameState.market.slots as cardId, slotIndex (cardId)}
                 {@const card = getCard(cardId)}
                 {@const cost = marketCardCost(card, slotIndex)}
@@ -892,7 +892,7 @@
                         class="market-card block overflow-hidden rounded border-2 border-[#8a6d3b] shadow-md"
                         title={affordable ? 'Click to buy' : 'Not enough money'}
                     >
-                        <img src={cardImageUrl(cardId)} alt={cardLabel(cardId)} class="block h-[266px] w-auto" draggable="false" />
+                        <img src={cardImageUrl(cardId)} alt={cardLabel(cardId)} class="block h-[266px] w-auto max-sm:h-[190px]" draggable="false" />
                     </button>
                     <button
                         type="button"
