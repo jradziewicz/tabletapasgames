@@ -24,14 +24,11 @@
                 isUsersGameTurn(game, sessionUser?.id))
     )
 
-    // Only offer to move on once the user has actually had a turn in this game during this
-    // visit and finished it (not merely opened a game they are waiting on), and let them wave
-    // it away; it comes back the next time their turn here ends.
-    let hadTurn = $state(false)
+    // Offer to move on whenever this game isn't waiting on the user but another one is, and
+    // let them wave it away; it comes back the next time their turn here ends.
     let dismissed = $state(false)
     $effect(() => {
         if (takingTurn) {
-            hadTurn = true
             dismissed = false
         }
     })
@@ -40,8 +37,7 @@
     let next = $derived(nextTurnGame(gameService.activeGames, game.id, sessionUser?.id))
 
     let visible = $derived(
-        hadTurn &&
-            !dismissed &&
+        !dismissed &&
             !takingTurn &&
             !game.hotseat &&
             gameSession.myPlayer !== undefined &&
