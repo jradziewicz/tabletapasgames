@@ -337,7 +337,7 @@
                 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
                 <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
                 <div
-                    class="group flex h-6 shrink-0 cursor-row-resize touch-none items-center justify-center select-none resize-handle {resizingTopSection ? 'bg-[#b8700a]/10' : ''}"
+                    class="group flex h-6 shrink-0 cursor-row-resize touch-none items-center justify-center select-none resize-handle max-sm:hidden {resizingTopSection ? 'bg-[#b8700a]/10' : ''}"
                     role="separator"
                     aria-orientation="horizontal"
                     aria-label="Resize the space above the tabs"
