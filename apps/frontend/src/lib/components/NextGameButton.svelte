@@ -13,11 +13,15 @@
     let sessionUser = $derived(authorizationService.getSessionUser())
     let game = $derived(gameSession.primaryGame)
 
-    // The session's own turn flag is the live truth, but it also reads false while browsing
-    // history as another player - so also consult the game record before deciding the turn is
-    // really over.
+    // The session's own turn flag is the live truth. It only misleads while browsing history or
+    // viewing as another player (it reads false then), so only in those cases fall back to the
+    // game record. The record must not be consulted otherwise: an action the player just took
+    // doesn't refresh it (the server's updated record is dropped when the optimistic result is
+    // kept), so it still lists them as active and the button never appeared after their turn.
     let takingTurn = $derived(
-        gameSession.isMyTurn || isUsersGameTurn(game, sessionUser?.id)
+        gameSession.isMyTurn ||
+            ((gameSession.isViewingHistory || gameSession.isViewingAsNonActivePlayer) &&
+                isUsersGameTurn(game, sessionUser?.id))
     )
 
     // Only offer to move on once the user has actually had a turn in this game during this
