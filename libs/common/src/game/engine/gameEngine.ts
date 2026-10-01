@@ -7,6 +7,7 @@ import { getGameVisibility } from '../visibility/gameVisibility.js'
 import { deriveGameSeeds, generateMasterSeed, normalizeMasterSeed } from '../../util/gameSeeds.js'
 import jsonpatch from 'fast-json-patch'
 import { GameAction, type HydratedAction, Patch } from './gameAction.js'
+import { createPatch } from './statePatch.js'
 import { Game, GameStatus } from '../model/game.js'
 import {
     GameState,
@@ -382,7 +383,7 @@ export class GameEngine<
 
             if (canonical) this.validateCanonicalState(updatedState)
 
-            const undoPatch: Patch = jsonpatch.compare(updatedState, stateBeforeAction)
+            const undoPatch: Patch = createPatch(updatedState, stateBeforeAction)
 
             const dehydratedAction = hydratedAction.dehydrate()
             dehydratedAction.undoPatch = undoPatch
