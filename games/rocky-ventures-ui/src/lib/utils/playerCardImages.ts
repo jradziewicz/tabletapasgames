@@ -1,17 +1,8 @@
+import { Images } from '$lib/images/playerCards/index.js'
 import { Color } from '@tabletop/common'
 
-const playerCardModules = import.meta.glob<string>('$lib/images/playerCards/*.png', {
-    eager: true,
-    query: '?url',
-    import: 'default'
-})
-
-const playerCardImagesByName: Record<string, string> = Object.fromEntries(
-    Object.entries(playerCardModules).map(([path, url]) => [
-        path.slice(path.lastIndexOf('/') + 1).replace(/\.png$/, ''),
-        url
-    ])
-)
+// Explicit image list (scripts/generate-image-index.mjs): the Rollup game bundle can't use import.meta.glob
+const playerCardImagesByName: Record<string, string> = Images
 
 const PrintedCardColors: Partial<Record<Color, string>> = {
     [Color.Yellow]: 'yellow',
