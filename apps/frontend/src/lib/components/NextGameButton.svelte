@@ -24,8 +24,9 @@
                 isUsersGameTurn(game, sessionUser?.id))
     )
 
-    // Offer to move on whenever this game isn't waiting on the user but another one is, and
-    // let them wave it away; it comes back the next time their turn here ends.
+    // Offer to move on whenever another game is waiting on the user (even mid-turn here, so
+    // they can jump between games), and let them wave it away; it comes back the next time
+    // their turn here ends.
     let dismissed = $state(false)
     $effect(() => {
         if (takingTurn) {
@@ -38,7 +39,6 @@
 
     let visible = $derived(
         !dismissed &&
-            !takingTurn &&
             !game.hotseat &&
             gameSession.myPlayer !== undefined &&
             next !== undefined
