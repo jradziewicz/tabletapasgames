@@ -67,6 +67,9 @@ export class RockyVenturesGameInitializer
         for (const playerId of turnManager.turnOrder) {
             const player = players.find((candidate) => candidate.playerId === playerId)
             if (player) {
+                // First to act starts with $15, each later seat $1 more (Justin, 2026-10-01).
+                // The 2-player dummy keeps its own ruled $15.
+                player.money = StartingMoney + orderedPlayers.length
                 orderedPlayers.push(player)
             }
         }

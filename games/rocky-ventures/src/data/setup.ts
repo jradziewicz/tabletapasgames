@@ -1,4 +1,5 @@
 // Setup constants from the draft rulebook.
+// Money for the first player to act; each later seat starts with $1 more (see initializer)
 export const StartingMoney = 15
 export const StartingGems = 2
 export const StartingClaimTokens = 4
