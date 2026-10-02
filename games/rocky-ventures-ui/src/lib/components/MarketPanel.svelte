@@ -2,10 +2,15 @@
     import { CardKind, DeliveryCityId, MarketSlotPrices, getCard } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { cardImageUrl } from '$lib/utils/cardImages.js'
+    import { agreementImageUrl, agreementTooltip } from '$lib/utils/agreementImages.js'
 
     const gameSession = getGameSession()
     const market = $derived(gameSession.gameState.market)
     const gameState = $derived(gameSession.gameState)
+    const agreementCities = [
+        { id: DeliveryCityId.Dornoch, name: 'Dornoch' },
+        { id: DeliveryCityId.Manor, name: 'Manor' }
+    ]
 
     // Clear the hover preview if the panel goes away (tab switch) while a card is hovered
     $effect(() => () => (gameSession.hoveredCard = undefined))
@@ -71,6 +76,36 @@
                 {:else}
                     <div class="flex aspect-[369/516] w-full items-center justify-center rounded-md border border-dashed border-[#8a6d3b] text-xs italic text-gray-500">
                         empty
+                    </div>
+                {/if}
+            </div>
+        {/each}
+    </div>
+
+    <h2 class="mb-3 mt-6 text-xs font-semibold uppercase tracking-widest text-[#c9a961]">
+        Agreements <span class="normal-case tracking-normal">· top of each pile</span>
+    </h2>
+    <div class="flex flex-row flex-wrap items-start gap-3">
+        {#each agreementCities as city (city.id)}
+            {@const stack = gameState.agreementStacks[city.id] ?? []}
+            {@const topLetter = stack[0]}
+            {@const imageUrl = topLetter ? agreementImageUrl(city.id, topLetter) : undefined}
+            <div class="flex w-[220px] flex-col items-center">
+                <div class="mb-1 whitespace-nowrap text-[11px] text-[#c9a961]">{city.name} · {stack.length} left</div>
+                {#if topLetter && imageUrl}
+                    <button
+                        type="button"
+                        class="market-card block w-full overflow-hidden rounded-md border border-[#8a6d3b] shadow-md"
+                        onclick={() => gameSession.zoomCard(`${city.id} agreement ${topLetter}`, imageUrl)}
+                        onpointerenter={(event) => gameSession.previewCard(event, `${city.id}-${topLetter}`, imageUrl)}
+                        onpointerleave={() => gameSession.clearCardPreview()}
+                        title={agreementTooltip(city.id, topLetter)}
+                    >
+                        <img src={imageUrl} alt="{city.name} agreement {topLetter}" class="block h-auto w-full" draggable="false" />
+                    </button>
+                {:else}
+                    <div class="flex aspect-[1.66] w-full items-center justify-center rounded-md border border-dashed border-[#8a6d3b] text-xs italic text-gray-500">
+                        none left
                     </div>
                 {/if}
             </div>
