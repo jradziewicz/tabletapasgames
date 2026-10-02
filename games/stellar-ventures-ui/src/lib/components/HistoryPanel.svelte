@@ -1,14 +1,18 @@
 <script lang="ts">
-    import { PlayerName } from '@tabletop/frontend-components'
+    import { createTimeAgo, PlayerName } from '@tabletop/frontend-components'
     import { ActionType, type CorporationId } from '@tabletop/stellar-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { CorporationDisplayNames } from '$lib/utils/corporationDisplay.js'
     import { CorporatePowerDisplayNames } from '$lib/utils/corporatePowerDisplay.js'
     import CreditsText from './CreditsText.svelte'
 
+    // Same shape as the other Board Together games' History (e.g. Kaivai): newest first on a
+    // timeline, each entry a short "<player> did something" sentence with how long ago it was,
+    // and "The game was started" at the very bottom.
     const gameSession = getGameSession()
+    const timeAgo = createTimeAgo()
 
-    const actions = $derived(gameSession.actions)
+    const items = $derived([...gameSession.actions].reverse())
 
     // "ExpandNetwork" -> "Expand Network".
     function formatType(type: string) {
@@ -19,124 +23,120 @@
         return typeof id === 'string' ? CorporationDisplayNames[id as CorporationId] : undefined
     }
 
-    function credits(amount: unknown): string | undefined {
-        return typeof amount === 'number' ? `₮${amount}` : undefined
+    function plural(count: number, word: string) {
+        return `${count} ${word}${count === 1 ? '' : 's'}`
     }
 
-    // One short, readable line per action. Credits are written with the "₮" placeholder, which
-    // CreditsText swaps for the game's own currency symbol. Hex IDs, internal metadata and other
-    // bookkeeping fields are left out entirely.
-    function details(action: Record<string, unknown>): string | undefined {
-        const corporation = corporationName(action['corporationId'])
+    // The sentence after the player's name. Credits use the "₮" placeholder, which CreditsText
+    // swaps for the game's own currency symbol. Hex IDs and internal metadata never appear.
+    function describe(action: Record<string, unknown>): string {
+        const corp = corporationName(action['corporationId'])
+        const forCorp = corp ? ` for ${corp}` : ''
         const metadata = (action['metadata'] ?? {}) as Record<string, unknown>
-        const parts: (string | undefined)[] = []
+        const amount = typeof action['amount'] === 'number' ? action['amount'] : undefined
 
         switch (action['type']) {
             case ActionType.PlaceBid:
+                return `bid ₮${amount ?? 0}${forCorp}`
+            case ActionType.PassAuction:
+            case ActionType.PassShareBid:
+                return 'passed'
+            case ActionType.IssueShare:
+                return `issued a Share${forCorp}`
+            case ActionType.DeclineIssueShare:
+                return `chose not to issue a Share${forCorp}`
             case ActionType.PlaceShareBid:
-                parts.push(corporation, credits(action['amount']))
-                break
-            case ActionType.PlaceBoardroomVote:
-                parts.push(
-                    corporation,
-                    typeof action['amount'] === 'number'
-                        ? `${action['amount']} vote${action['amount'] === 1 ? '' : 's'}`
-                        : undefined
-                )
-                break
-            case ActionType.CargoBoost:
-                parts.push(
-                    corporation,
-                    typeof action['amount'] === 'number' ? `+${action['amount']} CARGO` : undefined
-                )
-                break
-            case ActionType.Launder:
-                parts.push(
-                    typeof action['amount'] === 'number'
-                        ? `${action['amount']} Alien Tech`
-                        : undefined
-                )
-                break
+                return `bid ₮${amount ?? 0} for a Share${forCorp}`
+            case ActionType.ExpandNetwork:
+                return `built an Outpost${forCorp}`
+            case ActionType.CreateWormhole:
+                return `created a Wormhole${forCorp}`
+            case ActionType.DeclineExpandNetworkOrWormhole:
+                return `chose not to build${forCorp}`
+            case ActionType.FinishExpansion:
+                return `finished building${forCorp}`
             case ActionType.PayDividends:
-                parts.push(
-                    corporation,
-                    typeof action['payoutPerShare'] === 'number'
-                        ? `${credits(action['payoutPerShare'])} per Share`
-                        : undefined
-                )
-                break
-            case ActionType.PayTax:
-                parts.push(
-                    corporation,
-                    credits(metadata['amount']),
-                    typeof metadata['loans'] === 'number' && metadata['loans'] > 0
-                        ? `${metadata['loans']} loan${metadata['loans'] === 1 ? '' : 's'}`
-                        : undefined
-                )
-                break
-            case ActionType.TaxAgentsTakeFromTaxBox:
-                parts.push(
-                    corporation,
-                    metadata['amount'] !== undefined
-                        ? `${credits(metadata['amount'])} from the Tax Box`
-                        : undefined
-                )
-                break
+                return typeof action['payoutPerShare'] === 'number'
+                    ? `paid ₮${action['payoutPerShare']} per Share${forCorp}`
+                    : `paid dividends${forCorp}`
             case ActionType.OrderShip:
-                parts.push(
-                    corporation,
-                    typeof action['level'] === 'number' ? `Level ${action['level']}` : undefined
-                )
-                break
+                return typeof action['level'] === 'number'
+                    ? `ordered a Level ${action['level']} Ship${forCorp}`
+                    : `ordered a Ship${forCorp}`
+            case ActionType.DeclineOrderShips:
+                return `ordered no Ships${forCorp}`
+            case ActionType.PlaceBoardroomVote:
+                return `placed ${plural(amount ?? 0, 'vote')}${corp ? ` on ${corp}` : ''}`
+            case ActionType.DeclineBoardroomVote:
+                return 'placed no votes'
+            case ActionType.CargoBoost:
+                return `boosted CARGO +${amount ?? 0}${forCorp}`
+            case ActionType.Launder:
+                return `laundered ${amount ?? 0} Alien Tech`
+            case ActionType.DraftPower: {
+                const power =
+                    typeof action['powerId'] === 'string'
+                        ? (CorporatePowerDisplayNames[action['powerId']] ?? 'a Power')
+                        : 'a Power'
+                return `drafted ${power}${forCorp}`
+            }
+            case ActionType.SignTheAgreement:
+                return `signed The Agreement${forCorp}`
+            case ActionType.DeclineSignTheAgreement:
+                return `chose not to sign The Agreement${forCorp}`
+            case ActionType.PayTax: {
+                const loans =
+                    typeof metadata['loans'] === 'number' && metadata['loans'] > 0
+                        ? ` (${plural(metadata['loans'], 'loan')})`
+                        : ''
+                return typeof metadata['amount'] === 'number'
+                    ? `paid ₮${metadata['amount']} in taxes${forCorp}${loans}`
+                    : `paid taxes${forCorp}`
+            }
+            case ActionType.TaxAgentsTakeFromTaxBox:
+                return typeof metadata['amount'] === 'number'
+                    ? `took ₮${metadata['amount']} from the Tax Box${forCorp}`
+                    : `took from the Tax Box${forCorp}`
             case ActionType.BackroomDeal:
-                parts.push(
-                    action['direction'] === 'up'
-                        ? 'Alien Mining Capacity up'
-                        : action['direction'] === 'down'
-                          ? 'Alien Mining Capacity down'
-                          : undefined
-                )
-                break
+                return `moved Alien Mining Capacity ${action['direction'] === 'down' ? 'down' : 'up'}`
+            case ActionType.PassInvestorAction:
+            case ActionType.PassAlienTechAction:
+                return 'passed'
             default:
-                parts.push(corporation)
-                if (typeof action['powerId'] === 'string') {
-                    parts.push(CorporatePowerDisplayNames[action['powerId']] ?? undefined)
-                }
-                if (typeof action['shipLevel'] === 'number') {
-                    parts.push(`Level ${action['shipLevel']}`)
-                }
+                return `used ${formatType(String(action['type']))}${forCorp}`
         }
-
-        const text = parts.filter((part): part is string => !!part).join(' · ')
-        return text.length > 0 ? text : undefined
     }
 </script>
 
-<div class="h-full overflow-y-auto p-3 text-[#e6e9f5]">
-    {#if actions.length === 0}
-        <div class="text-xs text-[#7f88ad]">No actions yet.</div>
-    {:else}
-        <ol class="space-y-1">
-            {#each actions as action (action.id)}
-                {@const line = details(action as unknown as Record<string, unknown>)}
-                <li class="rounded-md bg-black/20 px-2.5 py-1.5 text-xs leading-snug">
-                    <div class="flex items-baseline justify-between gap-2">
-                        <span class="font-semibold">{formatType(action.type)}</span>
-                        <span class="shrink-0 text-[#7f88ad]">
-                            {#if action.playerId}
-                                <PlayerName playerId={action.playerId} />
-                            {:else}
-                                Game
-                            {/if}
-                        </span>
-                    </div>
-                    {#if line}
-                        <div class="mt-0.5 flex items-center gap-0.5 text-[#aeb5d6]">
-                            <CreditsText text={line} />
-                        </div>
+<div class="h-full overflow-y-auto px-3 py-2 text-[#e6e9f5]">
+    <ol class="relative ms-1.5 border-s border-[#3a4166]">
+        {#each items as action (action.id)}
+            {@const record = action as unknown as Record<string, unknown>}
+            <li class="mb-3 ms-4">
+                <div
+                    class="absolute -start-1.5 mt-1 h-3 w-3 rounded-full border border-[#0b0e1a] bg-[#2f6fed]"
+                ></div>
+                <div class="text-[11px] text-[#7f88ad]">
+                    {action.createdAt ? timeAgo.format(action.createdAt) : ''}
+                </div>
+                <div class="text-sm leading-snug">
+                    {#if action.playerId}
+                        <PlayerName playerId={action.playerId} />
+                        <CreditsText text={describe(record)} />
+                    {:else}
+                        <span class="text-[#aeb5d6]">{formatType(action.type)}</span>
                     {/if}
-                </li>
-            {/each}
-        </ol>
-    {/if}
+                </div>
+            </li>
+        {/each}
+        <li class="ms-4">
+            <div
+                class="absolute -start-1.5 mt-1 h-3 w-3 rounded-full border border-[#0b0e1a] bg-[#7f88ad]"
+            ></div>
+            <div class="text-[11px] text-[#7f88ad]">
+                {gameSession.game.createdAt ? timeAgo.format(gameSession.game.createdAt) : ''}
+            </div>
+            <div class="text-sm text-[#aeb5d6]">The game was started</div>
+        </li>
+    </ol>
 </div>
