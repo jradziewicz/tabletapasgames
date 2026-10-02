@@ -91,8 +91,7 @@
         { id: 'market', label: 'Market' },
         { id: 'grid', label: 'Weapon / Tool Grid' },
         { id: 'dragon', label: 'Dragon' },
-        { id: 'railroads', label: 'Railroads' },
-        { id: 'history', label: 'History' }
+        { id: 'railroads', label: 'Railroads' }
     ]
 
     // Each player's workspace layout follows their account via the title preferences system.
@@ -321,6 +320,11 @@
                 {#snippet playersPanel()}
                     <PlayersPanel />
                 {/snippet}
+                <!-- History sits beside Players and Chat in the left panel, like other Board
+                     Together games, rather than as a tab in the board workspace. -->
+                {#snippet history()}
+                    <History />
+                {/snippet}
             </DefaultTabs>
         {/snippet}
         {#snippet gameContent()}
@@ -376,8 +380,6 @@
                                     <div class="p-2">
                                         <CompaniesPanel />
                                     </div>
-                                {:else if id === 'history'}
-                                    <History />
                                 {/if}
                             {/snippet}
                         </TabWorkspace>
