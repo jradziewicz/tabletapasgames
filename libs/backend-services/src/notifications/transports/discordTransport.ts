@@ -19,9 +19,11 @@ import {
 
 const API_ENDPOINT = 'https://discord.com/api/v10'
 
-// Discord's "Cannot send messages to this user" - the bot and the user don't share a server and
-// the user hasn't added the app to their account, or their privacy settings block app DMs.
-const CANNOT_DM_USER = 50007
+// Discord's "Cannot send messages to this user" (50007) and "...due to having no mutual guilds"
+// (50278) - the bot and the user don't share a server and the user hasn't added the app to their
+// account, or their privacy settings block app DMs. 50278 is what a player who signed in with
+// Discord (which doesn't add the app) gets until they link Discord from the Notifications page.
+export const CANNOT_DM_USER_CODES: readonly number[] = [50007, 50278]
 
 type DiscordSendResult = { status: number; code?: number }
 
@@ -68,7 +70,7 @@ export class DiscordTransport implements NotificationTransport {
             success: result.status >= 200 && result.status < 300,
             // Nothing we send will ever get through until the player re-adds the app, so stop
             // trying; the Notifications page shows DMs as off and they can turn them back on.
-            unregister: result.code === CANNOT_DM_USER
+            unregister: result.code !== undefined && CANNOT_DM_USER_CODES.includes(result.code)
         }
     }
 
@@ -152,7 +154,11 @@ export class DiscordTransport implements NotificationTransport {
                     responseBody?.code,
                     responseBody?.message
                 )
-                if (response.status === 403 && responseBody?.code === CANNOT_DM_USER) {
+                if (
+                    response.status === 403 &&
+                    responseBody?.code !== undefined &&
+                    CANNOT_DM_USER_CODES.includes(responseBody.code)
+                ) {
                     this.dmCache.delete(userId)
                 }
                 return { status: response.status, code: responseBody?.code }

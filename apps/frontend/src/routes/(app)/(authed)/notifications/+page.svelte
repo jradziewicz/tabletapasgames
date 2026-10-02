@@ -83,8 +83,14 @@
         }
     }
 
+    // Set when Discord refused the test DM because the bot hasn't been added to the player's
+    // Discord account (common after signing in with Discord, which doesn't add it) - offers the
+    // link flow, which does.
+    let dmNeedsBot = $state(false)
+
     async function setDms(enabled: boolean) {
         dmError = undefined
+        dmNeedsBot = false
         dmSaved = false
         dmSaving = true
         try {
@@ -95,6 +101,7 @@
             dmSaved = enabled
         } catch (e) {
             console.log(e)
+            dmNeedsBot = e instanceof Error && e.name === 'DiscordDmRejectedError'
             dmError =
                 e instanceof Error && e.message
                     ? e.message
@@ -226,6 +233,12 @@
                     <Alert class="dark:bg-red-200 dark:text-red-700">
                         {dmError}
                     </Alert>
+                {/if}
+                {#if dmNeedsBot}
+                    <div class="flex flex-row gap-3 items-center justify-end">
+                        <span class="text-sm dark:text-gray-300">Add the TableTapas bot:</span>
+                        <DiscordSignIn mode={'link'} />
+                    </div>
                 {/if}
 
                 <div class="flex flex-row gap-3 items-center justify-end">

@@ -60,16 +60,16 @@ export class DiscordBotUnavailableError extends BaseError {
     }
 }
 
-// Discord code 50007 ("Cannot send messages to this user") is the one players actually hit:
-// the bot can only DM someone who has added the app to their account (or shares a server with
-// it), or who allows DMs from apps.
+// Discord codes 50007 ("Cannot send messages to this user") and 50278 ("no mutual guilds") are
+// the ones players actually hit: the bot can only DM someone who has added the app to their
+// account (or shares a server with it), or who allows DMs from apps.
 export class DiscordDmRejectedError extends BaseError {
     constructor(status: number, code?: number) {
         super({
             name: NotificationError.DiscordDmRejected,
             message:
-                code === 50007
-                    ? "Discord wouldn't let the bot message you. Add TableTapas to your Discord account (unlink and re-link Discord on your profile), and check that Settings > Privacy allows direct messages from apps."
+                code === 50007 || code === 50278
+                    ? "Discord wouldn't let the bot message you yet. Use the Add the TableTapas bot button below to add it to your Discord account, then turn direct messages on again. If it still fails, check that Discord's Settings > Privacy allows direct messages from apps."
                     : `Discord rejected the test message (HTTP ${status}). Please try again in a moment.`,
             metadata: { status, code }
         })
