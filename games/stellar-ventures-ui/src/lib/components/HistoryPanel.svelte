@@ -1,6 +1,13 @@
 <script lang="ts">
     import { createTimeAgo, PlayerName } from '@tabletop/frontend-components'
-    import { ActionType, type CorporationId } from '@tabletop/stellar-ventures'
+    import { GameEngine, type GameAction } from '@tabletop/common'
+    import {
+        ActionType,
+        Definition,
+        MachineState,
+        type CorporationId,
+        type StellarVenturesGameState
+    } from '@tabletop/stellar-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { CorporationDisplayNames } from '$lib/utils/corporationDisplay.js'
     import { CorporatePowerDisplayNames } from '$lib/utils/corporatePowerDisplay.js'
@@ -13,6 +20,58 @@
     const timeAgo = createTimeAgo()
 
     const items = $derived([...gameSession.actions].reverse())
+
+    // Most actions don't record which Corporation they were for (an Outpost, a Ship order, a
+    // Share issue...), so work it out from the game state just before each action: walk back
+    // from the current state through each action's undo patch. Results are cached by action id,
+    // so a new action only costs one step.
+    const engine = new GameEngine(Definition.runtime)
+    const corporationByActionId = new Map<string, CorporationId | undefined>()
+
+    // States where the active Corporation in turn order is the one acting.
+    const CorporationTurnStates = new Set<string>([
+        MachineState.IssueShare,
+        MachineState.ExpandNetworkOrWormhole,
+        MachineState.PayDividends,
+        MachineState.OrderShips,
+        MachineState.ReleaseDividends,
+        MachineState.OfferSignTheAgreement,
+        MachineState.OfferSecretAgentsChoice,
+        MachineState.OfferSpareParts
+    ])
+
+    function actingCorporation(before: StellarVenturesGameState): CorporationId | undefined {
+        return (
+            before.draftPowerCorporationId ??
+            before.signTheAgreementCorporationId ??
+            before.secretAgentsCorporationId ??
+            before.taxAgentsCorporationId ??
+            before.pendingSparePartsCorporationId ??
+            before.expandingCorporationId ??
+            before.activeInitialAuctionCorporationId ??
+            before.boardroomBattleCorporationId ??
+            (CorporationTurnStates.has(before.machineState)
+                ? before.corporationTurnOrder[before.activeCorporationIndex]
+                : undefined)
+        )
+    }
+
+    const corporations = $derived.by(() => {
+        const actions: GameAction[] = gameSession.actions
+        try {
+            let state = gameSession.gameState.dehydrate() as StellarVenturesGameState
+            for (let i = actions.length - 1; i >= 0; i--) {
+                const action = actions[i]!
+                if (corporationByActionId.has(action.id)) break
+                if (!action.undoPatch) break
+                state = engine.undoProcessedAction({ action, state })
+                corporationByActionId.set(action.id, actingCorporation(state))
+            }
+        } catch (error) {
+            console.warn('Could not work out Corporations for History', error)
+        }
+        return new Map(corporationByActionId)
+    })
 
     // "ExpandNetwork" -> "Expand Network".
     function formatType(type: string) {
@@ -30,7 +89,9 @@
     // The sentence after the player's name. Credits use the "₮" placeholder, which CreditsText
     // swaps for the game's own currency symbol. Hex IDs and internal metadata never appear.
     function describe(action: Record<string, unknown>): string {
-        const corp = corporationName(action['corporationId'])
+        const corp = corporationName(
+            action['corporationId'] ?? corporations.get(String(action['id']))
+        )
         const forCorp = corp ? ` for ${corp}` : ''
         const metadata = (action['metadata'] ?? {}) as Record<string, unknown>
         const amount = typeof action['amount'] === 'number' ? action['amount'] : undefined
@@ -40,7 +101,7 @@
                 return `bid ₮${amount ?? 0}${forCorp}`
             case ActionType.PassAuction:
             case ActionType.PassShareBid:
-                return 'passed'
+                return `passed${corp ? ` on ${corp}` : ''}`
             case ActionType.IssueShare:
                 return `issued a Share${forCorp}`
             case ActionType.DeclineIssueShare:
