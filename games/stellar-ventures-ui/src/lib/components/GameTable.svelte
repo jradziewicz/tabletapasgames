@@ -44,7 +44,7 @@
     setGameSession(session)
 
     // The board and its reference views (Shipyard, Charter, Investor Board, The Agreement,
-    // Dividend Chart) plus a readable action History live in a single draggable/resizable/closable
+    // Dividend Chart) live in a single draggable/resizable/closable
     // TabWorkspace (from @tabletop/frontend-components, ported from the 18xx branch's shared
     // workspace component - it has no game-specific dependency of its own). The Board is the
     // only tab that can't be closed, since it's the primary view; the rest can be split off into
@@ -56,7 +56,6 @@
         { id: 'agreement', label: 'The Agreement' },
         { id: 'investorBoard', label: 'Investor Board' },
         { id: 'roundTracker', label: 'Round Tracker' },
-        { id: 'history', label: 'History' },
         { id: 'shipyard', label: 'Shipyard' }
     ]
 
@@ -213,6 +212,11 @@
                 {#snippet playersPanel()}
                     <PlayersPanel />
                 {/snippet}
+                <!-- The action History sits beside Players and Chat in the left panel, rather than
+                     as a tab in the board workspace. -->
+                {#snippet history()}
+                    <HistoryPanel />
+                {/snippet}
             </DefaultTabs>
         {/snippet}
         {#snippet gameContent()}
@@ -307,8 +311,6 @@
                                 <AgreementPanel />
                             {:else if id === 'dividendChart'}
                                 <DividendChartPanel />
-                            {:else if id === 'history'}
-                                <HistoryPanel />
                             {/if}
                         {/snippet}
                     </TabWorkspace>
