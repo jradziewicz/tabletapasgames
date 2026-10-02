@@ -24,7 +24,9 @@
             // Discord only lets a bot message people who share a server with it or have added it.
             url = `https://discord.com/oauth2/authorize?client_id=${PUBLIC_DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${encodedHost}%2Foauth%2Fdiscord%2Flink&scope=identify+email+applications.commands&integration_type=1`
         } else {
-            url = `https://discord.com/oauth2/authorize?client_id=${PUBLIC_DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${encodedHost}%2Foauth%2Fdiscord&scope=identify+email`
+            // Signing in also adds the app to the user's Discord account (same user install as
+            // 'link'), so the bot can DM them as soon as they turn direct messages on.
+            url = `https://discord.com/oauth2/authorize?client_id=${PUBLIC_DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${encodedHost}%2Foauth%2Fdiscord&scope=identify+email+applications.commands&integration_type=1`
         }
         window.open(
             url,
