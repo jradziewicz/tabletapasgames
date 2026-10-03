@@ -328,7 +328,7 @@
             </DefaultTabs>
         {/snippet}
         {#snippet gameContent()}
-            <div bind:this={layoutColumnEl} class="flex h-full min-h-0 w-full flex-col">
+            <div bind:this={layoutColumnEl} data-rocky-game-column class="flex h-full min-h-0 w-full flex-col">
                 <div
                     bind:this={topSectionEl}
                     class="pb-3 {(topSectionHeightPx ?? frozenTopSectionPx) === undefined ? 'shrink-0' : 'shrink-0 overflow-y-auto'}"
@@ -479,6 +479,21 @@
         border-radius: 0.5rem;
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
         transition: transform 120ms ease, filter 120ms ease, box-shadow 120ms ease;
+    }
+
+    /* Phones: the shared table layout gives the game 90vw and leaves the players column peeking in
+       from the left. Let the game fill the screen (players stay one swipe right) and hide that
+       scroller's scrollbar. */
+    @media (width < 640px) {
+        :global([data-game-ui='rocky-ventures'] div:has(> [data-rocky-game-column])) {
+            min-width: calc(100vw - 8px);
+        }
+        :global([data-game-ui='rocky-ventures'] div:has(> div > div > [data-rocky-game-column])) {
+            scrollbar-width: none;
+        }
+        :global([data-game-ui='rocky-ventures'] div:has(> div > div > [data-rocky-game-column])::-webkit-scrollbar) {
+            display: none;
+        }
     }
 
     .resize-handle {

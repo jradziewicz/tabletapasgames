@@ -45,9 +45,9 @@
 
 <div
     id="rocky-ventures-header"
-    class="flex min-h-[44px] items-center justify-between gap-x-2 border-b border-[#4a3620] px-4 py-1.5 max-sm:px-2 text-[#f1e6cf] tracking-[0.06em]"
+    class="flex min-h-[44px] items-center justify-between gap-x-2 border-b border-[#4a3620] px-4 py-1.5 max-sm:flex-wrap max-sm:gap-y-1 max-sm:px-2 text-[#f1e6cf] tracking-[0.06em]"
 >
-    <div class="grid min-w-0 text-[13px] sm:text-[15px]">
+    <div class="grid min-w-0 text-[13px] max-sm:basis-full sm:text-[15px]">
         {#if gameSession.isViewingHistory}
             <div in:fade={{ duration: 200 }} out:fade={{ duration: 120 }}>HISTORY</div>
         {:else if gameSession.gameState.result}
@@ -70,7 +70,7 @@
         {/if}
     </div>
 
-    <div class="flex shrink-0 items-center gap-2 text-[15px]">
+    <div class="flex shrink-0 items-center gap-2 text-[15px] max-sm:ml-auto">
         <div class="flex items-center gap-1 text-[10px] font-semibold" title="Game ends when 2 of 3 triggers are met">
             {#each triggerChips as chip (chip.label)}
                 <span
