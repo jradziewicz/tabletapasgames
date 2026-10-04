@@ -129,6 +129,13 @@
             await gameSession.chooseBoardroomBattleCorporation(corporationId)
             return
         }
+        // Each queued vote is one click Undo can take back.
+        const previousCorporationId = queuedCorporationId
+        const previousAmount = queuedAmount
+        gameSession.pushLocalUndo(() => {
+            queuedCorporationId = previousCorporationId
+            queuedAmount = previousAmount
+        })
         if (queuedCorporationId !== corporationId) {
             queuedCorporationId = corporationId
             queuedAmount = 1

@@ -204,51 +204,96 @@ export class StellarVenturesGameSession extends GameSession<
         this.wormholeSelectedHexId = undefined
         this.testingLiquidationRedoAction = undefined
         this.signTheAgreementStaged = undefined
+        // A submitted action ends any local clicks there were to step back.
+        this.localUndoSteps = []
         // NOT reset here - a Private Contractor build spans several state updates (one per
         // Outpost placed) and needs to keep pointing at the same Corporation throughout. It's
         // cleared explicitly instead: right after a Jerry-Rig one-shot, and by finishExpansion.
         // this.investorBuildCorporationId intentionally left alone.
     }
 
-    // Several Investor/Alien Tech Action flows have a window where the player has made a local
-    // UI choice (opened a picker, picked a Corporation, ticked some hexes for Develop Planet(s))
-    // but nothing has actually been submitted to the server yet. Pressing Undo in that window
-    // should just cancel the pending local choice and drop back to the plain action circles -
-    // "revert to the start of that player's turn," per the co-designer's spec - rather than fall
-    // through to the framework's real undo. That matters because the framework's undoableAction
-    // (libs/frontend-components/gameSession.svelte.ts) has no action of this player's to find
-    // yet in that window, and in a hotseat game it doesn't require the found action to belong to
-    // the current viewer at all - it takes literally the most recent action in history, which at
-    // this point is still the PREVIOUS player's last action (e.g. the Pass that ended the prior
-    // Boardroom Battle auction). Once a real action for this build HAS been submitted (the first
-    // hex of a Jerry-Rig/Private Contractor build, confirmed via gameState.expandingCorporationId),
-    // this override's conditions no longer match and it falls through to the framework's real
-    // undo, which by then correctly finds and reverts only that single submitted action.
-    override async undo() {
-        if (
-            this.investorPickerOpen !== undefined ||
-            this.alienTechPickerOpen !== undefined ||
+    // Undo steps back one click at a time. Local, not-yet-submitted clicks (a bid or vote amount
+    // stepped up, a hex ticked for Develop Planets / a Forced Ship Purchase / a tax loan) push how
+    // to reverse themselves onto localUndoSteps, newest last; Undo pops one. After those come the
+    // staged choices that don't push steps (the Sign The Agreement preview, an open picker), each
+    // walked back one stage at a time. Only when nothing local is pending does Undo fall through
+    // to the framework's real undo of the last submitted action. Without this, Undo either
+    // cleared a whole selection at once or skipped the selection entirely and reverted an earlier
+    // submitted action (in a hotseat game, possibly another player's).
+    private localUndoSteps: (() => void)[] = $state([])
+
+    pushLocalUndo(step: () => void) {
+        this.localUndoSteps = [...this.localUndoSteps, step]
+    }
+
+    private hasStagedChoice(): boolean {
+        return (
+            this.signTheAgreementStaged !== undefined ||
+            this.boardActionMode === ActionType.DevelopPlanets ||
+            this.developPlanetsHexIds.length > 0 ||
+            this.forcedShipPurchaseHexIds.length > 0 ||
+            this.taxLoanHexIds.length > 0 ||
+            this.wormholeSelectedHexId !== undefined ||
             (this.investorBuildCorporationId !== undefined &&
                 this.gameState.expandingCorporationId === undefined) ||
-            // Develop Planet(s) never submits anything to the server until Submit is
-            // pressed (developPlanets()), so entering the mode at all - even with zero hexes
-            // ticked yet - is exactly the same "nothing pending server-side" situation as an
-            // open picker, and needs the same Undo-cancels-it-locally treatment.
-            this.boardActionMode === ActionType.DevelopPlanets ||
-            // A tentative Create Wormhole hex pick (see wormholeSelectedHexId above) hasn't been
-            // submitted either - Undo should just clear the highlight/preview, not fall through
-            // to reverting some earlier, unrelated action.
-            this.wormholeSelectedHexId !== undefined ||
-            // Sign / Issue Share are local previews until the tile flip submits the real action.
-            this.signTheAgreementStaged !== undefined
+            this.investorPickerOpen !== undefined ||
+            this.alienTechPickerOpen !== undefined
+        )
+    }
+
+    // Whether Undo has something local to step back (so the Undo button shows even when there's
+    // no submitted action of this player's to revert).
+    get hasLocalUndo(): boolean {
+        return this.localUndoSteps.length > 0 || this.hasStagedChoice()
+    }
+
+    override async undo() {
+        const step = this.localUndoSteps.at(-1)
+        if (step) {
+            this.localUndoSteps = this.localUndoSteps.slice(0, -1)
+            step()
+            return
+        }
+        if (this.signTheAgreementStaged === 'shares') {
+            this.signTheAgreementStaged = 'power'
+            return
+        }
+        if (this.signTheAgreementStaged === 'power') {
+            this.signTheAgreementStaged = undefined
+            return
+        }
+        if (this.developPlanetsHexIds.length > 0) {
+            this.developPlanetsHexIds = this.developPlanetsHexIds.slice(0, -1)
+            return
+        }
+        if (this.boardActionMode === ActionType.DevelopPlanets) {
+            this.boardActionMode = undefined
+            return
+        }
+        if (this.forcedShipPurchaseHexIds.length > 0) {
+            this.forcedShipPurchaseHexIds = this.forcedShipPurchaseHexIds.slice(0, -1)
+            return
+        }
+        if (this.taxLoanHexIds.length > 0) {
+            this.taxLoanHexIds = this.taxLoanHexIds.slice(0, -1)
+            return
+        }
+        if (this.wormholeSelectedHexId !== undefined) {
+            this.wormholeSelectedHexId = undefined
+            return
+        }
+        // A Jerry-Rig / Private Contractor Corporation picked but no Outpost placed yet: back to
+        // the Corporation picker first, then (next Undo) close the picker.
+        if (
+            this.investorBuildCorporationId !== undefined &&
+            this.gameState.expandingCorporationId === undefined
         ) {
+            this.investorBuildCorporationId = undefined
+            return
+        }
+        if (this.investorPickerOpen !== undefined || this.alienTechPickerOpen !== undefined) {
             this.investorPickerOpen = undefined
             this.alienTechPickerOpen = undefined
-            this.investorBuildCorporationId = undefined
-            this.developPlanetsHexIds = []
-            this.boardActionMode = undefined
-            this.wormholeSelectedHexId = undefined
-            this.signTheAgreementStaged = undefined
             return
         }
         await super.undo()
@@ -606,7 +651,8 @@ export class StellarVenturesGameSession extends GameSession<
     // Outposts pay for it, never how many - see forcedShipPurchaseHexIds' own comment.
     forcedShipPurchaseHexIds: string[] = $state([])
 
-    toggleForcedShipPurchaseHex(hexId: string) {
+    toggleForcedShipPurchaseHex(hexId: string, recordUndo = true) {
+        if (recordUndo) this.pushLocalUndo(() => this.toggleForcedShipPurchaseHex(hexId, false))
         this.forcedShipPurchaseHexIds = this.forcedShipPurchaseHexIds.includes(hexId)
             ? this.forcedShipPurchaseHexIds.filter((id) => id !== hexId)
             : [...this.forcedShipPurchaseHexIds, hexId]
@@ -912,7 +958,8 @@ export class StellarVenturesGameSession extends GameSession<
         }
     }
 
-    toggleDevelopPlanetsHex(hexId: string) {
+    toggleDevelopPlanetsHex(hexId: string, recordUndo = true) {
+        if (recordUndo) this.pushLocalUndo(() => this.toggleDevelopPlanetsHex(hexId, false))
         this.developPlanetsHexIds = this.developPlanetsHexIds.includes(hexId)
             ? this.developPlanetsHexIds.filter((id) => id !== hexId)
             : [...this.developPlanetsHexIds, hexId]
@@ -1041,7 +1088,8 @@ export class StellarVenturesGameSession extends GameSession<
 
     taxLoanHexIds: string[] = $state([])
 
-    toggleTaxLoanHex(hexId: string) {
+    toggleTaxLoanHex(hexId: string, recordUndo = true) {
+        if (recordUndo) this.pushLocalUndo(() => this.toggleTaxLoanHex(hexId, false))
         this.taxLoanHexIds = this.taxLoanHexIds.includes(hexId)
             ? this.taxLoanHexIds.filter((id) => id !== hexId)
             : [...this.taxLoanHexIds, hexId]

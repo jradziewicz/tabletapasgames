@@ -1,5 +1,6 @@
 <script lang="ts">
     import CreditsIcon from './CreditsIcon.svelte'
+    import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
     // The amount-to-bid control: "− ₡45 +" in one rounded box, tap-friendly on phones (a plain
     // number input needed the on-screen keyboard). `value` is bindable; it never goes below
@@ -19,14 +20,24 @@
         disabled?: boolean
     } = $props()
 
+    // Each step is one click Undo can take back (see the session's localUndoSteps).
+    const gameSession = getGameSession()
+    function stepTo(next: number) {
+        const previous = value
+        value = next
+        gameSession.pushLocalUndo(() => {
+            value = previous
+        })
+    }
+
     const canDecrease = $derived(!disabled && value - step >= min)
     const canIncrease = $derived(!disabled && (max === undefined || value + step <= max))
 
     function decrease() {
-        if (canDecrease) value = value - step
+        if (canDecrease) stepTo(value - step)
     }
     function increase() {
-        if (canIncrease) value = value + step
+        if (canIncrease) stepTo(value + step)
     }
 
     function onKeydown(event: KeyboardEvent) {

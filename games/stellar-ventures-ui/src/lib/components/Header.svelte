@@ -40,7 +40,7 @@
 
     <div class="header-grid grid shrink-0 text-[15px]">
         <div class="flex items-center gap-2">
-            {#if gameSession.undoableAction}
+            {#if gameSession.undoableAction || gameSession.hasLocalUndo}
                 <button
                     type="button"
                     onclick={() => gameSession.undo()}
