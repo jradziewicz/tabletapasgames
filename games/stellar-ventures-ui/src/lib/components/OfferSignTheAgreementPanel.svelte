@@ -59,6 +59,11 @@
     // fields have cleared keeps every derived value resolving through that final step.
     const gameSession = getGameSession()
 
+    // "You are ..." for the viewer, "<name> is ..." for anyone else (PlayerName renders "You").
+    function isOrAre(playerId: string | undefined) {
+        return playerId !== undefined && playerId === gameSession.myPlayer?.id ? 'are' : 'is'
+    }
+
     const reveal = $derived(gameSession.signTheAgreementReveal)
     const staged = $derived(gameSession.signTheAgreementStaged)
     // Where the walkthrough is, whether previewed locally or already submitted.
@@ -534,7 +539,7 @@
                 {:else}
                     <div class="text-xs text-[#7f88ad]">
                         {#if presidentId}<PlayerName playerId={presidentId} />{:else}The President{/if}
-                        is finishing Sign The Agreement...
+                        {isOrAre(presidentId)} finishing Sign The Agreement...
                     </div>
                 {/if}
             </div>

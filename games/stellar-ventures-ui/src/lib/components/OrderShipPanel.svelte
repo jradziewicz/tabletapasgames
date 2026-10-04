@@ -21,6 +21,11 @@
 
     const gameSession = getGameSession()
 
+    // "You are ..." for the viewer, "<name> is ..." for anyone else (PlayerName renders "You").
+    function isOrAre(playerId: string | undefined) {
+        return playerId !== undefined && playerId === gameSession.myPlayer?.id ? 'are' : 'is'
+    }
+
     const corporationId = $derived(gameSession.gameState.activeCorporationId)
     const corporation = $derived(
         corporationId ? gameSession.gameState.getCorporation(corporationId) : undefined
@@ -256,7 +261,7 @@
             {#if presidentId}
                 <PlayerName playerId={presidentId} />
             {/if}
-            is ordering Ships for
+            {isOrAre(presidentId)} ordering Ships for
             <span class="font-semibold">{CorporationDisplayNames[corporationId]}</span>
         </div>
 

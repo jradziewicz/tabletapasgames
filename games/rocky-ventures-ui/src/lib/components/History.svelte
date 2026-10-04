@@ -37,12 +37,13 @@
 
     // The sentence after the player's name.
     function describe(action: Record<string, unknown>): string {
+        const their = action['playerId'] === gameSession.myPlayer?.id ? 'your' : 'their'
         const company = companyName(action['companyId'])
         const forCompany = company ? ` for ${company}` : ''
 
         switch (action['type']) {
             case ActionType.MovePawn:
-                return 'moved their pawn'
+                return `moved ${their} pawn`
             case ActionType.Tax:
                 return 'collected taxes'
             case ActionType.Invest:
@@ -90,7 +91,7 @@
                     case 'swap':
                         return 'spent a gem to swap'
                     case 'movePawn':
-                        return 'spent a gem to move their pawn'
+                        return `spent a gem to move ${their} pawn`
                     default:
                         return 'spent a gem'
                 }
@@ -103,7 +104,7 @@
             case ActionType.SkipBonusInvest:
                 return 'skipped the bonus invest'
             case ActionType.EndTurn:
-                return 'ended their turn'
+                return `ended ${their} turn`
             default:
                 return `used ${formatType(String(action['type']))}${forCompany}`
         }

@@ -25,6 +25,11 @@
 
     const gameSession = getGameSession()
 
+    // "You are ..." for the viewer, "<name> is ..." for anyone else (PlayerName renders "You").
+    function isOrAre(playerId: string | undefined) {
+        return playerId !== undefined && playerId === gameSession.myPlayer?.id ? 'are' : 'is'
+    }
+
     const corporationId = $derived(gameSession.gameState.activeCorporationId)
     const corporation = $derived(
         corporationId ? gameSession.gameState.getCorporation(corporationId) : undefined
@@ -393,10 +398,10 @@
                 <PlayerName playerId={presidentId} />
             {/if}
             {#if isWormholeMode}
-                is creating a wormhole for
+                {isOrAre(presidentId)} creating a wormhole for
                 <span class="font-semibold">{CorporationDisplayNames[corporationId]}</span>
             {:else}
-                is expanding
+                {isOrAre(presidentId)} expanding
                 <span class="font-semibold">{CorporationDisplayNames[corporationId]}</span>'s network
             {/if}
         </div>

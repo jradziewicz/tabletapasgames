@@ -21,6 +21,11 @@
 
     const gameSession = getGameSession()
 
+    // "You are ..." for the viewer, "<name> is ..." for anyone else (PlayerName renders "You").
+    function isOrAre(playerId: string | undefined) {
+        return playerId !== undefined && playerId === gameSession.myPlayer?.id ? 'are' : 'is'
+    }
+
     const currentVoterId = $derived(gameSession.gameState.boardroomBattleCurrentVoterId)
     const isMe = $derived(!!gameSession.myPlayer && gameSession.myPlayer.id === currentVoterId)
     const currentVoter = $derived(
@@ -224,7 +229,7 @@
             {#if currentVoterId}
                 <PlayerName playerId={currentVoterId} />
             {/if}
-            is voting in the Boardroom Battle
+            {isOrAre(currentVoterId)} voting in the Boardroom Battle
         {/if}
     </div>
 
