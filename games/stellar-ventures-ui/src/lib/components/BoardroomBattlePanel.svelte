@@ -1,5 +1,6 @@
 <script lang="ts">
     import { PlayerName } from '@tabletop/frontend-components'
+    import CreditsIcon from './CreditsIcon.svelte'
     import {
         ActionType,
         MAX_CARGO,
@@ -189,11 +190,22 @@
             const castVote = (gameSession.gameState.boardroomBattleVotes ?? []).find(
                 (vote) => vote.playerId === player.playerId
             )
+            const voteOrder = gameSession.gameState.boardroomBattleVoteOrder ?? []
+            const currentIndex = currentVoterId ? voteOrder.indexOf(currentVoterId) : -1
+            const ownIndex = voteOrder.indexOf(player.playerId)
             return {
                 playerId: player.playerId,
+                liquidFunds: player.liquidFunds,
                 isDirector: player.playerId === gameSession.gameState.directorPlayerId,
                 isActive: player.playerId === currentVoterId,
                 hasVoted: !!castVote,
+                // Their turn in the vote order has already passed (or voting is over) without a
+                // cast Vote - they Declined. Distinguished from "hasn't had a turn yet" so the
+                // Not Voted badge below can say which it is.
+                passed:
+                    !castVote &&
+                    player.playerId !== currentVoterId &&
+                    (isTieBreak || currentIndex === -1 || (ownIndex !== -1 && ownIndex < currentIndex)),
                 // Which Corporation this player's cast Vote actually went to - shown as that
                 // Corporation's own logo inside the Voted badge below, so at a glance you can see
                 // not just who's voted but who they're backing.
@@ -359,6 +371,12 @@
                             ></span>
                         {/if}
                         <PlayerName playerId={info.playerId} />
+                        <span
+                            class="ml-0.5 font-mono text-[11px] font-semibold text-[#c3c9e6]"
+                            title="Liquid Funds"
+                        >
+                            <CreditsIcon />{info.liquidFunds}
+                        </span>
                     </span>
                 </div>
                 <div class="mt-1 flex flex-wrap gap-1">
@@ -389,6 +407,15 @@
                                 style="width: {12 * votedLogoAspect}px;"
                             />
                             Voted
+                        </span>
+                    {:else if !info.hasVoted && !info.isActive}
+                        <!-- Counterpart to the Voted badge above, so every box reads at a glance:
+                             "Passed" once their turn has gone by without a Vote, "Not Voted" while
+                             their turn is still to come. -->
+                        <span
+                            class="rounded-full border border-[#3a4166] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#8089ad]"
+                        >
+                            {info.passed ? 'Passed' : 'Not Voted'}
                         </span>
                     {/if}
                 </div>

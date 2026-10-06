@@ -217,12 +217,17 @@
                          sibling of the flex-1 stats div, which pushed it out to the end of the
                          whole row) - the co-designer wants it read as one more at-a-glance stat,
                          not a separate right-aligned badge. -->
-                    <img
-                        src={agreementBadgeIcon}
-                        alt="Has not signed The Agreement"
+                    <span
+                        class="flex shrink-0 items-center gap-1"
                         title="Has not signed The Agreement"
-                        class="h-6 w-auto shrink-0 drop-shadow"
-                    />
+                    >
+                        <img
+                            src={agreementBadgeIcon}
+                            alt="Has not signed The Agreement"
+                            class="h-6 w-auto shrink-0 drop-shadow"
+                        />
+                        <span class="text-[10px] text-[#7f88ad]">(unsigned)</span>
+                    </span>
                 {/if}
             </div>
         </div>

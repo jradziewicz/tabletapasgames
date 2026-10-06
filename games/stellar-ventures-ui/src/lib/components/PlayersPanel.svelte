@@ -4,6 +4,7 @@
         effectiveMiningCapacityForCorporation,
         dividendPayoutPerShare,
         dividendRowForCargo,
+        MAX_CARGO,
         dividendRowForMiningCapacity,
         shareValuePerShare,
         totalCredits,
@@ -360,6 +361,10 @@
                     corporation.id
                 )}
                 {@const cargoRow = dividendRowForCargo(corporation.cargo)}
+                {@const incomingCargo = Math.min(
+                    MAX_CARGO,
+                    corporation.cargo + corporation.orderedShipLevels.reduce((sum, level) => sum + level, 0)
+                ) - corporation.cargo}
                 {@const miningRow = dividendRowForMiningCapacity(miningCapacity)}
                 {@const limitingStat = cargoRow <= miningRow ? 'Cargo' : 'Mining'}
                 {@const payoutPerShare = dividendPayoutPerShare(
@@ -436,7 +441,12 @@
                                     ? 'text-[#e6e9f5]'
                                     : 'text-[#c3c9e6]'}"
                             >
-                                {corporation.cargo}
+                                {corporation.cargo}{#if incomingCargo > 0}
+                                    <!-- CARGO still on order - Ships Ordered but not yet Delivered
+                                         (same clamped-at-MAX_CARGO preview Order Ships shows). -->
+                                    <span class="text-xs font-semibold text-[#4ade80]" title="Arriving when Ordered Ships are Delivered">
+                                        (+{incomingCargo})</span
+                                    >{/if}
                             </div>
                         </div>
                         <div class="flex-1 px-3 py-1.5">
@@ -500,12 +510,17 @@
                                     ).bonusDividendPerShare}
                                 </div>
                             {:else if CorporationAgreementTokenIcons[corporation.id]}
-                                <img
-                                    src={CorporationAgreementTokenIcons[corporation.id]}
-                                    alt="Has not signed The Agreement"
+                                <div
+                                    class="flex items-center gap-1"
                                     title="Has not signed The Agreement"
-                                    class="h-6 w-auto drop-shadow"
-                                />
+                                >
+                                    <img
+                                        src={CorporationAgreementTokenIcons[corporation.id]}
+                                        alt="Has not signed The Agreement"
+                                        class="h-6 w-auto drop-shadow"
+                                    />
+                                    <span class="text-[10px] font-normal text-[#7f88ad]">(unsigned)</span>
+                                </div>
                             {:else}
                                 <span class="text-[10px] font-normal text-[#7f88ad]">Cannot sign</span>
                             {/if}

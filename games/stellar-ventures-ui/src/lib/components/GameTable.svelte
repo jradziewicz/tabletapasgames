@@ -93,6 +93,23 @@
     // control appearing...), which snaps it back to auto so the actions are never left clipped
     // (see the ResizeObserver effect below). A dragged height is therefore per-step only and is
     // deliberately not remembered across page loads, so a stale height can't hide the actions.
+    // On a phone the workspace is a single pane with a fixed tab order (Map, Dividend Chart,
+    // Charter, then the rest) rather than the player's saved desktop layout - a layout dragged
+    // into shape for a wide screen rarely makes sense on a narrow one, and a phone has no way to
+    // drag tabs about to fix it. Nothing done on a phone is saved back, so it can't disturb the
+    // desktop layout either. Re-evaluated on resize/rotation; the {#key} around TabWorkspace
+    // below remounts it when the answer changes, since it only reads savedLayout once.
+    const PHONE_QUERY = '(max-width: 639px)'
+    let isPhone = $state(typeof window !== 'undefined' && window.matchMedia(PHONE_QUERY).matches)
+    $effect(() => {
+        const mql = window.matchMedia(PHONE_QUERY)
+        const update = () => (isPhone = mql.matches)
+        mql.addEventListener('change', update)
+        return () => mql.removeEventListener('change', update)
+    })
+    const PHONE_TAB_ORDER = ['board', 'dividendChart', 'charter', 'agreement', 'investorBoard', 'roundTracker', 'shipyard']
+    const phoneLayout = { v: 1, sidebar: [], main: PHONE_TAB_ORDER }
+
     let topSectionHeightPx: number | undefined = $state(undefined)
     let layoutColumnEl: HTMLDivElement | undefined
     let topSectionEl: HTMLDivElement | undefined
@@ -288,11 +305,12 @@
 
                 <div class="overflow-x-hidden overflow-y-auto workspace-shell" style="flex:1; min-height: 320px;">
                 {#if session.preferences.ready && workspaceLayoutPreference.ready}
+                  {#key isPhone}
                     <TabWorkspace
                         tabs={workspaceTabs}
                         label="Stellar Ventures"
-                        savedLayout={workspaceLayoutPreference.value}
-                        onLayoutChange={(value) => workspaceLayoutPreference.change(value)}
+                        savedLayout={isPhone ? phoneLayout : workspaceLayoutPreference.value}
+                        onLayoutChange={(value) => { if (!isPhone) workspaceLayoutPreference.change(value) }}
                     >
                         {#snippet children(id, active)}
                             {#if id === 'board'}
@@ -314,6 +332,7 @@
                             {/if}
                         {/snippet}
                     </TabWorkspace>
+                  {/key}
                 {/if}
                 </div>
             </div>
