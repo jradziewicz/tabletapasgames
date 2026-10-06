@@ -134,6 +134,11 @@
     const minimumBid = $derived((auction?.highBid ?? -1) + 1)
     const isOpeningBid = $derived(auction?.highBid === undefined)
 
+    // A bid can never be more than the bidder's Liquid Funds (the engine rejects it), so the
+    // stepper stops there instead of letting the amount climb past what they can pay.
+    const maxBid = $derived(
+        currentBidderId ? gameSession.gameState.getPlayerState(currentBidderId).liquidFunds : undefined
+    )
     let bidInput = $state(0)
 
     // Keep the suggested bid sensible as the high bid changes from turn to turn - re-derive
@@ -291,7 +296,7 @@
 
             {#if myTurn && (canBid || canPass)}
                 <div class="flex flex-wrap items-center gap-2 pt-1">
-                    <BidStepper bind:value={bidInput} min={minimumBid} disabled={!canBid} />
+                    <BidStepper bind:value={bidInput} min={minimumBid} max={maxBid} disabled={!canBid} />
                     <button
                         type="button"
                         onclick={submitBid}
