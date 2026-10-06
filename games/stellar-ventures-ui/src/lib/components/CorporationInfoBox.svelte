@@ -45,6 +45,7 @@
         remainingOutposts,
         shipLevels,
         shipLevelsLabel = 'Ships',
+        deliveredShipLevels,
         voteMarkers,
         showOutpostCostTable = false,
         hasNotSignedAgreement = false,
@@ -108,6 +109,9 @@
         // Label for the shipLevels row - "Ships" by default; Order Ships passes "Ordered" since
         // what it shows there is this Corporation's Ordered (not yet Delivered) Ships.
         shipLevelsLabel?: string
+        // Delivered Ships, shown on their own row directly under the shipLevels row (Order Ships
+        // passes both, so Ordered and Delivered read together). Undefined skips the row.
+        deliveredShipLevels?: number[]
         // Votes already placed on this Corporation this Boardroom Battle, plus the current
         // voter's own still-queued preview (queued: true, ringed) - one entry per token, each
         // pre-resolved to its player's own vote-token icon by the caller (BoardroomBattlePanel),
@@ -307,6 +311,26 @@
                 {:else}
                     <span class="text-[10px] text-[#7f88ad]">None yet</span>
                 {/if}
+            {/if}
+        </div>
+    {/if}
+
+    {#if deliveredShipLevels !== undefined}
+        <div class="mt-1.5 flex flex-wrap items-center gap-1">
+            <span class="mr-1 shrink-0 text-[10px] uppercase tracking-widest text-[#7f88ad]">
+                Delivered:
+            </span>
+            {#if deliveredShipLevels.length > 0}
+                {#each deliveredShipLevels as level, index (index)}
+                    <img
+                        src={ShipLevelIcons[level]}
+                        alt="Level {level} Ship"
+                        class="h-6 shrink-0 object-contain drop-shadow"
+                        style="width: {1.5 * (ShipAspect[level] ?? 1)}rem;"
+                    />
+                {/each}
+            {:else}
+                <span class="text-[10px] text-[#7f88ad]">None yet</span>
             {/if}
         </div>
     {/if}

@@ -330,6 +330,7 @@
                         {futurePayout}
                         shipLevels={corporation.orderedShipLevels}
                         shipLevelsLabel="Ordered"
+                        deliveredShipLevels={corporation.deliveredShipLevels}
                     >
                         <!-- Forced Purchase's own "No Credits?" Loans (rulebook pages 16-17 &
                              25) - this Corporation has no Ships and can't afford one outright,
