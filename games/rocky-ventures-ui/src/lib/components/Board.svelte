@@ -447,6 +447,21 @@
         {@const flipping =
             flipAnimation !== undefined && flipAnimation.nodeId === node.id && flipAnimation.phase === 'flip'}
         <g>
+            {#if (claimable || extractable || newlyRevealed) && !extractSelected && !flipping}
+                <!-- SVG-native halo: iPhone Safari ignores CSS drop-shadow on SVG images, and on a
+                     phone-sized map a few px of shadow vanishes, so draw a blurred ring in map units -->
+                <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r={MineTokenRadius + 10}
+                    fill="none"
+                    stroke={claimable || extractable ? activePlayerColor : '#ffd166'}
+                    stroke-width="16"
+                    filter="url(#mine-halo-blur)"
+                    class="mine-halo"
+                    pointer-events="none"
+                />
+            {/if}
             {#if extractable}
                 <circle
                     cx={node.x}
@@ -875,6 +890,9 @@
                 </g>
             {/each}
         </g>
+        <filter id="mine-halo-blur" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="5" />
+        </filter>
         <filter id="hunt-region-soften" x="-5%" y="-5%" width="110%" height="110%">
             <feGaussianBlur stdDeviation="6" />
         </filter>
@@ -1030,6 +1048,18 @@
         0%,
         100% {
             opacity: 0.7;
+        }
+        50% {
+            opacity: 1;
+        }
+    }
+    .mine-halo {
+        animation: mine-halo-pulse 1.4s ease-in-out infinite;
+    }
+    @keyframes mine-halo-pulse {
+        0%,
+        100% {
+            opacity: 0.45;
         }
         50% {
             opacity: 1;
