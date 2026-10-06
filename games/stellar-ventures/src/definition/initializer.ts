@@ -73,7 +73,7 @@ const ScrapTargetLevelByLevel: Record<number, number | undefined> = {
 // (page 5, chevron side): 3, 2, 1, 1, 0. Setup step 7 (rulebook page 3): shuffle all 5 and place
 // 1 face-down on each of the Shipyard's 3 tile hexes (3 on Alpha - see the printed Shipyard
 // track), returning the other 2 to the box unseen.
-const ALIEN_SHIPYARD_TILE_CHEVRONS = [3, 2, 1, 1, 0]
+export const ALIEN_SHIPYARD_TILE_CHEVRONS = [3, 2, 1, 1, 0]
 // The 3 Shipyard levels that have a tile hex on the Alpha map, confirmed from the board's
 // printed Shipyard track (a green hex slot follows each of these levels' columns).
 const ALIEN_SHIPYARD_TILE_LEVELS = [2, 3, 5]
@@ -83,7 +83,7 @@ const ALIEN_SHIPYARD_TILE_LEVELS = [2, 3, 5]
 // other 3 to the box unseen. ("First Play: Tile with 4 chevrons should not be used" isn't
 // modeled as a special mode, consistent with how the Alien Shipyard Tiles' own "First Play" note
 // above is also not specially handled.)
-const ALIEN_AGREEMENT_TILE_CHEVRONS = [0, 1, 1, 1, 2, 2, 2, 2, 3, 4]
+export const ALIEN_AGREEMENT_TILE_CHEVRONS = [0, 1, 1, 1, 2, 2, 2, 2, 3, 4]
 
 // Confirmed directly from the rulebook's own "New Investor Setup" diagrams (pages 26-27),
 // which give a complete alternate Setup for 3, 4 and 5 players (New Investor Setup has no
