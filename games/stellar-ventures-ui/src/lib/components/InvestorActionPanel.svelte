@@ -14,14 +14,13 @@
     import {
         CorporationDisplayNames,
         CorporationLogoIcons,
-        CorporationLogoAspect,
-        CHARTER_ASPECT
+        CorporationLogoAspect
     } from '$lib/utils/corporationDisplay.js'
+    import { ShipLevelIcons } from '$lib/utils/shipDisplay.js'
     import { InvestorActionDiscIcons } from '$lib/utils/investorDisplay.js'
     import { PlayerVoteTokenIcons } from '$lib/utils/playerSymbolDisplay.js'
     import investorActionRow from '$lib/images/investor/investorActionRow.png'
     import CorporationInfoBox from './CorporationInfoBox.svelte'
-    import CorporationCharter from './CorporationCharter.svelte'
     import CreditsIcon from './CreditsIcon.svelte'
     import OutpostIcon from './OutpostIcon.svelte'
     import AlienEngineeringPanel from './AlienEngineeringPanel.svelte'
@@ -103,9 +102,8 @@
     const CIRCLE_WIDTH_PCT = CIRCLE_DIAM / ROW_ASPECT
 
     // Insurance Fraud needs a target Corporation (where this player is President) with at
-    // least one Delivered Ship - the specific Ship to scrap is now picked straight off that
-    // Corporation's own Charter (see the picker markup below), the same way Order Ships shows
-    // one, rather than from a separate list of buttons.
+    // least one Delivered Ship - the specific Ship to scrap is then picked from that
+    // Corporation's Ordered / Delivered Ship rows (see the picker markup below).
     const insuranceFraudCorporations = $derived.by(() => {
         if (!currentPlayerId) return []
         return gameSession.gameState.corporations.filter(
@@ -117,7 +115,7 @@
     })
 
     // Only meaningful when the President of more than one eligible Corporation at once - which
-    // Corporation's Charter is currently showing for the Delivered Ship pick.
+    // Corporation's Ships are currently showing for the Delivered Ship pick.
     let insuranceFraudCorporationId: CorporationId | undefined = $state()
 
     // Jerry-Rig / Private Contractor share the same "which Corporation" eligibility check the
@@ -493,18 +491,44 @@
                         </button>
                     {/if}
                 </div>
-                <!-- Same Charter box, same sizing, as the Order Ships action bar
-                     (OrderShipPanel.svelte) - except here a Delivered (bottom-row) Ship is the
-                     clickable target instead of the Shipyard, and clicking one scraps it
-                     immediately rather than queuing anything. Bare CorporationCharter (no
-                     CorporationCharterWithPowers wrapper) - Corporate Power cards aren't
-                     relevant to picking a Ship to scrap, and skipping them saves some space in
-                     this already-tight sidebar. -->
-                <div class="relative" style="width: 25%; aspect-ratio: {CHARTER_ASPECT};">
-                    <CorporationCharter
-                        corporationId={targetCorporationId}
-                        onSelectDeliveredShip={(level) => chooseInsuranceFraud(targetCorporationId, level)}
-                    />
+                <!-- Just the Corporation's Ships, not its whole Charter: Ordered Ships for
+                     reference, Delivered Ships as the buttons. Clicking one scraps it
+                     immediately. -->
+                {@const targetCorporation = gameSession.gameState.corporations.find(
+                    (c) => c.id === targetCorporationId
+                )!}
+                {#if targetCorporation.orderedShipLevels.length > 0}
+                    <div class="flex items-center gap-2">
+                        <span class="w-16 shrink-0 text-[11px] uppercase tracking-wider text-[#7f88ad]">Ordered</span>
+                        <div class="flex flex-wrap items-center gap-1.5">
+                            {#each targetCorporation.orderedShipLevels as level, index (index)}
+                                <img
+                                    src={ShipLevelIcons[level]}
+                                    alt="Level {level} Ship (ordered)"
+                                    class="h-10 w-auto opacity-60 drop-shadow"
+                                />
+                            {/each}
+                        </div>
+                    </div>
+                {/if}
+                <div class="flex items-center gap-2">
+                    <span class="w-16 shrink-0 text-[11px] uppercase tracking-wider text-[#7f88ad]">Delivered</span>
+                    <div class="flex flex-wrap items-center gap-1.5">
+                        {#each targetCorporation.deliveredShipLevels as level, index (index)}
+                            <button
+                                type="button"
+                                onclick={() => chooseInsuranceFraud(targetCorporationId, level)}
+                                class="cursor-pointer rounded-md border border-[#2a3155] bg-[#12162b] p-1 transition hover:border-[#3ddc84] hover:brightness-125"
+                                aria-label="Scrap Level {level} Ship"
+                            >
+                                <img
+                                    src={ShipLevelIcons[level]}
+                                    alt=""
+                                    class="pointer-events-none block h-12 w-auto drop-shadow"
+                                />
+                            </button>
+                        {/each}
+                    </div>
                 </div>
             {/if}
         </div>
