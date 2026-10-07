@@ -6,7 +6,7 @@
     // Same approach as FirstShipOrderedRevealOverlay: derived straight from permanent game state
     // (corporation.agreement is set once, forever, by signing) rather than from a live event, so
     // it reaches players who were watching live and players who open the game later alike. "Already
-    // seen" is per viewer, in localStorage scoped per game. If several signings are unseen at
+    // seen" is per viewer, saved to their account (SeenOverlays) scoped per game. If several signings are unseen at
     // once they queue, one at a time. Suppressed while scrubbing history so stepping through old
     // turns never replays it.
     //
@@ -17,7 +17,10 @@
         type CorporationId,
         agreementTrackEntryForPlanetCount
     } from '@tabletop/stellar-ventures'
+    import { untrack } from 'svelte'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import { SeenOverlays } from '$lib/model/seenOverlays.svelte.js'
+    import type { StellarVenturesGameSession } from '$lib/model/session.svelte.js'
     import {
         CorporationAgreementTokenIcons,
         CorporationColors,
@@ -40,9 +43,12 @@
 
     const storageKey = `stellar-ventures-seen-agreement-signings-${gameSession.gameState.gameId}`
 
+    // Saved to the player's account, so a signing watched on one device doesn't replay on another.
+    const seenOverlays = new SeenOverlays(gameSession as StellarVenturesGameSession)
+
     function loadSeen(): Set<CorporationId> {
         try {
-            const raw = localStorage.getItem(storageKey)
+            const raw = seenOverlays.get(storageKey)
             return raw ? new Set(JSON.parse(raw) as CorporationId[]) : new Set()
         } catch {
             return new Set()
@@ -50,16 +56,18 @@
     }
 
     let seen: Set<CorporationId> = $state(loadSeen())
+    // Picks up the account copy once it loads (or changes on another device).
+    $effect(() => {
+        const stored = loadSeen()
+        const current = untrack(() => seen)
+        if ([...stored].some((id) => !current.has(id))) seen = new Set([...current, ...stored])
+    })
 
     function markSeen(corporationId: CorporationId) {
         const next = new Set(seen)
         next.add(corporationId)
         seen = next
-        try {
-            localStorage.setItem(storageKey, JSON.stringify([...next]))
-        } catch {
-            // Best-effort: worst case it plays again next load.
-        }
+        seenOverlays.set(storageKey, JSON.stringify([...next]))
     }
 
     // Nobody sees this until the signer has finished their walkthrough. On the signer's own
@@ -79,7 +87,9 @@
     )
 
     const pendingCorporation = $derived(
-        gameSession.isViewingHistory || gameSession.signTheAgreementReveal !== undefined
+        !seenOverlays.ready ||
+            gameSession.isViewingHistory ||
+            gameSession.signTheAgreementReveal !== undefined
             ? undefined
             : signedCorporations.find(
                   (corporation) =>

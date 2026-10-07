@@ -8,7 +8,7 @@
     // Round action resolved and only "return to the game" afterward, so it's derived straight off
     // the Board's own permanent record (board.closedBorderLevels never un-closes a level - see
     // model/board.ts's closeBorder) rather than any snapshot taken right before one player's own
-    // action. "Already seen" is tracked in localStorage, scoped per game, same per-viewer
+    // action. "Already seen" is saved to the player's account (SeenOverlays), scoped per game, same per-viewer
     // dramatic-pacing convention as that overlay - nothing here is shared or persisted
     // server-side.
     //
@@ -17,7 +17,10 @@
     // module's own comment) is set to the Border level being revealed, so Board.svelte can pulse
     // that specific Border's own segments on the actual map right behind this dialog - the
     // "pulse the border that is now closed" half of the request this overlay exists for.
+    import { untrack } from 'svelte'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import { SeenOverlays } from '$lib/model/seenOverlays.svelte.js'
+    import type { StellarVenturesGameSession } from '$lib/model/session.svelte.js'
     import { borderClosedReveal } from '$lib/model/borderClosedReveal.svelte.js'
     import { borderZoneDisplay } from '$lib/utils/borderZoneDisplay.js'
 
@@ -40,9 +43,12 @@
     // Seen levels are a plain array of numbers (not a Set) - simpler to reason about and to
     // serialize, and dismiss() below always replaces this with a brand-new array, so equality/
     // reactivity never depends on any in-place mutation.
+    // Saved to the player's account, so a reveal watched on one device doesn't replay on another.
+    const seenOverlays = new SeenOverlays(gameSession as StellarVenturesGameSession)
+
     function loadSeenLevels(): number[] {
         try {
-            const raw = localStorage.getItem(storageKey)
+            const raw = seenOverlays.get(storageKey)
             return raw ? (JSON.parse(raw) as number[]) : []
         } catch {
             return []
@@ -50,15 +56,17 @@
     }
 
     function saveSeenLevels(levels: number[]) {
-        try {
-            localStorage.setItem(storageKey, JSON.stringify(levels))
-        } catch {
-            // Best-effort - if storage is unavailable/full, worst case this reveal shows again
-            // next time, which is harmless (purely dramatic, never a rules concern).
-        }
+        seenOverlays.set(storageKey, JSON.stringify(levels))
     }
 
     let seenLevels: number[] = $state(loadSeenLevels())
+    // Picks up the account copy once it loads (or changes on another device).
+    $effect(() => {
+        const stored = loadSeenLevels()
+        const current = untrack(() => seenLevels)
+        const added = stored.filter((level) => !current.includes(level))
+        if (added.length > 0) seenLevels = [...current, ...added]
+    })
 
     // If a Border-closing action gets Undone (canUndo/undoableAction - only possible before
     // anything revealsInfo-flagged happens after it), board.closedBorderLevels genuinely reverts
@@ -85,6 +93,7 @@
     // The Border (and its display color) currently pending acknowledgement, combined into one
     // derived value rather than two separate ones kept in sync by hand.
     const pending = $derived.by(() => {
+        if (!seenOverlays.ready) return undefined
         const border = closedBorders.find((candidate) => !seenLevels.includes(candidate.level))
         return border ? { border, color: borderZoneDisplay(border.level).color } : undefined
     })

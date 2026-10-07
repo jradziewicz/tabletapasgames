@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { untrack } from 'svelte'
     // Dramatic (not decision-driving) full-screen reveal for a completed batch of Tax Payments
     // (state.taxPaymentSummary - see model/gameState.ts's own comment and
     // stateHandlers/payTaxes.ts, which finalizes it the instant state.taxPayerCorporationIds
@@ -8,9 +9,11 @@
     // it's derived straight off taxPaymentSummary's own permanent, already-shared record rather
     // than any snapshot taken right before one player's own action. taxPaymentSummary.id
     // increments once per completed batch, so "already seen" is just the highest id this viewer
-    // has acknowledged - tracked in localStorage, scoped per game, same per-viewer dramatic-
+    // has acknowledged - saved to their account (SeenOverlays), scoped per game, same per-viewer dramatic-
     // pacing convention as those two overlays.
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import { SeenOverlays } from '$lib/model/seenOverlays.svelte.js'
+    import type { StellarVenturesGameSession } from '$lib/model/session.svelte.js'
     import { borderZoneDisplay } from '$lib/utils/borderZoneDisplay.js'
     import { CorporationDisplayNames, CorporationLogoIcons, CorporationLogoAspect } from '$lib/utils/corporationDisplay.js'
     import CreditsIcon from './CreditsIcon.svelte'
@@ -20,34 +23,30 @@
     const summary = $derived(gameSession.gameState.taxPaymentSummary)
 
     const storageKey = `stellar-ventures-seen-tax-payment-${gameSession.gameState.gameId}`
+    // Saved to the player's account, so a reveal watched on one device doesn't replay on another.
+    const seenOverlays = new SeenOverlays(gameSession as StellarVenturesGameSession)
 
     function loadSeenId(): number {
-        try {
-            const raw = localStorage.getItem(storageKey)
-            return raw ? Number(raw) || 0 : 0
-        } catch {
-            return 0
-        }
-    }
-
-    function saveSeenId(id: number) {
-        try {
-            localStorage.setItem(storageKey, String(id))
-        } catch {
-            // Best-effort - if storage is unavailable/full, worst case this reveal shows again
-            // next time, which is harmless (purely dramatic, never a rules concern).
-        }
+        const raw = seenOverlays.get(storageKey)
+        return raw ? Number(raw) || 0 : 0
     }
 
     let seenId: number = $state(loadSeenId())
+    // Picks up the account copy once it loads (or changes on another device).
+    $effect(() => {
+        const stored = loadSeenId()
+        if (stored > untrack(() => seenId)) seenId = stored
+    })
 
-    const pending = $derived(summary && summary.id > seenId ? summary : undefined)
+    const pending = $derived(
+        seenOverlays.ready && summary && summary.id > seenId ? summary : undefined
+    )
     const taxBoxIncrease = $derived(pending ? pending.taxBoxAfter - pending.taxBoxBefore : 0)
 
     function dismiss() {
         if (pending) {
             seenId = pending.id
-            saveSeenId(pending.id)
+            seenOverlays.set(storageKey, String(pending.id))
         }
     }
 </script>

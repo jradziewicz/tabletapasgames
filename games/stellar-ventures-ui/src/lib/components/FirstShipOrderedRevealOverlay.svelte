@@ -19,14 +19,17 @@
     // needed, no per-action snapshot needed, works identically for the player who triggered it
     // and for one who loads the game fresh a week later.
     //
-    // "Already seen" is tracked in localStorage, scoped per game, since it's purely a per-viewer
+    // "Already seen" is saved to the player's account (SeenOverlays), scoped per game, since it's purely a per-viewer
     // dramatic-pacing concern, not gameplay state - nothing here is shared or persisted
     // server-side.
     //
     // Mounted once, at the very top of GameTable.svelte (a sibling of DefaultTableLayout, not
     // nested inside the TabWorkspace/ActionPanel like the rest of the game's panels) so it truly
     // covers the whole screen regardless of which workspace tab happens to be active.
+    import { untrack } from 'svelte'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import { SeenOverlays } from '$lib/model/seenOverlays.svelte.js'
+    import type { StellarVenturesGameSession } from '$lib/model/session.svelte.js'
     import { type CorporationId } from '@tabletop/stellar-ventures'
     import DividendChartPanel from './DividendChartPanel.svelte'
     import alienTile0 from '$lib/images/shipyard/alienTile0.png'
@@ -70,9 +73,12 @@
 
     const storageKey = `stellar-ventures-seen-first-ship-ordered-reveals-${gameSession.gameState.gameId}`
 
+    // Saved to the player's account, so a reveal watched on one device doesn't replay on another.
+    const seenOverlays = new SeenOverlays(gameSession as StellarVenturesGameSession)
+
     function loadSeenLevels(): Set<number> {
         try {
-            const raw = localStorage.getItem(storageKey)
+            const raw = seenOverlays.get(storageKey)
             return raw ? new Set(JSON.parse(raw) as number[]) : new Set()
         } catch {
             return new Set()
@@ -80,15 +86,18 @@
     }
 
     function saveSeenLevels(levels: Set<number>) {
-        try {
-            localStorage.setItem(storageKey, JSON.stringify([...levels]))
-        } catch {
-            // Best-effort - if storage is unavailable/full, worst case this reveal shows again
-            // next time, which is harmless (purely dramatic, never a rules concern).
-        }
+        seenOverlays.set(storageKey, JSON.stringify([...levels]))
     }
 
     let seenLevels: Set<number> = $state(loadSeenLevels())
+    // Picks up the account copy once it loads (or changes on another device).
+    $effect(() => {
+        const stored = loadSeenLevels()
+        const current = untrack(() => seenLevels)
+        if ([...stored].some((level) => !current.has(level))) {
+            seenLevels = new Set([...current, ...stored])
+        }
+    })
 
     function markSeen(level: number) {
         const next = new Set(seenLevels)
@@ -97,7 +106,11 @@
         saveSeenLevels(next)
     }
 
-    const pendingSection = $derived(resolvedSections.find((section) => !seenLevels.has(section.level)))
+    const pendingSection = $derived(
+        seenOverlays.ready
+            ? resolvedSections.find((section) => !seenLevels.has(section.level))
+            : undefined
+    )
 
     // Reconstructs exactly what changed for the pending section - undefined fields mean "nothing
     // to show for that half" (e.g. a section with an Alien Tile but no Scrap Target, or an old
