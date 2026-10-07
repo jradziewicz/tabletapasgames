@@ -9,6 +9,11 @@
         CHARTER_ASPECT
     } from '$lib/utils/corporationDisplay.js'
     import CorporationCharterWithPowers from './CorporationCharterWithPowers.svelte'
+    import {
+        CHARTER_EDGE_TOP_PCT,
+        CHARTER_NOTCH_CARD_HEIGHT_PCT_OF_CHARTER,
+        CHARTER_NOTCH_SLOTS
+    } from '$lib/utils/charterLayout.js'
 
     const gameSession = getGameSession()
 
@@ -36,6 +41,18 @@
     let selectedId: CorporationId = $state(
         gameSession.gameState.activeCorporationId ?? DISPLAY_ORDER[0]!
     )
+
+    // Held Power cards hang off the Charter's bottom edge (absolutely positioned, see
+    // CorporationCharterWithPowers), so they add no height of their own. Without this padding the
+    // ScalingWrapper fit only the Charter box and the cards were cut off below it.
+    const powerOverhangPx = $derived.by(() => {
+        const powerCount = corporationsById.get(selectedId)?.powers.length ?? 0
+        if (powerCount === 0) return 0
+        const rows = Math.ceil(powerCount / CHARTER_NOTCH_SLOTS.length)
+        const bottomPct = CHARTER_EDGE_TOP_PCT + rows * CHARTER_NOTCH_CARD_HEIGHT_PCT_OF_CHARTER
+        const charterHeightPx = CHARTER_BASE_WIDTH_PX / CHARTER_ASPECT
+        return Math.max(0, ((bottomPct - 100) / 100) * charterHeightPx)
+    })
 
     function isFormed(id: CorporationId): boolean {
         return corporationsById.get(id)?.active ?? false
@@ -82,8 +99,10 @@
          below only sets how sharp it stays when zoomed in - the wrapper scales it to fit. -->
     <div class="min-h-0 flex-1">
         <ScalingWrapper justify="center" controls="bottom-left" dragToPan expandable>
-            <div class="relative" style="width: {CHARTER_BASE_WIDTH_PX}px; aspect-ratio: {CHARTER_ASPECT};">
-                <CorporationCharterWithPowers corporationId={selectedId} />
+            <div style="padding-bottom: {powerOverhangPx}px;">
+                <div class="relative" style="width: {CHARTER_BASE_WIDTH_PX}px; aspect-ratio: {CHARTER_ASPECT};">
+                    <CorporationCharterWithPowers corporationId={selectedId} />
+                </div>
             </div>
         </ScalingWrapper>
     </div>
