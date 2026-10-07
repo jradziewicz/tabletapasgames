@@ -26,8 +26,13 @@ import uFuzzy from '@leeoniya/ufuzzy'
 
 export class UserService {
     private readonly uFuzzy: uFuzzy
-    private usernamesInitialized = false
+    // Username list for the add-player type-ahead. Each backend instance keeps its own copy, so it
+    // is reloaded once it is older than USERNAMES_MAX_AGE_MS; otherwise anyone who signed up (or
+    // renamed) on another instance never showed up in the dropdown until this one restarted.
+    private usernamesLoadedAt: number | undefined
+    private usernamesLoading: Promise<void> | undefined
     private usernames: string[] = []
+    private static readonly USERNAMES_MAX_AGE_MS = 60_000
 
     constructor(
         private readonly userStore: UserStore,
@@ -426,10 +431,21 @@ export class UserService {
     }
 
     private async initializeUsernames(): Promise<void> {
-        if (this.usernamesInitialized) {
+        if (
+            this.usernamesLoadedAt !== undefined &&
+            Date.now() - this.usernamesLoadedAt < UserService.USERNAMES_MAX_AGE_MS
+        ) {
             return
         }
-        this.usernames = await this.userStore.findAllUsernames()
-        this.usernamesInitialized = true
+        this.usernamesLoading ??= this.userStore
+            .findAllUsernames()
+            .then((usernames) => {
+                this.usernames = usernames
+                this.usernamesLoadedAt = Date.now()
+            })
+            .finally(() => {
+                this.usernamesLoading = undefined
+            })
+        await this.usernamesLoading
     }
 }

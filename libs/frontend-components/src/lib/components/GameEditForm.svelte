@@ -248,7 +248,9 @@
                 if (e.name === 'PlayersNotFoundError') {
                     let metadata = e.metadata as { players: Player[] }
                     for (const player of metadata.players) {
-                        errors[player.id] = ['This player was not found']
+                        errors[player.id] = [
+                            'No player has this username. Type a few letters and pick one from the list.'
+                        ]
                     }
                     unexpectedError = false
                 } else if (e.name === 'PlayersWithoutTitleAccessError') {
