@@ -7,7 +7,8 @@
         DefaultTabs,
         TabWorkspace,
         DebouncedLayout,
-        type WorkspaceTab
+        type WorkspaceTab,
+        type SavedPane
     } from '@tabletop/frontend-components'
 
     import PlayersPanel from '$lib/components/PlayersPanel.svelte'
@@ -67,6 +68,16 @@
     // localStorage so a page refresh mid-save doesn't lose it. There's no dedicated "reset
     // layout" action; a player gets back to a from-scratch layout by closing panes and
     // re-adding the tabs they want via each pane's own Add tab menu.
+    // What a desktop player sees before they've arranged anything themselves: the Map (with
+    // Shipyard, Round Tracker, The Agreement and Charter behind it) on the left, the Dividend
+    // Chart (with the Investor Board behind it) on the right. A saved layout always wins.
+    const DEFAULT_DESKTOP_LAYOUT: SavedPane = [
+        'cols',
+        55,
+        ['board', 'shipyard', 'roundTracker', 'agreement', 'charter'],
+        ['dividendChart', 'investorBoard']
+    ]
+
     const workspaceLayoutPreference = new DebouncedLayout(
         () => ({
             ready: session.preferences.ready,
@@ -310,6 +321,7 @@
                         tabs={workspaceTabs}
                         label="Stellar Ventures"
                         savedLayout={isPhone ? phoneLayout : workspaceLayoutPreference.value}
+                        initialLayout={isPhone ? undefined : DEFAULT_DESKTOP_LAYOUT}
                         onLayoutChange={(value) => { if (!isPhone) workspaceLayoutPreference.change(value) }}
                     >
                         {#snippet children(id, active)}
