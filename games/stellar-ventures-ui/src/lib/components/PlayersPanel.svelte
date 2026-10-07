@@ -28,6 +28,7 @@
     import { CorporatePowerDisplayNames, CorporatePowerDescriptions } from '$lib/utils/corporatePowerDisplay.js'
     import { PlayerSymbolIcons, PlayerVoteTokenIcons } from '$lib/utils/playerSymbolDisplay.js'
     import CreditsIcon from './CreditsIcon.svelte'
+    import { ShipLevelIcons } from '$lib/utils/shipDisplay.js'
     import CreditsText from './CreditsText.svelte'
     import alienTechCube from '$lib/images/investor/alienTechCube.png'
 
@@ -461,6 +462,32 @@
                                 {miningCapacity}
                             </div>
                         </div>
+                    </div>
+
+                    <!-- Ships - Ordered (paid for, not yet arrived) and Delivered, as the same
+                         Ship icons the Charter shows, in two columns like the row above. -->
+                    <div class="flex divide-x divide-[#2a3155] border-b border-[#2a3155]">
+                        {#each [{ label: 'Ordered', levels: corporation.orderedShipLevels }, { label: 'Delivered', levels: corporation.deliveredShipLevels }] as ships (ships.label)}
+                            <div class="flex-1 px-3 py-1.5">
+                                <div class="text-[10px] uppercase tracking-widest text-[#7f88ad]">
+                                    {ships.label}
+                                </div>
+                                {#if ships.levels.length > 0}
+                                    <div class="mt-0.5 flex flex-wrap items-center gap-1">
+                                        {#each ships.levels as level, index (index)}
+                                            <img
+                                                src={ShipLevelIcons[level]}
+                                                alt="Level {level} Ship"
+                                                title="Level {level} Ship"
+                                                class="h-6 w-auto drop-shadow"
+                                            />
+                                        {/each}
+                                    </div>
+                                {:else}
+                                    <div class="text-[11px] text-[#7f88ad]">None</div>
+                                {/if}
+                            </div>
+                        {/each}
                     </div>
 
                     <!-- Secondary stats - mirrors a Player card's Votes/Alien Tech line. -->
