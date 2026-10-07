@@ -96,6 +96,23 @@
     let currentTranslateX = $state(0)
     let currentTranslateY = $state(0)
     let isExpanded = $state(false)
+    // Full screen lifts the frame out to <body>. Left in place, its position: fixed / z-index
+    // stayed trapped in whatever stacking context it lived in (a TabWorkspace panel is
+    // position: absolute; z-index: 2), so neighbouring panels painted over the expanded view.
+    // The game's CSS is scoped under [data-game-ui], so that attribute travels with the frame.
+    let host: HTMLElement
+    let frame: HTMLElement
+    $effect(() => {
+        if (!isExpanded || !host || !frame) return
+        const gameUi = host.closest('[data-game-ui]')?.getAttribute('data-game-ui')
+        if (gameUi) frame.setAttribute('data-game-ui', gameUi)
+        document.body.appendChild(frame)
+        return () => {
+            if (gameUi) frame.removeAttribute('data-game-ui')
+            if (host.isConnected) host.appendChild(frame)
+            else frame.remove()
+        }
+    })
     let pinchDistance: number | null = null
     let pinchStartDistance: number | null = null
     let pinchStartScale: number | null = null
@@ -194,7 +211,9 @@
         const scaledWidth = contentWidth * clampedScale
         const scaledHeight = contentHeight * clampedScale
         const defaultTranslateX = getOffsetX(scaledWidth)
-        const defaultTranslateY = 0
+        // Expanded, the content is centred vertically too rather than pinned to the top.
+        const defaultTranslateY =
+            isExpanded && scaledHeight < wrapperHeight ? (wrapperHeight - scaledHeight) / 2 : 0
         const minTranslateX = scaledWidth > wrapperWidth ? wrapperWidth - scaledWidth : defaultTranslateX
         const maxTranslateX = scaledWidth > wrapperWidth ? 0 : defaultTranslateX
         const minTranslateY = scaledHeight > wrapperHeight ? wrapperHeight - scaledHeight : defaultTranslateY
@@ -1209,12 +1228,14 @@
 
 <svelte:window onkeydown={handleWindowKeydown} />
 
+<div bind:this={host} class="w-full h-full">
 <div
+    bind:this={frame}
     class="relative overflow-hidden"
     class:w-full={!isExpanded}
     class:h-full={!isExpanded}
     style={isExpanded
-        ? 'position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.8); backdrop-filter: blur(1px);'
+        ? 'position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.92); backdrop-filter: blur(2px);'
         : undefined}
 >
     <!-- The scroller is a pure layout viewport, not a control: the pointer/click handlers only
@@ -1328,6 +1349,7 @@
             </button>
         {/if}
     </div>
+</div>
 </div>
 
 <style>
