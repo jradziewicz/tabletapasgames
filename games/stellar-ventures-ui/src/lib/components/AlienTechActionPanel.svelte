@@ -284,7 +284,7 @@
 
 <!-- Fixed min-height, shared with InvestorActionPanel.svelte's own wrapper (keep these two
      in sync) - see that file's comment for why. -->
-<div class="min-h-[22rem] space-y-2 px-4 py-2 text-[#e6e9f5]">
+<div class="space-y-2 sm:min-h-[22rem] px-4 py-2 text-[#e6e9f5]">
     <div class="flex items-center justify-between text-sm">
         <span class="font-semibold">Alien Tech Action</span>
         {#if currentPlayerId}

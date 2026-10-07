@@ -305,8 +305,9 @@
      these two in sync) - Investor Action and Alien Tech Action are the same player's two
      back-to-back turn segments, so this keeps the panel from visibly resizing either between
      this panel's own sub-states (row art / a picker / an in-progress build) or at the handoff
-     to the Alien Tech Action panel that follows it. -->
-<div class="min-h-[22rem] space-y-2 px-4 py-2 text-[#e6e9f5]">
+     to the Alien Tech Action panel that follows it. Not on phones: there the reserved space was
+     mostly an empty gap above the Map tabs, and screen height matters more than a steady panel. -->
+<div class="space-y-2 sm:min-h-[22rem] px-4 py-2 text-[#e6e9f5]">
     <div class="flex items-center justify-between text-sm">
         <span class="font-semibold">Investor Action</span>
         {#if currentPlayerId}
