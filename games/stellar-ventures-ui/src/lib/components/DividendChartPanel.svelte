@@ -53,8 +53,12 @@
         deepSpacePiratesClickableCorporationIds,
         onSelectDeepSpacePiratesTarget,
         payoutHighlight,
-        onlyCorporationId
+        onlyCorporationId,
+        markerMoveMs = 150
     }: {
+        // How long a marker takes to slide to a new cell. The reveal overlays slow this down so
+        // the move reads as a move: at 150ms on a phone-sized chart it looked like a jump.
+        markerMoveMs?: number
         cargoOverrides?: Partial<Record<CorporationId, number>>
         alienMiningCapacityOverride?: number
         // Hostile Takeover's own reveal (HostileTakeoverRevealOverlay.svelte) draws attention to
@@ -616,7 +620,7 @@
                       : isDeepSpacePiratesTarget
                         ? 'deep-space-pirates-target-pulse'
                         : 'drop-shadow-md'}"
-                style="left: {marker.left}%; top: {marker.top}%; height: {heightPct}%; width: {widthPct}%; z-index: {marker.zIndex}; transform: translate(-50%, -50%); transition: left 150ms ease, top 150ms ease;"
+                style="left: {marker.left}%; top: {marker.top}%; height: {heightPct}%; width: {widthPct}%; z-index: {marker.zIndex}; transform: translate(-50%, -50%); transition: left {markerMoveMs}ms ease-in-out, top {markerMoveMs}ms ease-in-out;"
                 data-cell-key={marker.cellKey}
                 onclick={() => onMarkerClick(marker)}
                 onpointerenter={() => onMarkerPointerEnter(marker)}

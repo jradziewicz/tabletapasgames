@@ -167,8 +167,9 @@
     // up - so the tile flip reads as the actual REASON the marker is about to move, rather than
     // the marker just jumping on its own. Paced with real gaps between each step so every one
     // reads as its own distinct moment rather than one instant jumble.
-    // DividendChartPanel's own existing marker transition (left/top, 150ms ease) is what
-    // actually animates each cargo/mining step once its override is released; the Tile's own two
+    // DividendChartPanel's own marker transition (left/top, slowed to 900ms here via markerMoveMs
+    // so it reads as a slide on a phone too) is what actually animates each cargo/mining step
+    // once its override is released; the Tile's own two
     // stages (tileStage 'facedown' -> 'revealed') drive its own entrance/flip CSS below instead.
     const INITIAL_DELAY_MS = 1100
     const CARGO_STEP_DELAY_MS = 1400
@@ -276,6 +277,7 @@
             <div class="text-center text-lg font-bold">Scrapping Event</div>
             <div class="relative min-h-0 flex-1 overflow-y-auto rounded-lg border border-[#2a2f45]">
                 <DividendChartPanel
+                    markerMoveMs={900}
                     cargoOverrides={cargoOverridesToShow}
                     alienMiningCapacityOverride={alienReleased ? undefined : reveal.alienMiningCapacityBefore}
                 />
