@@ -6,7 +6,6 @@ import { ActionType } from '../definition/actions.js'
 import { CorporationId } from '../model/corporation.js'
 import { AlienTechActionId } from '../model/investorBoard.js'
 import { canSelectAlienTechActionId } from '../operations/investorShenanigans.js'
-import { maxCargoForCorporation } from '../operations/shipOrdering.js'
 
 export type CargoBoost = Type.Static<typeof CargoBoost>
 export const CargoBoost = Type.Evaluate(
@@ -61,8 +60,8 @@ export class HydratedCargoBoost extends HydratableAction<typeof CargoBoost> impl
         const corporation = state.getCorporation(this.corporationId)
         const player = state.getPlayerState(this.playerId)
         player.spendAlienTechCubes(this.amount)
-        corporation.cargo = Math.min(maxCargoForCorporation(corporation), corporation.cargo + this.amount)
         corporation.cargoBoostCubesOnCharter = (corporation.cargoBoostCubesOnCharter ?? 0) + this.amount
+        state.recomputeCargo()
         player.lastAlienTechActionId = AlienTechActionId.CargoBoost
     }
 

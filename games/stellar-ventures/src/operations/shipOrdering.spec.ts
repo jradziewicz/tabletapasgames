@@ -182,7 +182,7 @@ describe('deliverOrderedShips', () => {
     it('clamps delivered CARGO at MAX_CARGO without Hyperdrive', () => {
         const state = createTestGameState()
         const corporation = state.getCorporation(CorporationId.PinkInc)
-        corporation.cargo = MAX_CARGO - 2
+        corporation.cargoBoostCubesOnCharter = MAX_CARGO - 2
         corporation.orderedShipLevels = [5]
         deliverOrderedShips(state)
         expect(corporation.cargo).toBe(MAX_CARGO)
@@ -194,7 +194,7 @@ describe('deliverOrderedShips', () => {
         const state = createTestGameState()
         const corporation = state.getCorporation(CorporationId.PinkInc)
         corporation.powers.push({ id: CorporatePowerId.Hyperdrive })
-        corporation.cargo = MAX_CARGO - 2
+        corporation.cargoBoostCubesOnCharter = MAX_CARGO - 2
         corporation.orderedShipLevels = [5]
         deliverOrderedShips(state)
         expect(corporation.cargo).toBe(MAX_CARGO)
@@ -207,7 +207,7 @@ describe('applyScrappingEvent', () => {
         const pink = state.getCorporation(CorporationId.PinkInc)
         pink.deliveredShipLevels = [1, 2]
         pink.orderedShipLevels = [1]
-        pink.cargo = 5
+        pink.cargoBoostCubesOnCharter = 2
 
         applyScrappingEvent(state, 1)
 
@@ -228,17 +228,19 @@ describe('applyScrappingEvent', () => {
         expect(pink.cargo).toBe(5)
     })
 
-    it('records the level-based CARGO loss on the section, floored at the CARGO actually held', () => {
+    it('readjusts CARGO to the Charter, correcting excess left by an earlier scrap', () => {
         const state = createTestGameState()
         const pink = state.getCorporation(CorporationId.PinkInc)
-        pink.deliveredShipLevels = [3, 3]
-        pink.cargo = 4
+        pink.deliveredShipLevels = [3, 5]
+        pink.cargoBoostCubesOnCharter = 1
+        pink.powers.push({ id: CorporatePowerId.Hyperdrive })
+        pink.cargo = 13 // 2 too many, e.g. left over from an old Level 2 scrap
         const section = state.shipyard.sectionForLevel(8)!
 
         applyScrappingEvent(state, 3, section)
 
-        expect(pink.cargo).toBe(0)
-        expect(section.scrapCargoLossByCorporation?.[CorporationId.PinkInc]).toBe(4)
+        expect(pink.cargo).toBe(7) // Level 5 + 1 Cargo Boost cube + Hyperdrive
+        expect(section.scrapCargoLossByCorporation?.[CorporationId.PinkInc]).toBe(6)
     })
 
     describe('Spare Parts', () => {
@@ -247,7 +249,7 @@ describe('applyScrappingEvent', () => {
             const pink = state.getCorporation(CorporationId.PinkInc)
             pink.powers = [{ id: CorporatePowerId.SpareParts }]
             pink.deliveredShipLevels = [1]
-            pink.cargo = 5
+            pink.cargoBoostCubesOnCharter = 4
 
             applyScrappingEvent(state, 1)
 
@@ -262,7 +264,7 @@ describe('applyScrappingEvent', () => {
             const pink = state.getCorporation(CorporationId.PinkInc)
             pink.powers = [{ id: CorporatePowerId.SpareParts }]
             pink.deliveredShipLevels = [1, 1]
-            pink.cargo = 5
+            pink.cargoBoostCubesOnCharter = 3
 
             applyScrappingEvent(state, 1)
 
@@ -276,7 +278,7 @@ describe('applyScrappingEvent', () => {
             const pink = state.getCorporation(CorporationId.PinkInc)
             pink.powers = [{ id: CorporatePowerId.SpareParts }]
             pink.orderedShipLevels = [1]
-            pink.cargo = 5
+            pink.cargoBoostCubesOnCharter = 5
 
             applyScrappingEvent(state, 1)
 
@@ -289,7 +291,7 @@ describe('applyScrappingEvent', () => {
             const pink = state.getCorporation(CorporationId.PinkInc)
             pink.powers = [{ id: CorporatePowerId.SpareParts }]
             pink.deliveredShipLevels = [2]
-            pink.cargo = 5
+            pink.cargoBoostCubesOnCharter = 3
 
             applyScrappingEvent(state, 1)
 
@@ -302,14 +304,13 @@ describe('applyScrappingEvent', () => {
             const pink = state.getCorporation(CorporationId.PinkInc)
             pink.powers = [{ id: CorporatePowerId.SpareParts }]
             pink.deliveredShipLevels = [1, 2]
-            pink.cargo = 5
             state.pendingSparePartsCorporationId = CorporationId.PinkInc
             state.pendingSparePartsShipLevel = 3
 
             applyScrappingEvent(state, 1)
 
             expect(pink.deliveredShipLevels).toEqual([2])
-            expect(pink.cargo).toBe(4)
+            expect(pink.cargo).toBe(5) // 2 Delivered + the still-pending Level 3
             expect(state.pendingSparePartsShipLevel).toBe(3)
         })
     })

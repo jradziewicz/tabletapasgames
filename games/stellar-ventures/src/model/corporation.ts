@@ -303,6 +303,11 @@ export const CorporationState = Type.Object({
 
 export const CorporationStateValidator = Compile(CorporationState)
 
+// "CARGO may never exceed the highest amount on the CARGO Track (e.g., 13)" (rulebook page 8) -
+// confirmed as the Alpha map's printed CARGO Track maximum, and by the game's co-designer as
+// universal: it is never raised per-Corporation. Re-exported from operations/shipOrdering.ts.
+export const MAX_CARGO = 13
+
 export class HydratedCorporationState
     extends Hydratable<typeof CorporationState>
     implements CorporationState
@@ -406,6 +411,19 @@ export class HydratedCorporationState
 
     hasActivePower(powerId: string): boolean {
         return this.powers.some((power) => power.id === powerId)
+    }
+
+    // CARGO is always exactly what this Charter holds (decided by Justin, 2026-10-08): the sum
+    // of its Delivered Ship levels, plus its permanent boosts - Cargo Boost cubes still on the
+    // Charter (1 each) and Hyperdrive (+1) - capped at MAX_CARGO. sparePartsShipLevel is a Ship
+    // pulled off the Charter onto the Spare Parts tile whose CARGO reduction is still delayed
+    // (see HydratedStellarVenturesGameState.recomputeCargo). Ordered Ships don't count until
+    // they're Delivered.
+    cargoFromCharter(sparePartsShipLevel: number = 0): number {
+        const shipLevels =
+            this.deliveredShipLevels.reduce((total, level) => total + level, 0) + sparePartsShipLevel
+        const hyperdrive = this.hasActivePower(CorporatePowerId.Hyperdrive) ? 1 : 0
+        return Math.min(MAX_CARGO, shipLevels + (this.cargoBoostCubesOnCharter ?? 0) + hyperdrive)
     }
 
     // Whether this Corporation may build Outposts on Alien Planet hexes at all - true for

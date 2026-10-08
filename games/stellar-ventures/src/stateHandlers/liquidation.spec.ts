@@ -114,7 +114,7 @@ describe('LiquidationStateHandler', () => {
         const handler = new LiquidationStateHandler()
         const pinkInc = state.getCorporation(CorporationId.PinkInc)
         pinkInc.orderedShipLevels = [2]
-        pinkInc.cargo = 1
+        pinkInc.cargoBoostCubesOnCharter = 1
 
         runLiquidate(state, handler)
 

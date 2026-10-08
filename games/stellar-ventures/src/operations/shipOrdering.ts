@@ -1,4 +1,4 @@
-import { CorporatePowerId, HydratedCorporationState } from '../model/corporation.js'
+import { CorporatePowerId, HydratedCorporationState, MAX_CARGO } from '../model/corporation.js'
 import { HydratedShipyardState, type ShipyardSection } from '../model/shipyard.js'
 import { HydratedStellarVenturesGameState } from '../model/gameState.js'
 
@@ -28,17 +28,11 @@ export function shipCost(level: number): number {
     return level
 }
 
-// "CARGO may never exceed the highest amount on the CARGO Track (e.g., 13)" (rulebook page 8) -
-// confirmed as the Alpha map's printed CARGO Track maximum. Used by Investor Shenanigans' Cargo
-// Boost Alien Tech Action (operations/investorShenanigans.ts is where that Action Disc lives;
-// this constant sits here alongside corporation.cargo's other mutators).
-export const MAX_CARGO = 13
+export { MAX_CARGO }
 
-// Every Corporation's CARGO is capped at the same flat MAX_CARGO (13) - confirmed by the game's
-// co-designer: the CARGO Track's printed maximum is universal, it is never raised per-Corporation.
-// Hyperdrive does NOT touch this ceiling - it grants an immediate one-time +1 to corporation.cargo
-// itself at the moment it's drafted (see actions/draftPower.ts's HydratedDraftPower.apply()),
-// the same as any other CARGO-granting event, clamped at this same cap like all the others.
+// Every Corporation's CARGO is capped at the same flat MAX_CARGO (13) - see model/corporation.ts.
+// Hyperdrive does NOT touch this ceiling - it's a permanent +1 inside it (see
+// HydratedCorporationState.cargoFromCharter).
 export function maxCargoForCorporation(_corporation: HydratedCorporationState): number {
     return MAX_CARGO
 }
@@ -102,9 +96,9 @@ export function loanHexesNeeded(corporation: HydratedCorporationState, loans: nu
 // from the game, reducing CARGO immediately for all Corporations." This applies across every
 // Corporation, not just the one that triggered it - and to Ships in either row, though only
 // Ships already in the Delivered Ships row have ever added to CARGO (see the "Ships and CARGO"
-// key concept, page 8), so only removals from there reduce CARGO - by each removed Ship's
-// level, mirroring deliverOrderedShips below (a Delivered Level 3 Ship added 3 CARGO, so
-// scrapping it takes those 3 back).
+// key concept, page 8), so only removals from there reduce CARGO. Every Corporation's CARGO is
+// then recomputed from its Charter (HydratedCorporationState.cargoFromCharter), which also
+// corrects any excess left over from an earlier scrap.
 //
 // Spare Parts (Corporate Power Glossary, page 29): "Anytime, One-Time (limit 1 Ship). When a Ship
 // of this Corporation would be Scrapped, the President may move 1 of those Ships onto this tile
@@ -136,25 +130,25 @@ export function applyScrappingEvent(
             state.pendingSparePartsShipLevel = targetLevel
         }
 
-        const deliveredBefore = corporation.deliveredShipLevels.length
         corporation.deliveredShipLevels = corporation.deliveredShipLevels.filter(
             (level) => level !== targetLevel
         )
-        const deliveredRemoved = deliveredBefore - corporation.deliveredShipLevels.length
-        if (deliveredRemoved > 0) {
-            const cargoLost = deliveredRemoved * targetLevel
-            const actualLoss = Math.min(cargoLost, corporation.cargo)
-            corporation.cargo = Math.max(0, corporation.cargo - cargoLost)
-            if (section && actualLoss > 0) {
-                section.scrapCargoLossByCorporation ??= {}
-                section.scrapCargoLossByCorporation[corporation.id] =
-                    (section.scrapCargoLossByCorporation[corporation.id] ?? 0) + actualLoss
-            }
-        }
-
         corporation.orderedShipLevels = corporation.orderedShipLevels.filter(
             (level) => level !== targetLevel
         )
+    }
+
+    const cargoBefore = new Map(state.corporations.map((corporation) => [corporation.id, corporation.cargo]))
+    state.recomputeCargo()
+    if (section) {
+        for (const corporation of state.corporations) {
+            const loss = (cargoBefore.get(corporation.id) ?? 0) - corporation.cargo
+            if (loss > 0) {
+                section.scrapCargoLossByCorporation ??= {}
+                section.scrapCargoLossByCorporation[corporation.id] =
+                    (section.scrapCargoLossByCorporation[corporation.id] ?? 0) + loss
+            }
+        }
     }
 }
 
@@ -179,11 +173,10 @@ export function deliverOrderedShips(state: HydratedStellarVenturesGameState): vo
             continue
         }
 
-        const deliveredSum = corporation.orderedShipLevels.reduce((total, level) => total + level, 0)
         corporation.deliveredShipLevels.push(...corporation.orderedShipLevels)
         corporation.orderedShipLevels = []
-        corporation.cargo = Math.min(maxCargoForCorporation(corporation), corporation.cargo + deliveredSum)
     }
+    state.recomputeCargo()
 }
 
 // Returns whether this call actually flipped a still-hidden Alien Shipyard tile face up - the

@@ -562,7 +562,7 @@ describe('InvestorActionStateHandler', () => {
         const corporation = state.getCorporation(CorporationId.PinkInc)
         corporation.issueShareToPlayer(playerId, state.actionCount) // their only Share - President
         corporation.deliveredShipLevels = [3]
-        corporation.cargo = 5
+        corporation.cargoBoostCubesOnCharter = 2
         const treasuryBefore = corporation.treasury
         const context = createMachineContext(state)
 
@@ -615,7 +615,7 @@ describe('InvestorActionStateHandler', () => {
             const corporation = state.getCorporation(CorporationId.PinkInc)
             corporation.issueShareToPlayer(playerId, state.actionCount)
             corporation.powers.push({ id: CorporatePowerId.AlienEngineering })
-            corporation.cargo = 5
+            corporation.deliveredShipLevels = [2]
             corporation.cargoBoostCubesOnCharter = 3
             const player = state.getPlayerState(playerId)
             const cubesBefore = player.alienTechCubes

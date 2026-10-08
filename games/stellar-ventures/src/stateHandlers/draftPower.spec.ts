@@ -196,7 +196,7 @@ describe('DraftPowerStateHandler', () => {
             ...state.availableCorporatePowerIds
         ]
         const corporation = state.getCorporation(CorporationId.PinkInc)
-        corporation.cargo = 3
+        corporation.cargoBoostCubesOnCharter = 3
 
         const action = new HydratedDraftPower({
             id: 'draft-hyperdrive',
@@ -224,7 +224,7 @@ describe('DraftPowerStateHandler', () => {
             ...state.availableCorporatePowerIds
         ]
         const corporation = state.getCorporation(CorporationId.PinkInc)
-        corporation.cargo = MAX_CARGO
+        corporation.cargoBoostCubesOnCharter = MAX_CARGO
 
         const action = new HydratedDraftPower({
             id: 'draft-hyperdrive-capped',

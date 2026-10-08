@@ -46,15 +46,11 @@ export class HydratedDeclineSpareParts
             throw Error(invalidReason)
         }
 
-        const corporationId = state.pendingSparePartsCorporationId
-        assertExists(corporationId, 'A Corporation should be pending Spare Parts')
-        const corporation = state.getCorporation(corporationId)
-        const shipLevel = state.pendingSparePartsShipLevel
-        assertExists(shipLevel, 'A Ship level should be pending Spare Parts')
+        assertExists(state.pendingSparePartsCorporationId, 'A Corporation should be pending Spare Parts')
 
-        corporation.cargo = Math.max(0, corporation.cargo - shipLevel)
         state.pendingSparePartsCorporationId = undefined
         state.pendingSparePartsShipLevel = undefined
+        state.recomputeCargo()
     }
 
     isValidDeclineSpareParts(state: HydratedStellarVenturesGameState): boolean {

@@ -78,7 +78,7 @@ function setUpPendingOffer(
     const corporation = state.getCorporation(CorporationId.PinkInc)
     corporation.issueShareToPlayer(presidentPlayerId, 0)
     corporation.powers = [{ id: CorporatePowerId.SpareParts }]
-    corporation.cargo = 5
+    corporation.cargoBoostCubesOnCharter = 3
 
     state.pendingSparePartsCorporationId = CorporationId.PinkInc
     state.pendingSparePartsShipLevel = 2

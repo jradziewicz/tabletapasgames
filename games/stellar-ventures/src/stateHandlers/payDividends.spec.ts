@@ -408,7 +408,7 @@ describe('PayDividendsStateHandler', () => {
             const state = createTestState()
             const corporation = state.getCorporation(CorporationId.PinkInc)
             corporation.issueShareToPlayer('p1', 0)
-            corporation.cargo = 6
+            corporation.cargoBoostCubesOnCharter = 4
 
             state.sparePartsParkedCorporationId = CorporationId.PinkInc
             state.sparePartsParkedShipLevel = 2

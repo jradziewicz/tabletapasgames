@@ -107,7 +107,7 @@ describe('DeliverShipsStateHandler', () => {
         const pinkInc = state.getCorporation(CorporationId.PinkInc)
         const frostFederated = state.getCorporation(CorporationId.FrostFederated)
         pinkInc.orderedShipLevels = [1, 2]
-        pinkInc.cargo = 3
+        pinkInc.cargoBoostCubesOnCharter = 3
         frostFederated.orderedShipLevels = [5]
         frostFederated.cargo = 0
 
@@ -152,7 +152,7 @@ describe('DeliverShipsStateHandler', () => {
         const handler = new DeliverShipsStateHandler()
         const pinkInc = state.getCorporation(CorporationId.PinkInc)
         pinkInc.deliveredShipLevels = [2]
-        pinkInc.cargo = 4
+        pinkInc.cargoBoostCubesOnCharter = 2
 
         runDeliverShips(state, handler)
 

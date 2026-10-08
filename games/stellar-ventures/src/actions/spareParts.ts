@@ -63,6 +63,8 @@ export class HydratedSpareParts extends HydratableAction<typeof SpareParts> impl
         corporation.powers = corporation.powers.filter(
             (power) => power.id !== CorporatePowerId.SpareParts
         )
+        // The parked Ship still counts toward CARGO until its delayed Scrap.
+        state.recomputeCargo()
     }
 
     isValidSpareParts(state: HydratedStellarVenturesGameState): boolean {

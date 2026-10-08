@@ -128,7 +128,7 @@ describe('ScrapLowestShipStateHandler', () => {
         level8Section.scrapTargetLevel = 3
         const corporation = state.getCorporation(CorporationId.PinkInc)
         corporation.deliveredShipLevels = [3]
-        corporation.cargo = 5
+        corporation.cargoBoostCubesOnCharter = 2
 
         const action = runScrapLowestShip(state, handler)
 
@@ -195,7 +195,7 @@ describe('ScrapLowestShipStateHandler', () => {
         const corporation = state.getCorporation(CorporationId.PinkInc)
         corporation.powers = [{ id: CorporatePowerId.SpareParts }]
         corporation.deliveredShipLevels = [3]
-        corporation.cargo = 5
+        corporation.cargoBoostCubesOnCharter = 2
 
         const action = runScrapLowestShip(state, handler)
 

@@ -74,7 +74,7 @@ export class HydratedAlienEngineering
 
         corporation.cargoBoostCubesOnCharter =
             (corporation.cargoBoostCubesOnCharter ?? 0) - this.cargoBoostCubesToReclaim
-        corporation.cargo = Math.max(0, corporation.cargo - this.cargoBoostCubesToReclaim)
+        state.recomputeCargo()
 
         if (this.reclaimWormhole) {
             corporation.wormholeActive = false

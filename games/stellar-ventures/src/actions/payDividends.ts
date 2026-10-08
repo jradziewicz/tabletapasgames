@@ -70,9 +70,9 @@ export class HydratedPayDividends
         const corporation = state.getCorporation(corporationId)
 
         if (state.sparePartsParkedCorporationId === corporationId) {
-            corporation.cargo = Math.max(0, corporation.cargo - (state.sparePartsParkedShipLevel ?? 0))
             state.sparePartsParkedCorporationId = undefined
             state.sparePartsParkedShipLevel = undefined
+            state.recomputeCargo()
         }
 
         const cargoSourceId = state.payDividendsCopyCargoFromCorporationId

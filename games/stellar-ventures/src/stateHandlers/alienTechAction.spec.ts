@@ -194,7 +194,7 @@ describe('AlienTechActionStateHandler', () => {
         const playerId = state.investorShenanigansCurrentPlayerId!
         const corporation = state.getCorporation(CorporationId.PinkInc)
         corporation.issueShareToPlayer(playerId, state.actionCount)
-        corporation.cargo = 5
+        corporation.deliveredShipLevels = [5]
         const player = state.getPlayerState(playerId)
         // Every player starts with 1 Alien Technology Cube already (Setup - see
         // STARTING_ALIEN_TECH_CUBES in definition/initializer.ts) - capture it so the +2/-2
@@ -231,7 +231,7 @@ describe('AlienTechActionStateHandler', () => {
         const playerId = state.investorShenanigansCurrentPlayerId!
         const corporation = state.getCorporation(CorporationId.PinkInc)
         corporation.issueShareToPlayer(playerId, state.actionCount)
-        corporation.cargo = MAX_CARGO
+        corporation.deliveredShipLevels = [5, 8]
         const player = state.getPlayerState(playerId)
         // Every player starts with 1 Alien Technology Cube already (Setup - see
         // STARTING_ALIEN_TECH_CUBES in definition/initializer.ts) - capture it so the +2/-2
@@ -270,7 +270,7 @@ describe('AlienTechActionStateHandler', () => {
         const corporation = state.getCorporation(CorporationId.PinkInc)
         corporation.issueShareToPlayer(playerId, state.actionCount)
         corporation.powers.push({ id: CorporatePowerId.Hyperdrive })
-        corporation.cargo = MAX_CARGO
+        corporation.deliveredShipLevels = [5, 8]
         const player = state.getPlayerState(playerId)
         player.addAlienTechCubes(2)
         const context = createMachineContext(state)
@@ -493,7 +493,7 @@ describe('AlienTechActionStateHandler', () => {
             const corporation = state.getCorporation(CorporationId.PinkInc)
             corporation.issueShareToPlayer(playerId, state.actionCount) // makes playerId President
             corporation.powers.push({ id: CorporatePowerId.AlienEngineering })
-            corporation.cargo = 5
+            corporation.deliveredShipLevels = [2]
             corporation.cargoBoostCubesOnCharter = 3
             const player = state.getPlayerState(playerId)
             // Every player starts with 1 Alien Technology Cube already (Setup - see

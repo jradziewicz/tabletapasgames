@@ -58,7 +58,7 @@ export class HydratedInsuranceFraud
         const corporation = state.getCorporation(this.corporationId)
         const index = corporation.deliveredShipLevels.indexOf(this.shipLevel)
         corporation.deliveredShipLevels.splice(index, 1)
-        corporation.cargo = Math.max(0, corporation.cargo - this.shipLevel)
+        state.recomputeCargo()
         corporation.treasury += shipCost(this.shipLevel)
 
         state.getPlayerState(this.playerId).lastInvestorActionId = InvestorActionId.InsuranceFraud

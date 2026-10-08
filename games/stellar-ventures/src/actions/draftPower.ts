@@ -4,7 +4,6 @@ import { GameAction, HydratableAction, MachineContext, assertExists } from '@tab
 import { HydratedStellarVenturesGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
 import { CorporatePowerId } from '../model/corporation.js'
-import { MAX_CARGO } from '../operations/shipOrdering.js'
 import { closeBordersReachedByCorporations } from '../operations/borders.js'
 
 export type DraftPower = Type.Static<typeof DraftPower>
@@ -87,9 +86,8 @@ export class HydratedDraftPower extends HydratableAction<typeof DraftPower> impl
             corporation.powers = corporation.powers.filter((power) => power.id !== CorporatePowerId.Windfall)
         }
 
-        if (this.powerId === CorporatePowerId.Hyperdrive) {
-            corporation.cargo = Math.min(MAX_CARGO, corporation.cargo + 1)
-        }
+        // Hyperdrive's permanent +1 CARGO comes from cargoFromCharter seeing the Power.
+        state.recomputeCargo()
 
         closeBordersReachedByCorporations(state)
     }

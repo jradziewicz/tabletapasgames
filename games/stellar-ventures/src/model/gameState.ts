@@ -391,6 +391,27 @@ export class HydratedStellarVenturesGameState
         this.activeShareAuction = data.activeShareAuction
             ? new HydratedSimpleAuction(data.activeShareAuction)
             : undefined
+
+        // Also brings games saved before CARGO was derived from the Charter back in line the
+        // moment they're loaded (e.g. excess left by the old 1-per-Ship scrap reduction).
+        this.recomputeCargo()
+    }
+
+    // Sets every Corporation's CARGO to what its Charter holds - see
+    // HydratedCorporationState.cargoFromCharter. A Ship pulled onto the Spare Parts tile (pending
+    // the President's decision, or parked until its next Dividend payment) still counts until
+    // its delayed Scrap resolves.
+    recomputeCargo() {
+        for (const corporation of this.corporations) {
+            let sparePartsShipLevel = 0
+            if (this.pendingSparePartsCorporationId === corporation.id) {
+                sparePartsShipLevel += this.pendingSparePartsShipLevel ?? 0
+            }
+            if (this.sparePartsParkedCorporationId === corporation.id) {
+                sparePartsShipLevel += this.sparePartsParkedShipLevel ?? 0
+            }
+            corporation.cargo = corporation.cargoFromCharter(sparePartsShipLevel)
+        }
     }
 
     getCorporation(corporationId: CorporationId): HydratedCorporationState {
