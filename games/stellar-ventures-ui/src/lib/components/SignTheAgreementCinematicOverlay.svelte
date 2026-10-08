@@ -513,6 +513,9 @@
             filter: blur(6px);
         }
     }
+    /* Every filter keyframe below lists the same functions at both ends (blur(0) included):
+       Safari can't interpolate between filter lists of different lengths and stayed stuck on
+       the blurred start frame, leaving the logos and title blurry on iPhone. */
     @keyframes slam {
         0% {
             opacity: 0;
@@ -522,6 +525,7 @@
         100% {
             opacity: 1;
             transform: scale(1);
+            filter: blur(0) drop-shadow(0 0 24px var(--corp));
         }
     }
     @keyframes slam-alien {
@@ -533,6 +537,7 @@
         100% {
             opacity: 1;
             transform: translateX(0) scale(1);
+            filter: blur(0) drop-shadow(0 0 24px rgba(125, 255, 178, 0.75));
         }
     }
     @keyframes stamp {
@@ -550,12 +555,13 @@
             opacity: 0;
             letter-spacing: 0.6em;
             transform: scale(1.15);
-            filter: blur(10px);
+            filter: blur(10px) drop-shadow(0 0 18px color-mix(in srgb, var(--corp) 70%, transparent));
         }
         100% {
             opacity: 1;
             letter-spacing: 0.08em;
             transform: scale(1);
+            filter: blur(0) drop-shadow(0 0 18px color-mix(in srgb, var(--corp) 70%, transparent));
         }
     }
     @keyframes rise {
