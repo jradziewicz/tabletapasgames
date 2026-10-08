@@ -490,6 +490,38 @@
                         {/each}
                     </div>
 
+                    <!-- Alien Technology on the Charter - Cargo Boost cubes (one icon per cube)
+                         and whether Wormhole Technology is active, in two columns like the rows
+                         above. -->
+                    <div class="flex divide-x divide-[#2a3155] border-b border-[#2a3155]">
+                        <div class="flex-1 px-3 py-1.5">
+                            <div class="text-[10px] uppercase tracking-widest text-[#7f88ad]">
+                                CARGO Boost
+                            </div>
+                            {#if (corporation.cargoBoostCubesOnCharter ?? 0) > 0}
+                                <div class="mt-0.5 flex flex-wrap items-center gap-1">
+                                    {#each Array.from({ length: corporation.cargoBoostCubesOnCharter ?? 0 }, (_, i) => i) as index (index)}
+                                        <img src={alienTechCube} alt="Alien Tech" title="Alien Tech" class="h-5 w-5 drop-shadow" />
+                                    {/each}
+                                </div>
+                            {:else}
+                                <div class="text-[11px] text-[#7f88ad]">None</div>
+                            {/if}
+                        </div>
+                        <div class="flex-1 px-3 py-1.5">
+                            <div class="text-[10px] uppercase tracking-widest text-[#7f88ad]">
+                                Wormhole
+                            </div>
+                            {#if corporation.wormholeActive}
+                                <div class="mt-0.5 flex items-center">
+                                    <img src={alienTechCube} alt="Wormhole Technology active" title="Wormhole Technology active" class="h-5 w-5 drop-shadow" />
+                                </div>
+                            {:else}
+                                <div class="text-[11px] text-[#7f88ad]">Not active</div>
+                            {/if}
+                        </div>
+                    </div>
+
                     <!-- Secondary stats - mirrors a Player card's Votes/Alien Tech line. -->
                     <div
                         class="flex gap-x-4 border-b border-[#2a3155] px-3 py-1 text-[11px] text-[#7f88ad]"
