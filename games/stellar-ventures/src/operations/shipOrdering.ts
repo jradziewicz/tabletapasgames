@@ -102,7 +102,9 @@ export function loanHexesNeeded(corporation: HydratedCorporationState, loans: nu
 // from the game, reducing CARGO immediately for all Corporations." This applies across every
 // Corporation, not just the one that triggered it - and to Ships in either row, though only
 // Ships already in the Delivered Ships row have ever added to CARGO (see the "Ships and CARGO"
-// key concept, page 8), so only removals from there reduce CARGO.
+// key concept, page 8), so only removals from there reduce CARGO - by each removed Ship's
+// level, mirroring deliverOrderedShips below (a Delivered Level 3 Ship added 3 CARGO, so
+// scrapping it takes those 3 back).
 //
 // Spare Parts (Corporate Power Glossary, page 29): "Anytime, One-Time (limit 1 Ship). When a Ship
 // of this Corporation would be Scrapped, the President may move 1 of those Ships onto this tile
@@ -140,8 +142,9 @@ export function applyScrappingEvent(
         )
         const deliveredRemoved = deliveredBefore - corporation.deliveredShipLevels.length
         if (deliveredRemoved > 0) {
-            const actualLoss = Math.min(deliveredRemoved, corporation.cargo)
-            corporation.cargo = Math.max(0, corporation.cargo - deliveredRemoved)
+            const cargoLost = deliveredRemoved * targetLevel
+            const actualLoss = Math.min(cargoLost, corporation.cargo)
+            corporation.cargo = Math.max(0, corporation.cargo - cargoLost)
             if (section && actualLoss > 0) {
                 section.scrapCargoLossByCorporation ??= {}
                 section.scrapCargoLossByCorporation[corporation.id] =

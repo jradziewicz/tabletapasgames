@@ -216,6 +216,31 @@ describe('applyScrappingEvent', () => {
         expect(pink.cargo).toBe(4)
     })
 
+    it("reduces CARGO by each removed Ship's level, not by 1 per Ship", () => {
+        const state = createTestGameState()
+        const pink = state.getCorporation(CorporationId.PinkInc)
+        pink.deliveredShipLevels = [3, 3, 5]
+        pink.cargo = 11
+
+        applyScrappingEvent(state, 3)
+
+        expect(pink.deliveredShipLevels).toEqual([5])
+        expect(pink.cargo).toBe(5)
+    })
+
+    it('records the level-based CARGO loss on the section, floored at the CARGO actually held', () => {
+        const state = createTestGameState()
+        const pink = state.getCorporation(CorporationId.PinkInc)
+        pink.deliveredShipLevels = [3, 3]
+        pink.cargo = 4
+        const section = state.shipyard.sectionForLevel(8)!
+
+        applyScrappingEvent(state, 3, section)
+
+        expect(pink.cargo).toBe(0)
+        expect(section.scrapCargoLossByCorporation?.[CorporationId.PinkInc]).toBe(4)
+    })
+
     describe('Spare Parts', () => {
         it('pulls one Delivered Ship off the Charter without reducing CARGO, recording a pending offer', () => {
             const state = createTestGameState()

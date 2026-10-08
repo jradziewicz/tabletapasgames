@@ -137,7 +137,7 @@ describe('ScrapLowestShipStateHandler', () => {
         expect(level8Section.firstShipOrdered).toBe(true)
         expect(level8Section.hasTriggeredScrappingEvent).toBe(true)
         expect(corporation.deliveredShipLevels).toEqual([])
-        expect(corporation.cargo).toBe(4)
+        expect(corporation.cargo).toBe(2) // the Level 3 Ship's 3 CARGO
     })
 
     it("flags itself as revealing info when it happens to flip a section's Alien Shipyard tile", () => {

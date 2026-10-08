@@ -582,7 +582,7 @@ describe('InvestorActionStateHandler', () => {
 
         expect(nextState).toBe(MachineState.AlienTechAction)
         expect(corporation.deliveredShipLevels).toEqual([])
-        expect(corporation.cargo).toBe(4)
+        expect(corporation.cargo).toBe(2)
         expect(corporation.treasury).toBe(treasuryBefore + 3)
     })
 

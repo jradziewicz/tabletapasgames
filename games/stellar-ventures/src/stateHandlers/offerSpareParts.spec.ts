@@ -147,7 +147,7 @@ describe('OfferSparePartsStateHandler', () => {
         action.apply(state, context)
         const nextState = handler.onAction(action, context)
 
-        expect(corporation.cargo).toBe(4)
+        expect(corporation.cargo).toBe(3) // the Level 2 Ship's 2 CARGO
         expect(state.sparePartsParkedCorporationId).toBeUndefined()
         expect(corporation.hasActivePower(CorporatePowerId.SpareParts)).toBe(true)
 

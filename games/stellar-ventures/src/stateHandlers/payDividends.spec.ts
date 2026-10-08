@@ -415,11 +415,11 @@ describe('PayDividendsStateHandler', () => {
 
             const handler = new PayDividendsStateHandler()
             const miningCapacity = effectiveMiningCapacityForCorporation(state, CorporationId.PinkInc)
-            const expectedPayout = dividendPayoutPerShare(5, miningCapacity, corporation.status)
+            const expectedPayout = dividendPayoutPerShare(4, miningCapacity, corporation.status)
 
             const action = runPayDividends(state, handler)
 
-            expect(corporation.cargo).toBe(5)
+            expect(corporation.cargo).toBe(4)
             expect(state.sparePartsParkedCorporationId).toBeUndefined()
             expect(state.sparePartsParkedShipLevel).toBeUndefined()
             expect(action.payoutPerShare).toBe(expectedPayout)

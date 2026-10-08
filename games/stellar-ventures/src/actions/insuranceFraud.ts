@@ -33,7 +33,7 @@ export function isInsuranceFraud(action?: GameAction): action is InsuranceFraud 
  * Ship." Unlike Jerry-Rig and Private Contractor, this one does require the acting player to be
  * the target Corporation's President specifically. The Ship's "cost" is the same level-equals-
  * cost formula used to Order it (operations/shipOrdering.ts's shipCost) - reimbursed straight
- * into the Corporate Treasury. Removing a Delivered Ship also reduces CARGO by 1 (floor 0), same
+ * into the Corporate Treasury. Removing a Delivered Ship also reduces CARGO by its level (floor 0), same
  * as a Scrapping Event (see operations/shipOrdering.ts's applyScrappingEvent).
  */
 export class HydratedInsuranceFraud
@@ -58,7 +58,7 @@ export class HydratedInsuranceFraud
         const corporation = state.getCorporation(this.corporationId)
         const index = corporation.deliveredShipLevels.indexOf(this.shipLevel)
         corporation.deliveredShipLevels.splice(index, 1)
-        corporation.cargo = Math.max(0, corporation.cargo - 1)
+        corporation.cargo = Math.max(0, corporation.cargo - this.shipLevel)
         corporation.treasury += shipCost(this.shipLevel)
 
         state.getPlayerState(this.playerId).lastInvestorActionId = InvestorActionId.InsuranceFraud
