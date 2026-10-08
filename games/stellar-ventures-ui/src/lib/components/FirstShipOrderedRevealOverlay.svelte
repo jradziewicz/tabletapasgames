@@ -181,36 +181,27 @@
     let tileStage: 'hidden' | 'facedown' | 'revealed' = $state('hidden')
     let alienReleased = $state(false)
 
-    // Which pending section's reveal sequence is currently running/finished, tracked by its
-    // stable level number rather than by the `reveal` object itself. `reveal` is a fresh object
-    // literal every time its own $derived.by recomputes - which happens on ANY unrelated
-    // gameState update (gameSession.gameState is replaced wholesale on every sync, even from
-    // other players' actions elsewhere), not just when a genuinely new section becomes pending.
-    // Without this guard, a background sync arriving mid-reveal reran this whole effect, which
-    // unconditionally reset tileStage back to 'hidden' and rescheduled every timer from scratch -
-    // so the Alien Tile flip kept getting cut off and restarted before the President ever saw the
-    // revealed face, reading as "it just flips around and shows the back of the tile again."
-    let animatedLevel: number | undefined = $state(undefined)
+    // The sequence is keyed on the pending section's level (a plain number), not on `reveal`
+    // itself. `reveal` is a fresh object every time gameState syncs (even from other players'
+    // actions), and restarting on each one cut the Alien Tile flip off mid-way. A $derived number
+    // only re-runs the effect below when it actually changes. (An earlier version guarded this
+    // with an `animatedLevel` $state the effect both read and wrote - writing it re-ran the
+    // effect at once, whose cleanup cancelled every timer and whose early return never
+    // rescheduled them, so the tokens never moved at all.)
+    const revealLevel = $derived(hasAnythingToShow ? reveal?.level : undefined)
 
     $effect(() => {
-        const r = hasAnythingToShow ? reveal : undefined
-        if (!r) {
-            animatedLevel = undefined
-            releasedCorporationIds = []
-            tileStage = 'hidden'
-            alienReleased = false
-            return
-        }
-        if (animatedLevel === r.level) {
-            // Same section still pending - just an unrelated gameState update producing a new
-            // `reveal` object with identical content. Leave the in-progress/finished animation
-            // alone instead of restarting it.
-            return
-        }
-        animatedLevel = r.level
+        const level = revealLevel
         releasedCorporationIds = []
         tileStage = 'hidden'
         alienReleased = false
+        if (level === undefined) {
+            return
+        }
+        const r = untrack(() => reveal)
+        if (!r) {
+            return
+        }
 
         let cancelled = false
         const timers: ReturnType<typeof setTimeout>[] = []
