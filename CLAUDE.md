@@ -21,12 +21,17 @@ on top of the upstream guidance in `AGENTS.md`.
 - Each worktree has its own `node_modules`; run `pnpm install` in each on
   the Mac.
 
-### Deploying (the user does this, never an agent)
+### Deploying
 
-All deploys go through `pnpm run deploy:tui` from the repo root, run by
-Justin in his own Terminal. Agents must not run `gcloud run deploy`, upload
-bundles to GCS, or write `site-manifest.json`; read-only checks
-(`gcloud run services describe`, `gcloud storage ls/cat`) are fine.
+Justin deploys with `pnpm run deploy:tui` from the repo root in his own
+Terminal. Agents may also deploy when Justin asks (decided 2026-10-08),
+using the non-interactive commands of the same tool
+(`node tools/deploy/esm/cli.js --help`), from `main` only. For a game:
+bump the logic and/or UI `package.json` versions (patch unless told
+otherwise), `sync-manifest`, `deploy-logic <packageId>` and/or
+`deploy-ui <packageId>`, then `deploy-manifest`, and commit the bump as
+`Deploy: <Game> ...`. Agents still don't run raw `gcloud run deploy` or
+hand-edit `site-manifest.json`.
 
 TUI targets and keys: arrow keys select a target; `d` deploys, `y` confirms
 (for Backend, `y` also shifts traffic). Backend asks which service: `b`
