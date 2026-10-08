@@ -3,6 +3,7 @@
     import type { HydratedRockyVenturesPlayerState } from '@tabletop/rocky-ventures'
     import PlayerPanel from '$lib/components/PlayerPanel.svelte'
     import DummyPanel from '$lib/components/DummyPanel.svelte'
+    import RailroadsPanel from '$lib/components/RailroadsPanel.svelte'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
     const gameSession = getGameSession()
@@ -38,3 +39,4 @@
     {/each}
     <DummyPanel />
 </div>
+<RailroadsPanel />

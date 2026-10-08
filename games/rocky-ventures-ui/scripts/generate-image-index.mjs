@@ -7,7 +7,7 @@ import { join } from 'path'
 import { fileURLToPath } from 'url'
 
 const imagesRoot = fileURLToPath(new URL('../src/lib/images/', import.meta.url))
-const folders = ['agreements', 'cards', 'dragon', 'playerCards', 'scourges', 'shares', 'tokens']
+const folders = ['agreements', 'cards', 'companyLogos', 'dragon', 'playerCards', 'scourges', 'shares', 'tokens']
 
 for (const folder of folders) {
     const files = readdirSync(join(imagesRoot, folder))

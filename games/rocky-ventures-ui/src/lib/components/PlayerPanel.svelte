@@ -1,6 +1,5 @@
 <script lang="ts">
     import { type Player } from '@tabletop/common'
-    import { PlayerName } from '@tabletop/frontend-components'
     import {
         CardKind,
         HuntDrawRuleByWeaponLevel,
@@ -14,6 +13,9 @@
     import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.js'
     import gemIcon from '$lib/images/icons/gem.png'
     import Pawn from '$lib/components/Pawn.svelte'
+    import { cardActionsTooltip } from '$lib/utils/cardActionText.js'
+    import { cardImageUrl } from '$lib/utils/cardImages.js'
+    import { playerCardImageUrl } from '$lib/utils/playerCardImages.js'
 
     const gameSession = getGameSession()
     let { player, playerState }: { player: Player; playerState: HydratedRockyVenturesPlayerState } =
@@ -25,6 +27,12 @@
     const playerTextColor = $derived(gameSession.colors.getPlayerTextColorValue(player.id))
     const oreCapacity = $derived(OreCapacityByToolLevel[playerState.toolLevel])
     const huntRule = $derived(HuntDrawRuleByWeaponLevel[playerState.weaponLevel])
+
+    function tableauImageUrl(cardId: string): string | undefined {
+        return getCard(cardId).kind === CardKind.Player
+            ? playerCardImageUrl(cardId, playerState.color)
+            : cardImageUrl(cardId)
+    }
 
     function cardLabel(cardId: string): string {
         const card = getCard(cardId)
@@ -45,31 +53,23 @@
     class="overflow-hidden rounded-lg border text-sm text-left"
     style="background-color: #12162b; color: #e6e9f5; border-color: {isTurn ? '#4f7cf2' : '#2a3155'};"
 >
+    <!-- Header painted in the player's colour, like Stellar Ventures' player boxes. -->
     <div
         class="flex items-center justify-between border-b px-3 py-2"
-        style="background-color: #1b2242; border-color: #2a3155;"
+        style="background-color: {playerColor}; color: {playerTextColor}; border-color: #2a3155;"
     >
         <div class="flex items-center gap-2 font-semibold">
-            <span class="h-2.5 w-2.5 shrink-0 rounded-full" style="background-color: {playerColor};"></span>
-            <span class="rounded-md px-2 py-0.5" style="background-color: {playerColor}; color: {playerTextColor};">
-                <PlayerName playerId={player.id} />
-            </span>
+            <span class="capitalize">{player.id === gameSession.myPlayer?.id ? 'You' : gameSession.getPlayerName(player.id)}</span>
         </div>
         <div class="flex items-center gap-1">
             <span class="font-mono text-sm font-semibold">{playerState.victoryPoints} VP</span>
             {#if isTurn}
-                <span
-                    class="rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                    style="border-color: #4f7cf2; color: #9db4f5;"
-                >
+                <span class="rounded-full border border-current px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
                     Active
                 </span>
             {/if}
             {#if botProfile}
-                <span
-                    class="rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
-                    style="border-color: #ffd166; color: #ffd166;"
-                >
+                <span class="rounded-full border border-current bg-black/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
                     {BotProfileNames[botProfile]}
                 </span>
             {/if}
@@ -132,18 +132,23 @@
 
     <div class="flex items-center gap-x-1 border-b px-3 pb-1.5 pt-6" style="border-color: #2a3155;">
         {#each playerState.tableau as cardId, index (cardId)}
-            <div
+            {@const imageUrl = tableauImageUrl(cardId)}
+            <button
+                type="button"
                 class="relative flex h-7 w-6 items-center justify-center rounded border text-[11px] font-bold"
                 style="background-color: #f3ead6; color: #111; border-color: #8a6d3b;"
-                title={cardId}
+                title={cardActionsTooltip(cardId)}
+                onclick={() => gameSession.zoomCard(cardId, imageUrl)}
+                onpointerenter={(event) => gameSession.previewCard(event, cardId, imageUrl)}
+                onpointerleave={() => gameSession.clearCardPreview()}
             >
                 {cardLabel(cardId)}
                 {#if playerState.pawnIndex === index}
-                    <div class="absolute -top-7 left-1/2 -translate-x-1/2">
+                    <div class="pointer-events-none absolute -top-7 left-1/2 -translate-x-1/2">
                         <Pawn fill={playerColor} height={36} />
                     </div>
                 {/if}
-            </div>
+            </button>
         {/each}
         {#if playerState.tuckedCardIds.length > 0}
             <span class="ml-1 text-[11px]" style="color: #7f88ad;">+{playerState.tuckedCardIds.length} tucked</span>
