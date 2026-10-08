@@ -29,7 +29,9 @@ using the non-interactive commands of the same tool
 (`node tools/deploy/esm/cli.js --help`), from `main` only. For a game:
 bump the logic and/or UI `package.json` versions (patch unless told
 otherwise), `sync-manifest`, `deploy-logic <packageId>` and/or
-`deploy-ui <packageId>`, then `deploy-manifest`, and commit the bump as
+`deploy-ui <packageId>`, then `deploy-manifest` only once those both
+succeeded (put `node_modules/.bin` on PATH for `turbo`; a first build
+sometimes fails and passes on retry), and commit the bump as
 `Deploy: <Game> ...`. Agents still don't run raw `gcloud run deploy` or
 hand-edit `site-manifest.json`.
 
