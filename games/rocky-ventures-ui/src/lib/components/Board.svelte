@@ -253,6 +253,16 @@
     xmlns="http://www.w3.org/2000/svg"
     class="select-none"
 >
+    <!-- Always rendered: Safari draws nothing for an element whose filter isn't in the document,
+         so these must not sit inside a conditional block. -->
+    <defs>
+        <filter id="mine-halo-blur" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="5" />
+        </filter>
+        <filter id="track-halo-blur" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="3" />
+        </filter>
+    </defs>
     <image href={boardArt} x="0" y="0" width={BoardArtSize.width} height={BoardArtSize.height} />
     <GridArtOverrides artUrl={boardArt} idPrefix="board" />
 
@@ -390,6 +400,21 @@
                     }
                 }}
             >
+                <!-- SVG-native halo (the CSS drop-shadow below doesn't render on iPhone) -->
+                <rect
+                    x={location.x - BoxSize / 2 - 5}
+                    y={location.y - BoxSize / 2 - 5}
+                    width={BoxSize + 10}
+                    height={BoxSize + 10}
+                    rx="4"
+                    fill="none"
+                    stroke={glow}
+                    stroke-width="8"
+                    transform="rotate({location.angle} {location.x} {location.y})"
+                    filter="url(#track-halo-blur)"
+                    class="mine-halo"
+                    pointer-events="none"
+                />
                 <rect
                     x={location.x - BoxSize / 2 - 1}
                     y={location.y - BoxSize / 2 - 1}
@@ -890,9 +915,6 @@
                 </g>
             {/each}
         </g>
-        <filter id="mine-halo-blur" x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="5" />
-        </filter>
         <filter id="hunt-region-soften" x="-5%" y="-5%" width="110%" height="110%">
             <feGaussianBlur stdDeviation="6" />
         </filter>
