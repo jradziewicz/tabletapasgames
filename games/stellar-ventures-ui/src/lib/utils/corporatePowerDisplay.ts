@@ -47,7 +47,7 @@ export const CorporatePowerDescriptions: Record<string, string> = {
     [CorporatePowerId.DeepSpaceSmuggling]: "One-Time: copy another Corporation's CARGO for Pay Dividends.",
     [CorporatePowerId.FinePrint]:
         'One-Time: discard before Boardroom Battle to exempt this Corporation from Votes and forced Share issuance.',
-    [CorporatePowerId.IcarusExperiment]: 'Ongoing: may build Outposts on Suns and Anomalies.',
+    [CorporatePowerId.IcarusExperiment]: 'Ongoing: may build Outposts on Suns.',
     [CorporatePowerId.AlienAlchemist]:
         'Once per Corporation Round: scrap 2 unbuilt Outposts for 1 Alien Tech Cube.',
     [CorporatePowerId.BackroomDeal]:
