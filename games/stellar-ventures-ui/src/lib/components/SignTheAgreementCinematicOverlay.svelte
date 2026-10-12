@@ -506,38 +506,39 @@
             transform: rotateY(180deg);
         }
     }
+    /* No blur here either - the tile is a box of <img>s, same iOS white-rectangle risk as the
+       logo/alien keyframes below. */
     @keyframes tile-away {
         to {
             opacity: 0;
             transform: scale(1.8);
-            filter: blur(6px);
         }
     }
-    /* Every filter keyframe below lists the same functions at both ends (blur(0) included):
-       Safari can't interpolate between filter lists of different lengths and stayed stuck on
-       the blurred start frame, leaving the logos and title blurry on iPhone. */
+    /* The logo and alien <img>s animate opacity/transform only - their drop-shadow glow stays
+       static on the class. Animating filter (blur + drop-shadow) on an <img> makes iOS Safari
+       paint the image as a solid white rectangle for the whole animation (a WebKit compositing
+       bug), which is exactly what the Agreement overlay showed on iPhone. The title below is
+       text rather than an image and still animates its filter fine; its keyframes list the same
+       filter functions at both ends because Safari can't interpolate between lists of
+       different lengths. */
     @keyframes slam {
         0% {
             opacity: 0;
             transform: scale(3);
-            filter: blur(8px) drop-shadow(0 0 24px var(--corp));
         }
         100% {
             opacity: 1;
             transform: scale(1);
-            filter: blur(0) drop-shadow(0 0 24px var(--corp));
         }
     }
     @keyframes slam-alien {
         0% {
             opacity: 0;
             transform: translateX(60px) scale(2.2);
-            filter: blur(8px) drop-shadow(0 0 24px rgba(125, 255, 178, 0.75));
         }
         100% {
             opacity: 1;
             transform: translateX(0) scale(1);
-            filter: blur(0) drop-shadow(0 0 24px rgba(125, 255, 178, 0.75));
         }
     }
     @keyframes stamp {
