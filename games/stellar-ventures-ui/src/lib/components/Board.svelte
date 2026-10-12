@@ -254,8 +254,8 @@
 
     // Same reasoning as blockedAlienPlanetMessage above, for the other common "looks legal, but
     // this specific hex needs a Power you don't have" click: a Nebular Anomaly (HexType.Anomaly)
-    // hex is normally off-limits, buildable only via Icarus Experiment (Sun/Anomaly alike) or
-    // Nebular Explorers (Anomaly only, and only while unused Alien Planet tiles remain - see
+    // hex is normally off-limits, buildable only via Nebular Explorers (and only while unused
+    // Alien Planet tiles remain - Icarus Experiment is Suns only - see
     // model/board.ts's canBuildOutpost / operations/network.ts's
     // canBuildOnNebulaAnomalyForCorporation). validHexIds already keeps an ineligible
     // Corporation's Anomaly hexes unhighlighted, but per the board's own comment an unhighlighted
@@ -269,9 +269,6 @@
             return false
         }
         const corporation = gameSession.gameState.getCorporation(corporationId)
-        if (corporation.hasActivePower(CorporatePowerId.IcarusExperiment)) {
-            return false
-        }
         if (
             corporation.hasActivePower(CorporatePowerId.NebularExplorers) &&
             gameSession.gameState.unusedAlienAgreementTileChevrons.length > 0

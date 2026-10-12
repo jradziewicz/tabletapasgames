@@ -157,9 +157,11 @@ describe('HydratedBoardState.canBuildOutpost (Outpost Restrictions)', () => {
         expect(board.canBuildOutpost('-1,0', CorporationId.PinkInc, false, true)).toBe(true)
     })
 
-    it('canBuildOnSunAnomalies also lifts the block on plain Anomaly hexes', () => {
+    it('canBuildOnSunAnomalies (Icarus Experiment) does NOT open plain Nebular Anomaly hexes', () => {
         const board = createTestBoard()
-        expect(board.canBuildOutpost('0,1', CorporationId.PinkInc, false, true)).toBe(true)
+        expect(board.canBuildOutpost('0,1', CorporationId.PinkInc, false, true)).toBe(false)
+        // Only Nebular Explorers does.
+        expect(board.canBuildOutpost('0,1', CorporationId.PinkInc, false, false, false, true)).toBe(true)
     })
 
     it('blocks Alien Planet hexes unless canBuildOnAlienPlanets is true (e.g. Alien Explorers)', () => {

@@ -247,8 +247,8 @@ export class HydratedBoardState extends Hydratable<typeof BoardState> implements
     // Suns are themselves a form of red-bordered Anomaly (hence the "with a Sun" vs. Nebular
     // Anomaly art variants), confirmed by the rulebook co-designer, even though HexType.Sun is
     // its own distinct value in this data model. Icarus Experiment ("Ignore the restriction
-    // against building on Suns and Anomalies", Glossary page 29) lifts this specific
-    // restriction for its Corporation - the caller passes canBuildOnSunAnomalies (true once the
+    // against building on Suns and Anomalies", Glossary page 29 - Suns only, per the designer,
+    // since a Sun is itself an Anomaly) lifts this specific restriction for Sun hexes only - the caller passes canBuildOnSunAnomalies (true once the
     // Corporation has that Power active - see operations/network.ts). Cloaking Devices ("May
     // build Outposts on Deep Space hexes ignoring Outpost Restrictions and Placement Penalties",
     // Glossary page 29) similarly lifts Deep Space's own max-2-Outposts-per-hex cap for its
@@ -293,13 +293,13 @@ export class HydratedBoardState extends Hydratable<typeof BoardState> implements
             case HexType.Sun:
                 return canBuildOnSunAnomalies
             case HexType.Anomaly:
-                // A plain (non-Sun) Anomaly is also a Nebular Anomaly - buildable either via
-                // Icarus Experiment (canBuildOnSunAnomalies, which lifts the restriction for
-                // BOTH Sun and Anomaly alike) or via Nebular Explorers specifically
-                // (canBuildOnNebulaAnomaly - see operations/network.ts's
-                // canBuildOnNebulaAnomalyForCorporation), which only ever applies to this case,
-                // never to a true Sun.
-                return canBuildOnSunAnomalies || canBuildOnNebulaAnomaly
+                // A plain (non-Sun) Anomaly is a Nebular Anomaly - buildable ONLY via Nebular
+                // Explorers (canBuildOnNebulaAnomaly - see operations/network.ts's
+                // canBuildOnNebulaAnomalyForCorporation). Icarus Experiment is Suns only, per
+                // the designer: Suns are themselves the Anomaly its glossary text means, so it
+                // does not open up Nebular Anomalies (it used to, letting an Icarus Corporation
+                // build on Nebulas it had no Power for).
+                return canBuildOnNebulaAnomaly
             case HexType.AlienPlanet:
                 return canBuildOnAlienPlanets
             case HexType.HomePlanet:
