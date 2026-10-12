@@ -198,12 +198,20 @@
                             {/if}
                         </div>
                     </div>
-                    <div class="parties flex items-center gap-3 sm:gap-5">
-                        <img class="logo" src={reveal.logo} alt="{reveal.name} logo" />
+                    <!-- Logo and alien sit in equal-width slots so the handshake is dead center.
+                         Their glows are radial-gradient backgrounds on the slot, not CSS filters
+                         on the <img>s: iOS Safari composites a filtered <img> as its own
+                         rectangle, which showed as a box behind the logos on iPhone. -->
+                    <div class="parties flex items-center justify-center gap-3 sm:gap-5">
+                        <span class="party party-corp">
+                            <img class="logo" src={reveal.logo} alt="{reveal.name} logo" />
+                        </span>
                         {#if reveal.token}
                             <img class="token" src={reveal.token} alt="{reveal.name} Agreement Token" />
                         {/if}
-                        <img class="alien" src={alienHead} alt="The Aliens" />
+                        <span class="party party-alien">
+                            <img class="alien" src={alienHead} alt="The Aliens" />
+                        </span>
                     </div>
                 </div>
 
@@ -374,30 +382,55 @@
         height: 100%;
         object-fit: contain;
         backface-visibility: hidden;
-        filter: drop-shadow(0 0 18px rgba(125, 255, 178, 0.7));
     }
     .tile-front {
         transform: rotateY(180deg);
     }
+    .party {
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 9rem;
+        height: 9rem;
+    }
+    .party::before {
+        content: '';
+        position: absolute;
+        inset: -15%;
+        border-radius: 9999px;
+        pointer-events: none;
+        opacity: 0;
+    }
+    .party-corp::before {
+        background: radial-gradient(closest-side, color-mix(in srgb, var(--corp) 55%, transparent), transparent);
+        animation: fade-in 0.6s ease-out 2.45s forwards;
+    }
+    .party-alien::before {
+        background: radial-gradient(closest-side, rgba(125, 255, 178, 0.45), transparent);
+        animation: fade-in 0.6s ease-out 2.65s forwards;
+    }
     .logo {
-        max-width: 9rem;
-        max-height: 9rem;
+        position: relative;
+        max-width: 100%;
+        max-height: 100%;
         object-fit: contain;
-        filter: drop-shadow(0 0 24px var(--corp));
         animation: slam 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) 2.35s both;
     }
     .alien {
-        max-height: 8.5rem;
+        position: relative;
+        max-width: 100%;
+        max-height: 95%;
         object-fit: contain;
-        filter: drop-shadow(0 0 24px rgba(125, 255, 178, 0.75));
         animation: slam-alien 0.55s cubic-bezier(0.2, 1.4, 0.4, 1) 2.55s both;
     }
     .token {
+        position: relative;
         flex-shrink: 0;
         width: 4.5rem;
         height: 4.5rem;
         object-fit: contain;
-        filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.8));
         animation: stamp 0.45s cubic-bezier(0.3, 1.6, 0.5, 1) 2.9s both;
     }
 
@@ -587,12 +620,9 @@
     }
 
     @media (max-width: 480px) {
-        .logo {
-            max-width: 6rem;
-            max-height: 6rem;
-        }
-        .alien {
-            max-height: 6rem;
+        .party {
+            width: 6rem;
+            height: 6rem;
         }
         .token {
             width: 3.25rem;
