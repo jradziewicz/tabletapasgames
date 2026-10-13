@@ -33,6 +33,7 @@
     import type { HydratedRockyVenturesGameState, RockyVenturesGameState } from '@tabletop/rocky-ventures'
     import { setGameSession } from '$lib/model/sessionContext.svelte'
     import { chooseBotMoves } from '$lib/bots/rockyBots.js'
+    import { setCompanyColorBlind } from '$lib/utils/companyDisplay.svelte.js'
 
     let {
         gameSession
@@ -40,6 +41,11 @@
         $props()
     const session = gameSession as RockyVenturesGameSession
     setGameSession(session)
+
+    // Railroad colours follow the viewer's colour-blind palette preference.
+    $effect(() => {
+        setCompanyColorBlind(session.colors.colorBlind)
+    })
 
     const BotThinkMs = 900
     let botTimer: ReturnType<typeof setTimeout> | undefined

@@ -26,7 +26,7 @@
         type MineSite
     } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import { CompanyColors } from '$lib/utils/companyDisplay.js'
+    import { CompanyColors } from '$lib/utils/companyDisplay.svelte.js'
     import { CompanyBoardLayouts } from '$lib/utils/companyBoardLayout.js'
     import { shareImageUrl } from '$lib/utils/shareImages.js'
     import { mineTokenBackImageUrl, mineTokenImageUrl } from '$lib/utils/tokenImages.js'

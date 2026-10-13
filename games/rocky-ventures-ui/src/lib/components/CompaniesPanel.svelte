@@ -1,7 +1,7 @@
 <script lang="ts">
     import { CompanyAbbreviations, CompanyNames, SharesPerCompany } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.js'
+    import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.svelte.js'
 
     const gameSession = getGameSession()
     const companies = $derived(gameSession.gameState.companies)

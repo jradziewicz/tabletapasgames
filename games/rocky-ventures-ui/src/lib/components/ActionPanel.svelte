@@ -47,7 +47,7 @@
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { cardImageUrl } from '$lib/utils/cardImages.js'
     import { shareImageUrl } from '$lib/utils/shareImages.js'
-    import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.js'
+    import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.svelte.js'
     import { playerCardImageUrl } from '$lib/utils/playerCardImages.js'
     import Pawn from '$lib/components/Pawn.svelte'
     import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'

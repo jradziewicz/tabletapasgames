@@ -10,7 +10,7 @@
     import { agreementTooltip } from '$lib/utils/agreementImages.js'
     import { BotProfileNames } from '$lib/bots/rockyBots.js'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.js'
+    import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.svelte.js'
     import gemIcon from '$lib/images/icons/gem.png'
     import Pawn from '$lib/components/Pawn.svelte'
     import { cardActionsTooltip } from '$lib/utils/cardActionText.js'

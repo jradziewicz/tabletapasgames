@@ -2,7 +2,7 @@
     import { CompanyIds, CompanyNames, buildableBoxes } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { agreementImageUrl, agreementTooltip } from '$lib/utils/agreementImages.js'
-    import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.js'
+    import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.svelte.js'
 
     const gameSession = getGameSession()
     const gameState = $derived(gameSession.gameState)

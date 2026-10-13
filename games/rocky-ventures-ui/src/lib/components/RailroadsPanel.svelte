@@ -6,7 +6,7 @@
         ShareFlipTriggerIndex
     } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.js'
+    import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.svelte.js'
     import { companyLogoUrl } from '$lib/utils/companyLogos.js'
 
     // One box per railroad, styled like the player boxes above (and Stellar Ventures' sidebar):
