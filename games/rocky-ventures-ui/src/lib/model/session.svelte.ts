@@ -47,6 +47,7 @@ import {
     type HydratedRockyVenturesGameState
 } from '@tabletop/rocky-ventures'
 import { BotProfile, type BotMove } from '$lib/bots/rockyBots.js'
+import { pawnMoveEndsTurnReason } from '$lib/utils/pawnMovePreview.js'
 
 export type ExtractAnimation = {
     nodeId: string
@@ -79,6 +80,9 @@ export class RockyVenturesGameSession extends GameSession<
     splayedShareCompanyId: CompanyId | undefined = $state()
 
     moveTargetIndex: number | undefined = $state()
+    // Why the chosen pawn move would end the turn at once (nothing on that card is usable), shown
+    // so the player can confirm or pick another card.
+    moveEndsTurnWarning: string | undefined = $state()
     moveDiscardIndexes: number[] = $state([])
     movePaidIndexes: number[] = $state([])
     discardAnimating = $state(false)
@@ -137,6 +141,7 @@ export class RockyVenturesGameSession extends GameSession<
         this.claimHuntNodeId = undefined
         this.extractHoverCityId = undefined
         this.moveTargetIndex = undefined
+        this.moveEndsTurnWarning = undefined
         this.moveDiscardIndexes = []
         this.movePaidIndexes = []
         this.discardAnimating = false
@@ -184,6 +189,7 @@ export class RockyVenturesGameSession extends GameSession<
             return
         }
         this.moveTargetIndex = index
+        this.moveEndsTurnWarning = undefined
         this.moveDiscardIndexes = []
         this.movePaidIndexes = []
         if (skipped.length === 0 || player?.pawnIndex === undefined) {
@@ -866,11 +872,20 @@ export class RockyVenturesGameSession extends GameSession<
         }
     }
 
-    async confirmMove() {
+    async confirmMove(evenIfTurnEnds = false) {
         const targetIndex = this.moveTargetIndex
         if (targetIndex === undefined) {
             return
         }
+        const playerId = this.gameState.activePlayerIds[0]
+        if (!evenIfTurnEnds && playerId !== undefined) {
+            const reason = pawnMoveEndsTurnReason(this.gameState, playerId, targetIndex, this.moveDiscardIndexes)
+            if (reason) {
+                this.moveEndsTurnWarning = reason
+                return
+            }
+        }
+        this.moveEndsTurnWarning = undefined
         if (this.moveDiscardIndexes.length > 0) {
             this.discardAnimating = true
             await new Promise((resolve) => setTimeout(resolve, 1300))

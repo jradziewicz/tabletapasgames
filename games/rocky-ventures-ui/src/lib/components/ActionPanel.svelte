@@ -305,6 +305,13 @@
                 </div>
             {/each}
         </div>
+        {#if gameSession.moveEndsTurnWarning}
+            <div class="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-[#c9302c] bg-[#4a1614]/60 px-3 py-2 text-sm">
+                <span>Nothing on that card can be used: {gameSession.moveEndsTurnWarning}. Moving there ends your turn.</span>
+                <button type="button" class="rv-btn rv-danger text-xs" onclick={() => gameSession.confirmMove(true)}>Move anyway</button>
+                <button type="button" class="rv-quiet text-xs" onclick={() => gameSession.clearLocalSelection()}>Pick another card</button>
+            </div>
+        {/if}
     {:else if gameState.machineState === MachineState.TakeActions}
         {#if player.gems > 0 && !gameSession.investPickerOpen}
             <GemActions />
