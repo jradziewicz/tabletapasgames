@@ -52,10 +52,9 @@ export class HydratedSellVictoryPoints
         recordCash(state, this.playerId, cash, 'vpSale', { cardId: undefined })
     }
 
-    static canSellVictoryPoints(state: HydratedRockyVenturesGameState, playerId: string): boolean {
-        return (
-            state.activePlayerIds.includes(playerId) &&
-            state.getPlayerState(playerId).victoryPoints > 0
-        )
+    // Selling VP for money was removed from the rules, so it is never offered. The action and
+    // apply() stay so games that already sold VP still replay.
+    static canSellVictoryPoints(_state: HydratedRockyVenturesGameState, _playerId: string): boolean {
+        return false
     }
 }

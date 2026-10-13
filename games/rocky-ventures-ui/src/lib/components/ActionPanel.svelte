@@ -41,7 +41,6 @@
     } from '@tabletop/rocky-ventures'
     import { PlayerName } from '@tabletop/frontend-components'
     import { CityRouteColors } from '$lib/utils/routePath.js'
-    import SellVictoryPointsControl from '$lib/components/SellVictoryPoints.svelte'
     import AgreementDiscard from '$lib/components/AgreementDiscard.svelte'
     import GemActions from '$lib/components/GemActions.svelte'
     import gemIcon from '$lib/images/icons/gem.png'
@@ -223,7 +222,6 @@
         {#if moveTarget === undefined}
             <div class="flex flex-wrap items-start gap-x-4">
                 <AgreementDiscard />
-                <SellVictoryPointsControl />
             </div>
         {/if}
         <div class="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -315,7 +313,6 @@
             {#if !gameSession.investPickerOpen}
                 <AgreementDiscard />
             {/if}
-            <SellVictoryPointsControl />
         </div>
         {#if !gameSession.investPickerOpen}
         <div class="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -877,7 +874,6 @@
             </div>
         {/if}
     {:else if gameState.machineState === MachineState.BonusInvest}
-        <SellVictoryPointsControl />
         <div class="flex flex-wrap items-end gap-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1 max-sm:*:shrink-0">
             {#each gameState.market.slots as cardId, slotIndex (cardId)}
                 {@const card = getCard(cardId)}

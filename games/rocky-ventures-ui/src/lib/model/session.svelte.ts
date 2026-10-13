@@ -9,7 +9,6 @@ import {
     AgreementPointBuy,
     DiscardAgreement,
     LayFreeTrack,
-    SellVictoryPoints,
     type AgreementLetter,
     GemAction,
     type GemActionKind,
@@ -786,12 +785,6 @@ export class RockyVenturesGameSession extends GameSession<
             )
         })
         this.discardPick = undefined
-    }
-
-    async sellVictoryPoints(amount: number) {
-        await this.submit(ActionType.SellVictoryPoints, async () => {
-            await this.applyAction(this.createPlayerAction(SellVictoryPoints, { amount }))
-        })
     }
 
     async stopFreeTrack() {
