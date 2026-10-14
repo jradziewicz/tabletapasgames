@@ -8,8 +8,16 @@
 
     const triggers = $derived(endTriggers(gameSession.gameState))
     const gemThreshold = $derived(gemTriggerThreshold(gameSession.gameState.players.length))
+    // Cards still to come before the face-up Game Over card at the bottom of the draw pile.
+    const deckCardsLeft = $derived(
+        Math.max(0, gameSession.gameState.market.drawPile.length - (triggers.deckExhausted ? gameSession.gameState.market.drawPile.length : 1))
+    )
     const triggerChips = $derived([
-        { label: 'DECK', met: triggers.deckExhausted, title: 'Development deck reached the End of Era 3 card' },
+        {
+            label: `DECK ${deckCardsLeft}`,
+            met: triggers.deckExhausted,
+            title: `${deckCardsLeft} ${deckCardsLeft === 1 ? 'card' : 'cards'} left in the development deck before the Game Over card`
+        },
         { label: 'DRAGON', met: triggers.dragonKilled, title: 'The dragon has been summoned and killed' },
         {
             label: `GEMS ${Math.min(gameSession.gameState.gemsSpent, gemThreshold)}/${gemThreshold}`,
