@@ -5,6 +5,7 @@
     import HabitatView from './HabitatView.svelte'
     import SpaceView from './SpaceView.svelte'
     import DraftOverlay from './DraftOverlay.svelte'
+    import FallingNymphs from './FallingNymphs.svelte'
     import ZoneRuler from './ZoneRuler.svelte'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
@@ -76,6 +77,7 @@
             {#each Habitats as habitat (habitat.id)}
                 <HabitatView habitatId={habitat.id} />
             {/each}
+            <FallingNymphs />
             <DraftOverlay />
         </svg>
     </div>

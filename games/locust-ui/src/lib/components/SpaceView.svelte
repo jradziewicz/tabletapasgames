@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getSpace } from '@tabletop/locust'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import { ActionNames } from '$lib/utils/describe.js'
     import { SpaceSize, UnlimitedSpaceSize, spaceCenter } from '$lib/utils/boardLayout.js'
 
     let { spaceId }: { spaceId: string } = $props()
@@ -17,6 +18,9 @@
     const choosable = $derived(session.choosableSpaceIds.includes(spaceId))
     const isActiveCube = $derived(
         !session.gameState.result && session.gameState.nextCubeSpaceId() === spaceId
+    )
+    const spaceTitle = $derived(
+        space.kind ? `${ActionNames[space.kind]} ${space.level}${space.color ? ` (${space.color})` : ''}` : spaceId
     )
     const bonusToken = $derived(session.gameState.board.bonusTokens[spaceId])
     const BonusFill: Record<string, string> = {
@@ -102,7 +106,7 @@
             onclick={() => session.chooseSpace(spaceId)}
             onkeydown={(event) => event.key === 'Enter' && session.chooseSpace(spaceId)}
         >
-            <title>{space.kind} {space.level}{space.color ? ` (${space.color})` : ''}</title>
+            <title>{spaceTitle}</title>
         </rect>
     {/if}
 </g>
