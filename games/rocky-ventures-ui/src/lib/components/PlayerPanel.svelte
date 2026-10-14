@@ -111,22 +111,16 @@
 
     <!-- What this player's levels actually let them do, rather than the bare level numbers. -->
     <div class="grid grid-cols-2 gap-px border-b" style="background-color: #2a3155; border-color: #2a3155;">
-        <div class="px-3 py-2" style="background-color: #12162b;" title="Weapon level {playerState.weaponLevel}">
-            <div class="flex items-baseline justify-between">
-                <span class="text-[10px] uppercase tracking-widest" style="color: #7f88ad;">Hunt</span>
-                <span class="text-[10px]" style="color: #7f88ad;">Weapon {playerState.weaponLevel}</span>
-            </div>
+        <div class="px-3 py-2" style="background-color: #12162b;">
+            <div class="text-[10px] uppercase tracking-widest" style="color: #7f88ad;">Hunt</div>
             <div class="mt-0.5 flex items-baseline gap-1.5 font-semibold">
                 <span>Draw <span class="font-mono">{huntRule.draw}</span></span>
                 <span style="color: #4a5175;">·</span>
                 <span>Keep <span class="font-mono">{huntRule.apply}</span></span>
             </div>
         </div>
-        <div class="px-3 py-2" style="background-color: #12162b;" title="Tool level {playerState.toolLevel}">
-            <div class="flex items-baseline justify-between">
-                <span class="text-[10px] uppercase tracking-widest" style="color: #7f88ad;">Extract</span>
-                <span class="text-[10px]" style="color: #7f88ad;">Tool {playerState.toolLevel}</span>
-            </div>
+        <div class="px-3 py-2" style="background-color: #12162b;">
+            <div class="text-[10px] uppercase tracking-widest" style="color: #7f88ad;">Extract</div>
             <div class="mt-0.5 flex flex-wrap items-center gap-x-2 font-semibold">
                 <span class="flex items-center gap-1 whitespace-nowrap" title="Up to {oreCapacity.gold} gold ore per extract">
                     <span class="inline-block h-2.5 w-2.5 rounded-full" style="background: radial-gradient(circle at 35% 35%, #ffe08a, #c99a2e);"></span>
