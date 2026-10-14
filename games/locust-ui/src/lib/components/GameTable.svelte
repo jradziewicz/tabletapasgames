@@ -215,6 +215,15 @@
         filter: drop-shadow(0 0 4px rgba(208, 124, 240, 1)) drop-shadow(0 0 10px rgba(208, 124, 240, 0.9))
             drop-shadow(0 0 18px rgba(180, 91, 214, 0.6));
     }
+    /* Action spaces stay quiet so their printed numbers remain readable; hover brings the glow up. */
+    :global([data-game-ui='locust'] .lc-space-ring) {
+        filter: drop-shadow(0 0 2px rgba(61, 220, 132, 0.95)) drop-shadow(0 0 5px rgba(61, 220, 132, 0.6));
+        transition: filter 120ms ease;
+    }
+    :global([data-game-ui='locust'] .lc-space:hover .lc-space-ring) {
+        stroke-width: 5;
+        filter: drop-shadow(0 0 4px rgba(61, 220, 132, 1)) drop-shadow(0 0 11px rgba(61, 220, 132, 0.9));
+    }
     :global([data-game-ui='locust'] .lc-lift) {
         filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
     }

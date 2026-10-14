@@ -70,43 +70,34 @@
         />
     {/if}
     {#if choosable}
-        <g class="lc-target lc-target-go" pointer-events="none">
+        <g class="lc-space">
             <rect
-                x={center.x - size / 2 - 6}
-                y={center.y - size / 2 - 6}
-                width={size + 12}
-                height={size + 12}
-                rx="8"
-                fill="#3ddc84"
-                fill-opacity="0.25"
-                stroke="#06371b"
-                stroke-width="10"
-            />
-            <rect
-                x={center.x - size / 2 - 6}
-                y={center.y - size / 2 - 6}
-                width={size + 12}
-                height={size + 12}
-                rx="8"
+                x={center.x - size / 2 - 2}
+                y={center.y - size / 2 - 2}
+                width={size + 4}
+                height={size + 4}
+                rx="5"
                 fill="none"
                 stroke="#3ddc84"
-                stroke-width="5"
+                stroke-width="2.5"
+                class="lc-space-ring"
+                pointer-events="none"
             />
+            <rect
+                x={center.x - size / 2 - 4}
+                y={center.y - size / 2 - 4}
+                width={size + 8}
+                height={size + 8}
+                fill="transparent"
+                role="button"
+                tabindex="0"
+                aria-label="Action space {spaceId}"
+                class="cursor-pointer"
+                onclick={() => session.chooseSpace(spaceId)}
+                onkeydown={(event) => event.key === 'Enter' && session.chooseSpace(spaceId)}
+            >
+                <title>{spaceTitle}</title>
+            </rect>
         </g>
-        <rect
-            x={center.x - size / 2 - 8}
-            y={center.y - size / 2 - 8}
-            width={size + 16}
-            height={size + 16}
-            fill="transparent"
-            role="button"
-            tabindex="0"
-            aria-label="Action space {spaceId}"
-            class="cursor-pointer"
-            onclick={() => session.chooseSpace(spaceId)}
-            onkeydown={(event) => event.key === 'Enter' && session.chooseSpace(spaceId)}
-        >
-            <title>{spaceTitle}</title>
-        </rect>
     {/if}
 </g>
