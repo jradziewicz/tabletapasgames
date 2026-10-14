@@ -147,6 +147,14 @@
         }
         return player.liquidFunds + player.frozenFunds + shareValue
     }
+
+    // Readable text on a Corporation-colored header: dark on light backgrounds, white on dark.
+    function headerTextColor(hex: string): string {
+        const value = hex.replace('#', '')
+        const [r, g, b] = [0, 2, 4].map((i) => parseInt(value.slice(i, i + 2), 16) / 255)
+        const luminance = 0.2126 * r! + 0.7152 * g! + 0.0722 * b!
+        return luminance > 0.5 ? '#0b0e1a' : '#ffffff'
+    }
 </script>
 
 <div class="space-y-4 p-2 text-[#e6e9f5]">
@@ -390,11 +398,15 @@
                         ? `0 0 0 1px ${borderColor}, 0 0 12px ${borderColor}66`
                         : undefined}
                 >
-                    <!-- Header - same layout as a Player card's header (identity marker, not a
-                         paint job): logo + name on the left, an "Active" badge here (in place of
-                         the Status badge) while this Corporation itself is the one operating. -->
+                    <!-- Header - painted in the Corporation's own color, like a Player card's
+                         header, so Corporations are easy to tell apart at a glance: logo + name on
+                         the left, an "Active" badge here (in place of the Status badge) while this
+                         Corporation itself is the one operating. Dark text on the light colors
+                         (Frost's white, Gamboge's amber), white text on the rest. -->
                     <div
-                        class="flex items-center justify-between border-b border-[#2a3155] bg-[#1b2242] px-3 py-2"
+                        class="flex items-center justify-between border-b border-[#2a3155] px-3 py-2"
+                        style:background-color={borderColor}
+                        style:color={headerTextColor(borderColor)}
                     >
                         <div class="flex items-center gap-2 font-semibold">
                             <img
@@ -407,13 +419,13 @@
                         </div>
                         {#if corporation.id === operatingCorpId}
                             <span
-                                class="rounded-full border border-[#4f7cf2] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#9db4f5]"
+                                class="rounded-full border border-current bg-black/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
                             >
                                 Active
                             </span>
                         {:else}
                             <span
-                                class="rounded-full border border-[#3a4166] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#a8afd1]"
+                                class="rounded-full border border-current px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide opacity-80"
                             >
                                 {statusLabel(corporation.status)}
                             </span>
