@@ -60,26 +60,45 @@
             height={size + 14}
             rx="8"
             fill="none"
-            stroke="#ffffff"
-            stroke-width="5"
-            class="animate-pulse"
+            stroke="#ffd66e"
+            stroke-width="6"
+            class="lc-target lc-target-gold"
         />
     {/if}
     {#if choosable}
+        <g class="lc-target lc-target-go" pointer-events="none">
+            <rect
+                x={center.x - size / 2 - 6}
+                y={center.y - size / 2 - 6}
+                width={size + 12}
+                height={size + 12}
+                rx="8"
+                fill="#3ddc84"
+                fill-opacity="0.25"
+                stroke="#06371b"
+                stroke-width="10"
+            />
+            <rect
+                x={center.x - size / 2 - 6}
+                y={center.y - size / 2 - 6}
+                width={size + 12}
+                height={size + 12}
+                rx="8"
+                fill="none"
+                stroke="#3ddc84"
+                stroke-width="5"
+            />
+        </g>
         <rect
-            x={center.x - size / 2 - 5}
-            y={center.y - size / 2 - 5}
-            width={size + 10}
-            height={size + 10}
-            rx="7"
-            fill="#7165ad"
-            fill-opacity="0.35"
-            stroke="#7165ad"
-            stroke-width="4"
+            x={center.x - size / 2 - 8}
+            y={center.y - size / 2 - 8}
+            width={size + 16}
+            height={size + 16}
+            fill="transparent"
             role="button"
             tabindex="0"
             aria-label="Action space {spaceId}"
-            class="cursor-pointer hover:fill-opacity-70"
+            class="cursor-pointer"
             onclick={() => session.chooseSpace(spaceId)}
             onkeydown={(event) => event.key === 'Enter' && session.chooseSpace(spaceId)}
         >

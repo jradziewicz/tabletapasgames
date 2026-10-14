@@ -196,6 +196,40 @@
         border-color: #c9a961;
     }
 
+    /* Legal-target and selection cues, matching Stellar/Rocky's green glow and gold pulse but
+       stronger, because the board art is pale yellow/salmon/blue. */
+    :global([data-game-ui='locust'] .lc-target) {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: lc-target-pulse 1.6s ease-in-out infinite;
+    }
+    :global([data-game-ui='locust'] .lc-target-go) {
+        filter: drop-shadow(0 0 4px rgba(61, 220, 132, 1)) drop-shadow(0 0 10px rgba(61, 220, 132, 0.9))
+            drop-shadow(0 0 18px rgba(61, 220, 132, 0.6));
+    }
+    :global([data-game-ui='locust'] .lc-target-gold) {
+        filter: drop-shadow(0 0 4px rgba(255, 214, 110, 1)) drop-shadow(0 0 10px rgba(255, 214, 110, 0.9))
+            drop-shadow(0 0 18px rgba(255, 214, 110, 0.6));
+    }
+    :global([data-game-ui='locust'] .lc-target-swarm) {
+        filter: drop-shadow(0 0 4px rgba(208, 124, 240, 1)) drop-shadow(0 0 10px rgba(208, 124, 240, 0.9))
+            drop-shadow(0 0 18px rgba(180, 91, 214, 0.6));
+    }
+    :global([data-game-ui='locust'] .lc-lift) {
+        filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.55));
+    }
+    @keyframes -global-lc-target-pulse {
+        0%,
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+        50% {
+            transform: scale(1.07);
+            opacity: 0.8;
+        }
+    }
+
     .workspace-shell {
         --workspace-text: #f1e6cf;
         --workspace-muted: #c9a961;

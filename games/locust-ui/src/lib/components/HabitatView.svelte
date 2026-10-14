@@ -2,13 +2,9 @@
     import { getHabitat, occupantDiscs } from '@tabletop/locust'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import type { Color } from '@tabletop/common'
-    import {
-        HabitatRadius,
-        habitatCenter,
-        nymphPoint,
-        quadrantPoint
-    } from '$lib/utils/boardLayout.js'
+    import { HabitatRadius, habitatCenter, nymphPoint, quadrantPoint } from '$lib/utils/boardLayout.js'
     import Disc from './Disc.svelte'
+    import TargetRing from './TargetRing.svelte'
 
     let { habitatId }: { habitatId: string } = $props()
 
@@ -22,6 +18,14 @@
     const selectable = $derived(session.selectableHabitatIds.includes(habitatId))
     const isOrigin = $derived(session.hopOrigin === habitatId)
     const isSwarming = $derived(session.gameState.swarm?.habitatId === habitatId)
+    const canJumpFrom = $derived(session.jumpOriginIds.includes(habitatId))
+    const canBreedHere = $derived(session.breedTargetIds.includes(habitatId))
+
+    const actingQuadrant = $derived.by(() => {
+        const index = occupants.findIndex((occupant) => occupant.color === session.actingColor)
+        return index === -1 ? occupants.length : index
+    })
+    const actingFill = $derived(session.actingColor ? session.colors.getUiColor(session.actingColor) : '#3ddc84')
 
     function colorOf(color: Color) {
         return session.colors.getUiColor(color)
@@ -29,28 +33,43 @@
 </script>
 
 <g>
-    {#if selectable || isOrigin || isSwarming}
-        <circle
+    {#if isSwarming}
+        <TargetRing cx={center.x} cy={center.y} r={HabitatRadius + 16} tone="swarm" />
+    {/if}
+    {#if selectable}
+        <TargetRing
             cx={center.x}
             cy={center.y}
-            r={HabitatRadius + 18}
-            fill="none"
-            stroke={isOrigin ? '#ffffff' : isSwarming ? '#7a1d6b' : '#7165ad'}
-            stroke-width="10"
-            stroke-dasharray={selectable && !isOrigin ? '18 10' : undefined}
-            class={selectable ? 'animate-pulse' : ''}
+            r={HabitatRadius + 14}
+            tone={session.performKind === 'Swarm' ? 'swarm' : 'go'}
         />
     {/if}
 
     {#each occupants as occupant, quadrant (occupant.color)}
         {@const fill = colorOf(occupant.color)}
         {@const both = occupant.grasshopper > 0 && occupant.locust > 0}
+        {@const isActing = occupant.color === session.actingColor}
         {#if occupant.grasshopper > 0}
-            <Disc
-                center={quadrantPoint(center, quadrant, both ? { x: -10, y: -8 } : undefined)}
-                {fill}
-                count={occupant.grasshopper}
-            />
+            {@const point = quadrantPoint(center, quadrant, both ? { x: -10, y: -8 } : undefined)}
+            <g style:cursor={isActing && (canJumpFrom || isOrigin) ? 'pointer' : undefined}>
+                {#if isActing && (canJumpFrom || isOrigin)}
+                    <TargetRing cx={point.x} cy={point.y} r={31} tone={isOrigin ? 'gold' : 'go'} />
+                {/if}
+                <Disc center={point} {fill} count={occupant.grasshopper} />
+                {#if isActing && (canJumpFrom || isOrigin)}
+                    <circle
+                        cx={point.x}
+                        cy={point.y}
+                        r="30"
+                        fill="transparent"
+                        role="button"
+                        tabindex="0"
+                        aria-label="Grasshopper in {habitatId}"
+                        onclick={() => session.selectGrasshopper(habitatId)}
+                        onkeydown={(event) => event.key === 'Enter' && session.selectGrasshopper(habitatId)}
+                    />
+                {/if}
+            </g>
         {/if}
         {#if occupant.locust > 0}
             <Disc
@@ -61,47 +80,50 @@
             />
         {/if}
         {#if occupant.nymph > 0}
-            <Disc
-                center={nymphPoint(center, quadrant)}
-                {fill}
-                count={occupant.nymph}
-                nymph
-                radius={20}
-            />
+            <Disc center={nymphPoint(center, quadrant)} {fill} count={occupant.nymph} nymph radius={20} />
         {/if}
     {/each}
 
+    {#if canBreedHere}
+        {@const point = nymphPoint(center, actingQuadrant)}
+        <g style:cursor="pointer">
+            <TargetRing cx={point.x} cy={point.y} r={25} />
+            <circle cx={point.x} cy={point.y} r="10" fill={actingFill} stroke="#1a1a1a" stroke-width="2" opacity="0.9" />
+            <circle
+                cx={point.x}
+                cy={point.y}
+                r="30"
+                fill="transparent"
+                role="button"
+                tabindex="0"
+                aria-label="Nymph circle in {habitatId}"
+                onclick={() => session.selectNymphCircle(habitatId)}
+                onkeydown={(event) => event.key === 'Enter' && session.selectNymphCircle(habitatId)}
+            />
+        </g>
+    {/if}
+
     <g transform="translate({center.x} {center.y + HabitatRadius + 30})">
-        <rect
-            x="-34"
-            y="-15"
-            width="68"
-            height="30"
-            rx="8"
-            fill={crowded ? '#b3261e' : '#2b2418'}
-            opacity="0.82"
-        />
-        <text
-            text-anchor="middle"
-            dominant-baseline="central"
-            font-size="20"
-            font-weight="700"
-            fill="#ffffff">{discs}/{capacity}</text
+        <rect x="-34" y="-15" width="68" height="30" rx="8" fill={crowded ? '#b3261e' : '#2b2418'} opacity="0.82" />
+        <text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="700" fill="#ffffff"
+            >{discs}/{capacity}</text
         >
     </g>
 
-    <circle
-        cx={center.x}
-        cy={center.y}
-        r={HabitatRadius + 18}
-        fill="transparent"
-        role="button"
-        tabindex={selectable ? 0 : -1}
-        aria-label="Habitat {habitatId}"
-        class={selectable || isOrigin ? 'cursor-pointer' : 'pointer-events-none'}
-        onclick={() => session.selectHabitat(habitatId)}
-        onkeydown={(event) => event.key === 'Enter' && session.selectHabitat(habitatId)}
-    >
-        <title>{habitatId} · {habitat.color} · {discs} discs, room for {capacity}</title>
-    </circle>
+    {#if selectable}
+        <circle
+            cx={center.x}
+            cy={center.y}
+            r={HabitatRadius + 18}
+            fill="transparent"
+            role="button"
+            tabindex="0"
+            aria-label="Habitat {habitatId}"
+            class="cursor-pointer"
+            onclick={() => session.selectHabitat(habitatId)}
+            onkeydown={(event) => event.key === 'Enter' && session.selectHabitat(habitatId)}
+        >
+            <title>{habitatId} · {habitat.color} · {discs} discs, room for {capacity}</title>
+        </circle>
+    {/if}
 </g>
