@@ -1,7 +1,13 @@
 <script lang="ts">
     import { fade } from 'svelte/transition'
     import { PlayerName } from '@tabletop/frontend-components'
-    import { MachineState, endTriggers, gemTriggerThreshold } from '@tabletop/rocky-ventures'
+    import {
+        BonusTokensToSummonDragon,
+        DragonLevel,
+        MachineState,
+        endTriggers,
+        gemTriggerThreshold
+    } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
     const gameSession = getGameSession()
@@ -12,17 +18,42 @@
     const deckCardsLeft = $derived(
         Math.max(0, gameSession.gameState.market.drawPile.length - (triggers.deckExhausted ? gameSession.gameState.market.drawPile.length : 1))
     )
-    const triggerChips = $derived([
+    const dragon = $derived(gameSession.gameState.dragon)
+    // Bonus tokens still to land on the dragon tracker before it is summoned.
+    const dragonBonusesLeft = $derived(Math.max(0, BonusTokensToSummonDragon - dragon.trackerTokens.length))
+    const dragonActive = $derived(dragon.summoned && !dragon.killed)
+
+    type TriggerChip = { key: string; label: string; tip: string; met: boolean; alert?: boolean }
+    const triggerChips: TriggerChip[] = $derived([
         {
+            key: 'deck',
             label: `DECK ${deckCardsLeft}`,
             met: triggers.deckExhausted,
-            title: `${deckCardsLeft} ${deckCardsLeft === 1 ? 'card' : 'cards'} left in the development deck before the Game Over card`
+            tip: triggers.deckExhausted
+                ? 'The Game Over card is next: this end trigger is met'
+                : `${deckCardsLeft} ${deckCardsLeft === 1 ? 'card' : 'cards'} left before the Game Over card`
         },
-        { label: 'DRAGON', met: triggers.dragonKilled, title: 'The dragon has been summoned and killed' },
+        dragon.killed
+            ? { key: 'dragon', label: 'DRAGON SLAIN', met: true, tip: 'The dragon has been killed: this end trigger is met' }
+            : dragonActive
+              ? {
+                    key: 'dragon',
+                    label: `DRAGON ${dragon.hits}/${DragonLevel} HITS`,
+                    met: false,
+                    alert: true,
+                    tip: `The dragon is in play: ${dragon.hits} of ${DragonLevel} hits landed. Killing it meets this end trigger`
+                }
+              : {
+                    key: 'dragon',
+                    label: `DRAGON ${dragonBonusesLeft}/${BonusTokensToSummonDragon}`,
+                    met: false,
+                    tip: `${dragonBonusesLeft} of ${BonusTokensToSummonDragon} bonus tokens still to draw before the dragon is summoned`
+                },
         {
+            key: 'gems',
             label: `GEMS ${Math.min(gameSession.gameState.gemsSpent, gemThreshold)}/${gemThreshold}`,
             met: triggers.gemsSpent,
-            title: 'Gems spent on gem actions'
+            tip: `${Math.min(gameSession.gameState.gemsSpent, gemThreshold)} of ${gemThreshold} gems spent on gem actions`
         }
     ])
     const phaseText = $derived.by(() => {
@@ -53,7 +84,7 @@
 
 <div
     id="rocky-ventures-header"
-    class="flex min-h-[44px] items-center justify-between gap-x-2 border-b border-[#4a3620] px-4 py-1.5 max-sm:flex-wrap max-sm:gap-y-1 max-sm:px-2 text-[#f1e6cf] tracking-[0.06em]"
+    class="relative z-30 flex min-h-[44px] items-center justify-between gap-x-2 border-b border-[#4a3620] px-4 py-1.5 max-sm:flex-wrap max-sm:gap-y-1 max-sm:px-2 text-[#f1e6cf] tracking-[0.06em]"
 >
     <div class="grid min-w-0 text-[13px] max-sm:basis-full sm:text-[15px]">
         {#if gameSession.isViewingHistory}
@@ -79,12 +110,16 @@
     </div>
 
     <div class="flex shrink-0 items-center gap-2 text-[15px] max-sm:ml-auto">
-        <div class="flex items-center gap-1 text-[10px] font-semibold" title="Game ends when 2 of 3 triggers are met">
-            {#each triggerChips as chip (chip.label)}
-                <span
-                    class="rounded border px-1.5 py-0.5"
-                    style="border-color: {chip.met ? '#ffd166' : '#4a3620'}; color: {chip.met ? '#ffd166' : '#8a7a5c'}; background-color: {chip.met ? '#3a2a17' : 'transparent'};"
-                    title={chip.title}>{chip.label}</span
+        <div class="flex items-center gap-1 text-[10px] font-semibold">
+            {#each triggerChips as chip (chip.key)}
+                <!-- Small hover (or tap) box with the details, rather than a slow native tooltip. -->
+                <button
+                    type="button"
+                    class="trigger-chip relative cursor-default rounded border px-1.5 py-0.5"
+                    class:dragon-alert={chip.alert}
+                    style="border-color: {chip.met ? '#ffd166' : chip.alert ? '#ff5a3c' : '#4a3620'}; color: {chip.met ? '#ffd166' : chip.alert ? '#ffffff' : '#8a7a5c'}; background-color: {chip.met ? '#3a2a17' : chip.alert ? '#a3241a' : 'transparent'};"
+                    aria-label={chip.tip}
+                    >{chip.label}<span class="chip-tip" role="tooltip">{chip.tip}</span></button
                 >
             {/each}
         </div>
@@ -99,3 +134,46 @@
         {/if}
     </div>
 </div>
+
+<style>
+    .chip-tip {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        z-index: 50;
+        display: none;
+        width: max-content;
+        max-width: 220px;
+        padding: 4px 8px;
+        border: 1px solid #8a6d3b;
+        border-radius: 6px;
+        background: #1a120b;
+        color: #f1e6cf;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: normal;
+        line-height: 1.3;
+        white-space: normal;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+    }
+    .trigger-chip:hover .chip-tip,
+    .trigger-chip:focus .chip-tip {
+        display: block;
+    }
+    .trigger-chip:focus {
+        outline: none;
+    }
+    .dragon-alert {
+        animation: dragon-alert-pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes dragon-alert-pulse {
+        0%,
+        100% {
+            box-shadow: 0 0 0 0 rgba(255, 90, 60, 0.7);
+        }
+        50% {
+            box-shadow: 0 0 0 4px rgba(255, 90, 60, 0);
+        }
+    }
+</style>
