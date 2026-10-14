@@ -22,7 +22,9 @@
             >{count}</text
         >
     {:else}
+        <ellipse cx="2" cy={radius * 0.35} rx={radius} ry={radius * 0.85} fill="#000" opacity="0.28" />
         <circle r={radius} {fill} stroke="#1a1a1a" stroke-width="3" />
+        <circle r={radius - 2} fill="url(#disc-shine)" />
         {#if locust}
             <circle cx={radius * 0.55} cy={-radius * 0.55} r="5" fill="#ffffff" stroke="#1a1a1a" stroke-width="1.5" />
         {/if}
