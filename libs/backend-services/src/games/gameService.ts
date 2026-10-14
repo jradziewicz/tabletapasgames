@@ -310,6 +310,12 @@ export class GameService {
             throw new UnauthorizedAccessError({ user, gameId })
         }
 
+        // A finished game is archived before it's erased, so deleting it from a player's list
+        // never loses the play for later analysis. If archiving fails, the delete doesn't happen.
+        if (game.status === GameStatus.Finished) {
+            await this.gameStore.archiveGame(gameId)
+        }
+
         await this.gameStore.deleteGame(game)
         if (game.isPublic) {
             await this.notifyGlobal(GameNotificationAction.Delete, { game })
@@ -1152,6 +1158,17 @@ export class GameService {
 
         if (!game.result && representation.game.result) {
             await this.sendGameEndEmail(representation.game)
+        }
+
+        // Save a permanent copy of every game the moment it finishes (see
+        // FirestoreGameStore.archiveGame). Best-effort: a failure is logged, never surfaced to
+        // the player whose move ended the game, and deleting the game later archives it again.
+        if (!priorState.result && updatedGame.result) {
+            try {
+                await this.gameStore.archiveGame(updatedGame.id)
+            } catch (error) {
+                console.error(`Failed to archive finished game ${updatedGame.id}`, error)
+            }
         }
 
         return representation

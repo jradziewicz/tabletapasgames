@@ -352,6 +352,53 @@ export class FirestoreGameStore implements GameStore {
         }
     }
 
+    // Finished-game archive. Live game data can be erased (a host deleting a game removes its
+    // state and every action), so each game is copied here the moment it finishes, and again
+    // just before a finished game is deleted. Everything is stored as JSON strings, the same way
+    // action chunks are, so the archive is a faithful copy that can be read without this code:
+    //   gameArchives/{gameId}                      game (no state), final state, counts, archivedAt
+    //   gameArchives/{gameId}/actionChunks/chunk-N  actionsData: up to ARCHIVE_CHUNK_SIZE actions
+    async archiveGame(gameId: string): Promise<void> {
+        const ARCHIVE_CHUNK_SIZE = 100
+        const data = await this.readGameData(gameId, async (reader) => ({
+            game: reader.game,
+            actions: await reader.actions()
+        }))
+        if (!data) {
+            return
+        }
+        const { state, ...game } = data.game
+        const archive = this.games.firestore.collection('gameArchives').doc(gameId)
+        const chunks: GameAction[][] = []
+        for (let i = 0; i < data.actions.length; i += ARCHIVE_CHUNK_SIZE) {
+            chunks.push(data.actions.slice(i, i + ARCHIVE_CHUNK_SIZE))
+        }
+        try {
+            const batch = this.games.firestore.batch()
+            batch.set(archive, {
+                gameId,
+                typeId: game.typeId,
+                status: game.status,
+                archivedAt: new Date(),
+                actionCount: data.actions.length,
+                chunkCount: chunks.length,
+                gameData: JSON.stringify(game),
+                stateData: state ? JSON.stringify(state) : null
+            })
+            chunks.forEach((actions, index) => {
+                batch.set(archive.collection('actionChunks').doc(`chunk-${index}`), {
+                    index,
+                    startIndex: index * ARCHIVE_CHUNK_SIZE,
+                    actionsData: JSON.stringify(actions)
+                })
+            })
+            await batch.commit()
+        } catch (error) {
+            this.handleError(error, gameId)
+            throw Error('unreachable')
+        }
+    }
+
     async writeFullGameData(
         game: Game,
         state: GameState,

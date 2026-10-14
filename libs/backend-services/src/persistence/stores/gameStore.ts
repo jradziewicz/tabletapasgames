@@ -135,6 +135,10 @@ export interface GameStore {
 
     deleteGame(game: Game): Promise<void>
 
+    // Writes a permanent copy of a finished game (game record, final state, every action) to
+    // the gameArchives collection, for later analysis. Safe to call repeatedly - it overwrites.
+    archiveGame(gameId: string): Promise<void>
+
     getActionChecksum(gameId: string): Promise<number | undefined>
     setGameState({ gameId, state }: { gameId: string; state: GameState }): Promise<void>
 
