@@ -1,6 +1,6 @@
 import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
-import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
+import { Color, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { ActionType } from '../definition/actions.js'
 import { BonusToken } from '../data/board.js'
 import type { HydratedLocustGameState } from '../model/gameState.js'
@@ -18,6 +18,7 @@ export const PlaceCube = Type.Evaluate(
             alternative: Type.Boolean(),
             metadata: Type.Optional(
                 Type.Object({
+                    color: Type.Enum(Color),
                     fromSpaceId: Type.String(),
                     bonusToken: Type.Optional(Type.Enum(BonusToken))
                 })
@@ -37,7 +38,7 @@ export class HydratedPlaceCube extends HydratableAction<typeof PlaceCube> implem
     declare playerId: string
     declare spaceId: string
     declare alternative: boolean
-    declare metadata?: { fromSpaceId: string; bonusToken?: BonusToken }
+    declare metadata?: { color: Color; fromSpaceId: string; bonusToken?: BonusToken }
 
     constructor(data: PlaceCube) {
         super(data, PlaceCubeValidator)
@@ -62,6 +63,6 @@ export class HydratedPlaceCube extends HydratableAction<typeof PlaceCube> implem
         if (bonusToken) {
             colony.tokens.push(bonusToken)
         }
-        this.metadata = { fromSpaceId, bonusToken }
+        this.metadata = { color: colony.color, fromSpaceId, bonusToken }
     }
 }

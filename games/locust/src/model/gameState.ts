@@ -16,7 +16,7 @@ import {
     getSpace,
     spacesInTurnOrder
 } from '../data/board.js'
-import { OpenRuleDefaults } from '../data/rules.js'
+import { OpenRuleDefaults, WhiteCubeColonyCount, WhiteCubeRegion } from '../data/rules.js'
 import { MachineState } from '../definition/states.js'
 import { BoardState, HydratedBoardState } from './board.js'
 import { ColonyState, HydratedColonyState } from './colony.js'
@@ -118,7 +118,19 @@ export class HydratedLocustGameState
         const unlimited = Object.entries(this.board.unlimitedCubes)
             .filter(([spaceId]) => getSpace(spaceId).region === region)
             .reduce((sum, [, cubes]) => sum + cubes.length, 0)
-        return placed.length + (OpenRuleDefaults.unlimitedSpacesCountAsRain ? unlimited : 0)
+        return (
+            placed.length +
+            (OpenRuleDefaults.unlimitedSpacesCountAsRain ? unlimited : 0) +
+            (this.hasWhiteCubeIn(region) ? 1 : 0)
+        )
+    }
+
+    hasWhiteCubeIn(region: number): boolean {
+        return (
+            OpenRuleDefaults.whiteCubeIsRain &&
+            region === WhiteCubeRegion &&
+            this.colonies.length === WhiteCubeColonyCount
+        )
     }
 
     habitatCapacity(habitatId: string): number {

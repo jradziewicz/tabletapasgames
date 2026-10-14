@@ -29,7 +29,12 @@ export const RunnerUpSupplyBonus = 2
 export const TiedMostSupplyBonus = 3
 
 // Defaults for rules the v0.42 rulebook leaves open; each is applied in exactly one place.
+export const WhiteCubeRegion = 0
+export const WhiteCubeColonyCount = 4
+
 export const OpenRuleDefaults = {
+    // The white 4-player cube sits beside Region I and adds one rain there (Justin, 2026-10-14).
+    whiteCubeIsRain: true,
     // Region F's crowding limit counts every cube there, including the two unlimited spaces.
     unlimitedSpacesCountAsRain: true,
     // Actions are "up to" their level, so taking zero is allowed and doubles as passing.

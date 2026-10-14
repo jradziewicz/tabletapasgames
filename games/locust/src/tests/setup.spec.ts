@@ -37,7 +37,7 @@ describe.each([
     it(`fills Region I round-robin with ${cubesPerColony} cubes per colony`, () => {
         const order = spacesInTurnOrder(0).map((space) => state.board.cubeOn(space.id))
         expect(order).toEqual(order.map((_, index) => state.colonies[index % colonyCount]!.color))
-        expect(state.cubesInRegion(0)).toBe(12)
+        expect(state.cubesInRegion(0)).toBe(colonyCount === 4 ? 13 : 12)
         for (const colony of state.colonies) {
             expect(order.filter((color) => color === colony.color)).toHaveLength(cubesPerColony)
         }
@@ -65,5 +65,14 @@ describe('duel setup', () => {
             second
         ])
         expect(state.isDuel).toBe(true)
+    })
+})
+
+describe('white 4-player cube', () => {
+    it('adds one rain to Region I with four colours only', () => {
+        expect(new LocustTable(4, 1).view.habitatCapacity('I-1')).toBe(13)
+        expect(new LocustTable(2, 1).view.habitatCapacity('I-1')).toBe(13)
+        expect(new LocustTable(3, 1).view.habitatCapacity('I-1')).toBe(12)
+        expect(new LocustTable(4, 1).view.habitatCapacity('II-1')).toBe(0)
     })
 })
