@@ -1544,6 +1544,46 @@ importers:
         specifier: ^7.3.1
         version: 7.3.1(@types/node@25.1.0)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.46.0)(tsx@4.21.0)
 
+  games/locust:
+    dependencies:
+      '@tabletop/common':
+        specifier: workspace:*
+        version: link:../../libs/common
+      es-iterator-helpers:
+        specifier: ^1.2.2
+        version: 1.2.2
+      typebox:
+        specifier: ^1.0.79
+        version: 1.0.79
+    devDependencies:
+      '@babel/core':
+        specifier: ^7.28.6
+        version: 7.28.6
+      '@babel/preset-env':
+        specifier: ^7.28.6
+        version: 7.28.6(@babel/core@7.28.6)
+      '@tabletop/eslint-config':
+        specifier: workspace:*
+        version: link:../../config/config-eslint
+      '@tabletop/rollup-config':
+        specifier: workspace:*
+        version: link:../../config/config-rollup
+      '@tabletop/vitest-config':
+        specifier: workspace:*
+        version: link:../../config/config-vitest
+      '@typescript/native-preview':
+        specifier: 7.0.0-dev.20260707.2
+        version: 7.0.0-dev.20260707.2
+      rimraf:
+        specifier: ^6.1.0
+        version: 6.1.2
+      rollup:
+        specifier: 4.55.2
+        version: 4.55.2
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+
   games/lowenherz:
     dependencies:
       '@tabletop/common':
