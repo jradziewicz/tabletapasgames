@@ -1,4 +1,9 @@
-import { ActionKind, MachineState, type HydratedLocustGameState, type PendingAction } from '@tabletop/locust'
+import {
+    ActionKind,
+    MachineState,
+    type HydratedLocustGameState,
+    type PendingAction
+} from '@tabletop/locust'
 
 export const ActionNames: Record<ActionKind, string> = {
     [ActionKind.JumpOrBreed]: 'Jump or Breed',
@@ -12,7 +17,8 @@ export const ActionBlurbs: Record<ActionKind, string> = {
         'Jump grasshoppers along lines from habitats of this colour, or breed nymphs where you already live.',
     [ActionKind.Swarm]:
         'Pick a crowded habitat in the Swarming Zone: nymphs and locusts die, grasshoppers become locusts and fly off.',
-    [ActionKind.Cannibalize]: 'In habitats with your locusts, each locust eats one opposing insect.',
+    [ActionKind.Cannibalize]:
+        'In habitats with your locusts, each locust eats one opposing insect.',
     [ActionKind.Hatch]: 'Bring dead discs back from the general pool to your supply.'
 }
 
@@ -42,7 +48,9 @@ export function phaseText(state: HydratedLocustGameState): string {
         case MachineState.ChooseSpace:
             return 'CHOOSE AN ACTION SPACE'
         case MachineState.PerformAction:
-            return state.pendingAction ? ActionNames[state.pendingAction.kind].toUpperCase() : 'TAKE ACTION'
+            return state.pendingAction
+                ? ActionNames[state.pendingAction.kind].toUpperCase()
+                : 'TAKE ACTION'
         case MachineState.RelocateLocusts:
             return 'RELOCATE LOCUSTS'
         case MachineState.Scoring:

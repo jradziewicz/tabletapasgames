@@ -54,7 +54,9 @@
                 </li>
             {/each}
             <li class="ms-4">
-                <div class="absolute -start-1.5 mt-1 h-3 w-3 rounded-full border border-[#1a140c] bg-[#5a4630]"></div>
+                <div
+                    class="absolute -start-1.5 mt-1 h-3 w-3 rounded-full border border-[#1a140c] bg-[#5a4630]"
+                ></div>
                 <div class="text-[11px] text-[#a88d5a]">
                     {session.game.createdAt ? timeAgo.format(session.game.createdAt) : ''}
                 </div>

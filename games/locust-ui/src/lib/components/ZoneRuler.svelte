@@ -19,9 +19,22 @@
 <svg viewBox="0 0 {BoardWidth} {RulerHeight}" class="block w-full" aria-label="Zone Ruler">
     <rect x="0" y="0" width={BoardWidth} height={RulerHeight} fill="#2b2418" />
     <g class="ruler-slide" style="transform: translateX({rulerX}px)">
-        <rect x={-3 * RulerWidth} y="0" width={3 * RulerWidth} height={RulerHeight} fill="#f1ec8f" />
+        <rect
+            x={-3 * RulerWidth}
+            y="0"
+            width={3 * RulerWidth}
+            height={RulerHeight}
+            fill="#f1ec8f"
+        />
         <rect x={RulerWidth} y="0" width={3 * RulerWidth} height={RulerHeight} fill="#94cde5" />
-        <image href={rulerArt} x="0" y="0" width={RulerWidth} height={RulerHeight} preserveAspectRatio="none" />
+        <image
+            href={rulerArt}
+            x="0"
+            y="0"
+            width={RulerWidth}
+            height={RulerHeight}
+            preserveAspectRatio="none"
+        />
     </g>
 </svg>
 

@@ -20,7 +20,15 @@
 </script>
 
 <defs>
-    <marker id="hop-arrow" viewBox="0 0 10 10" refX="7" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+    <marker
+        id="hop-arrow"
+        viewBox="0 0 10 10"
+        refX="7"
+        refY="5"
+        markerWidth="5"
+        markerHeight="5"
+        orient="auto"
+    >
         <path d="M0,0 L10,5 L0,10 z" fill="#ffffff" />
     </marker>
 </defs>
@@ -45,8 +53,12 @@
     {@const center = centerOf(habitatId)}
     <g transform="translate({center.x} {center.y - HabitatRadius - 26})">
         <rect x="-42" y="-20" width="84" height="40" rx="10" fill="#2f6b2f" />
-        <text text-anchor="middle" dominant-baseline="central" font-size="24" font-weight="700" fill="#fff"
-            >+{count} nymph</text
+        <text
+            text-anchor="middle"
+            dominant-baseline="central"
+            font-size="24"
+            font-weight="700"
+            fill="#fff">+{count} nymph</text
         >
     </g>
 {/each}
@@ -55,8 +67,12 @@
     {@const center = centerOf(habitatId)}
     <g transform="translate({center.x} {center.y - HabitatRadius - 26})">
         <rect x="-46" y="-20" width="92" height="40" rx="10" fill="#7a1d6b" />
-        <text text-anchor="middle" dominant-baseline="central" font-size="24" font-weight="700" fill="#fff"
-            >+{count} locust</text
+        <text
+            text-anchor="middle"
+            dominant-baseline="central"
+            font-size="24"
+            font-weight="700"
+            fill="#fff">+{count} locust</text
         >
     </g>
 {/each}
@@ -64,8 +80,24 @@
 {#each session.attacks as attack (attack.habitatId)}
     {@const center = centerOf(attack.habitatId)}
     <g transform="translate({center.x} {center.y})" opacity="0.85" pointer-events="none">
-        <line x1="-60" y1="-60" x2="60" y2="60" stroke="#b3261e" stroke-width="14" stroke-linecap="round" />
-        <line x1="60" y1="-60" x2="-60" y2="60" stroke="#b3261e" stroke-width="14" stroke-linecap="round" />
+        <line
+            x1="-60"
+            y1="-60"
+            x2="60"
+            y2="60"
+            stroke="#b3261e"
+            stroke-width="14"
+            stroke-linecap="round"
+        />
+        <line
+            x1="60"
+            y1="-60"
+            x2="-60"
+            y2="60"
+            stroke="#b3261e"
+            stroke-width="14"
+            stroke-linecap="round"
+        />
     </g>
 {/each}
 

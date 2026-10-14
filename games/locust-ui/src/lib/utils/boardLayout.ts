@@ -29,7 +29,10 @@ export const SpaceSize = 34
 export const UnlimitedSpaceSize = 62
 
 export function habitatCenter(habitat: Habitat): Point {
-    const rows = habitat.region === 0 || habitat.region === FinalRegion ? ThreeHabitatRowsY : FourHabitatRowsY
+    const rows =
+        habitat.region === 0 || habitat.region === FinalRegion
+            ? ThreeHabitatRowsY
+            : FourHabitatRowsY
     return { x: RegionCenterX[habitat.region] ?? 0, y: rows[habitat.row - 1] ?? 0 }
 }
 
@@ -55,7 +58,11 @@ function quadrantOffset(quadrant: number): Point {
     return QuadrantOffsets[quadrant % QuadrantOffsets.length] ?? { x: 0, y: 0 }
 }
 
-export function quadrantPoint(center: Point, quadrant: number, shift: Point = { x: 0, y: 0 }): Point {
+export function quadrantPoint(
+    center: Point,
+    quadrant: number,
+    shift: Point = { x: 0, y: 0 }
+): Point {
     const offset = quadrantOffset(quadrant)
     return { x: center.x + offset.x + shift.x, y: center.y + offset.y + shift.y }
 }

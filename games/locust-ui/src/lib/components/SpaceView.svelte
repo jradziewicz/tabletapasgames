@@ -19,7 +19,11 @@
         !session.gameState.result && session.gameState.nextCubeSpaceId() === spaceId
     )
     const bonusToken = $derived(session.gameState.board.bonusTokens[spaceId])
-    const BonusFill: Record<string, string> = { grey: '#8d8d8d', orange: '#d98a10', cream: '#efe6c8' }
+    const BonusFill: Record<string, string> = {
+        grey: '#8d8d8d',
+        orange: '#d98a10',
+        cream: '#efe6c8'
+    }
 </script>
 
 <g>

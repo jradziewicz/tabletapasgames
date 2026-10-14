@@ -74,8 +74,13 @@ export function emptyActionFor(kind: ActionKind): {
 }
 
 export function passTurn(table: LocustTable, spaceId?: string) {
-    const target = spaceId ?? legalCubeSpaceIds(table.view)[0]!
+    const target =
+        spaceId ??
+        legalCubeSpaceIds(table.view).find((id) => getSpace(id).kind !== ActionKind.Hatch)!
     table.act(ActionType.PlaceCube, { spaceId: target, alternative: false })
+    if (table.view.machineState !== MachineState.PerformAction) {
+        return
+    }
     const { type, fields } = emptyActionFor(table.view.pendingAction!.kind)
     table.act(type, fields)
 }

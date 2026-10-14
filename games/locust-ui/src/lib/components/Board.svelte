@@ -14,8 +14,17 @@
 
 <div class="select-none" style:width="{DisplayWidth}px">
     <ZoneRuler />
-    <div class="relative" style:width="{DisplayWidth}px" style:height="{(DisplayWidth * BoardHeight) / BoardWidth}px">
-        <img src={boardImg} alt="Locust board" class="absolute inset-0 h-full w-full" draggable="false" />
+    <div
+        class="relative"
+        style:width="{DisplayWidth}px"
+        style:height="{(DisplayWidth * BoardHeight) / BoardWidth}px"
+    >
+        <img
+            src={boardImg}
+            alt="Locust board"
+            class="absolute inset-0 h-full w-full"
+            draggable="false"
+        />
         <svg viewBox="0 0 {BoardWidth} {BoardHeight}" class="absolute inset-0 h-full w-full">
             <defs>
                 <radialGradient id="disc-shine" cx="35%" cy="30%" r="75%">
@@ -36,12 +45,31 @@
                     height={BoardHeight}
                     pointer-events="none"
                     class="zone-wash"
-                    fill={region < active - 2 ? '#2b2418' : region === active - 2 ? '#b3261e' : '#ffffff'}
-                    fill-opacity={region < active - 2 ? 0.45 : region === active - 2 ? 0.16 : region === active ? 0.06 : 0}
+                    fill={region < active - 2
+                        ? '#2b2418'
+                        : region === active - 2
+                          ? '#b3261e'
+                          : '#ffffff'}
+                    fill-opacity={region < active - 2
+                        ? 0.45
+                        : region === active - 2
+                          ? 0.16
+                          : region === active
+                            ? 0.06
+                            : 0}
                 />
             {/each}
             {#if session.gameState.hasWhiteCubeIn(0)}
-                <rect x="104" y="201" width="28" height="28" rx="4" fill="#f7f4ea" stroke="#1a1a1a" stroke-width="2.5">
+                <rect
+                    x="104"
+                    y="201"
+                    width="28"
+                    height="28"
+                    rx="4"
+                    fill="#f7f4ea"
+                    stroke="#1a1a1a"
+                    stroke-width="2.5"
+                >
                     <title>White 4-player cube: +1 rain in Region I</title>
                 </rect>
             {/if}

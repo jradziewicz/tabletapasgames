@@ -7,6 +7,7 @@
         InsectKinds,
         MachineState,
         isOpponent,
+        isPlaceCube,
         requiredVictims
     } from '@tabletop/locust'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -18,9 +19,12 @@
     const session = getGameSession()
     const state = $derived(session.gameState)
     const pending = $derived(session.pendingAction)
-    const actingColony = $derived(session.actingColor ? state.colony(session.actingColor) : undefined)
-    const hatchMax = $derived(pending && actingColony ? Math.min(pending.level, actingColony.dead) : 0)
-    const breedLimit = $derived(pending && actingColony ? Math.min(pending.level, actingColony.supply) : 0)
+    const actingColony = $derived(
+        session.actingColor ? state.colony(session.actingColor) : undefined
+    )
+    const breedLimit = $derived(
+        pending && actingColony ? Math.min(pending.level, actingColony.supply) : 0
+    )
 
     const KindLabels: Record<InsectKind, string> = {
         [InsectKind.Grasshopper]: 'grasshopper',
@@ -30,15 +34,45 @@
 
     function chosenVictims(habitatId: string, color: Color, kind: InsectKind) {
         const attack = session.attacks.find((candidate) => candidate.habitatId === habitatId)
-        return attack?.victims.find((victim) => victim.color === color && victim.kind === kind)?.count ?? 0
+        return (
+            attack?.victims.find((victim) => victim.color === color && victim.kind === kind)
+                ?.count ?? 0
+        )
     }
 
+    // HATCH resolves automatically, so the result is shown until the next player move.
+    const lastHatch = $derived.by(() => {
+        const lastPlayerAction = session.actions.findLast((action) => action.playerId !== undefined)
+        if (
+            !lastPlayerAction ||
+            !isPlaceCube(lastPlayerAction) ||
+            lastPlayerAction.metadata?.hatched === undefined
+        ) {
+            return undefined
+        }
+        return { playerId: lastPlayerAction.playerId, hatched: lastPlayerAction.metadata.hatched }
+    })
+
     const canConfirm = $derived(
-        session.hasManualSelection && session.draftError === undefined && session.hopOrigin === undefined
+        session.hasManualSelection &&
+            session.draftError === undefined &&
+            session.hopOrigin === undefined
     )
 </script>
 
 <div class="px-4 py-2 text-sm text-[#f1e6cf]">
+    {#if lastHatch && !session.isViewingHistory}
+        <div
+            class="hatch-note mb-2 inline-flex items-center gap-2 rounded-full border border-[#efe6c8]/60 bg-[#efe6c8]/10 px-3 py-0.5 text-[13px]"
+        >
+            <ActionBadge kind={ActionKind.Hatch} level={lastHatch.hatched} size={20} />
+            <PlayerName playerId={lastHatch.playerId} />
+            <span
+                >hatched <b class="font-mono text-[#ffd166]">{lastHatch.hatched}</b>
+                disc{lastHatch.hatched === 1 ? '' : 's'} back to supply</span
+            >
+        </div>
+    {/if}
     {#if state.result && !session.isViewingHistory}
         <div class="flex flex-wrap items-center gap-2 text-base">
             <span class="text-[11px] uppercase tracking-[0.3em] text-[#c9a961]"
@@ -72,7 +106,12 @@
         </div>
     {:else if state.machineState === MachineState.PerformAction && pending}
         <div class="flex items-start gap-3">
-            <ActionBadge kind={pending.kind} level={pending.level} color={pending.color} size={44} />
+            <ActionBadge
+                kind={pending.kind}
+                level={pending.level}
+                color={pending.color}
+                size={44}
+            />
             <div class="min-w-0 flex-1 space-y-2">
                 <div>
                     <div class="font-semibold tracking-wide">
@@ -92,7 +131,9 @@
                         {#each [JumpOrBreedMode.Jump, JumpOrBreedMode.Breed] as mode (mode)}
                             <button
                                 type="button"
-                                class="lc-btn {session.jumpOrBreedMode === mode ? 'lc-selected' : ''} text-[13px]"
+                                class="lc-btn {session.jumpOrBreedMode === mode
+                                    ? 'lc-selected'
+                                    : ''} text-[13px]"
                                 onclick={() => session.setJumpOrBreedMode(mode)}
                                 >{mode === JumpOrBreedMode.Jump ? 'Jump' : 'Breed'}</button
                             >
@@ -102,7 +143,9 @@
                                 {session.hopOrigin
                                     ? 'Now click a linked habitat (click the same habitat to cancel).'
                                     : 'Click a highlighted habitat to pick up a grasshopper.'}
-                                <span class="font-mono text-[#ffd166]">{session.hops.length}/{pending.level}</span>
+                                <span class="font-mono text-[#ffd166]"
+                                    >{session.hops.length}/{pending.level}</span
+                                >
                                 jumps
                             {:else}
                                 Click highlighted habitats to lay nymphs
@@ -112,23 +155,11 @@
                             {/if}
                         </span>
                     </div>
-                {:else if pending.kind === ActionKind.Hatch}
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="text-[#e0cfae]">Discs to hatch</span>
-                        {#each Array.from({ length: hatchMax + 1 }, (_, count) => count) as count (count)}
-                            <button
-                                type="button"
-                                class="lc-btn {session.hatchCount === count ? 'lc-selected' : ''} min-w-9 text-[13px]"
-                                onclick={() => session.setHatchCount(count)}>{count}</button
-                            >
-                        {/each}
-                        <span class="text-[12px] text-[#a88d5a]">{actingColony?.dead ?? 0} dead in the pool</span>
-                    </div>
                 {:else if pending.kind === ActionKind.Cannibalize}
                     <div class="text-[#e0cfae]">
-                        Click up to <span class="font-mono text-[#ffd166]">{pending.level}</span> habitat{pending.level > 1
-                            ? 's'
-                            : ''} where you have locusts. Adjust the victims below if you like.
+                        Click up to <span class="font-mono text-[#ffd166]">{pending.level}</span>
+                        habitat{pending.level > 1 ? 's' : ''} where you have locusts. Adjust the victims
+                        below if you like.
                     </div>
                     <div class="flex flex-wrap gap-2">
                         {#each session.attacks as attack (attack.habitatId)}
@@ -140,9 +171,15 @@
                                         isOpponent(state, session.actingColor, occupant.color)
                                 )}
                             <div class="rounded-lg border border-[#4a3620] bg-black/20 px-3 py-2">
-                                <div class="mb-1 text-[11px] uppercase tracking-widest text-[#c9a961]">
+                                <div
+                                    class="mb-1 text-[11px] uppercase tracking-widest text-[#c9a961]"
+                                >
                                     {attack.habitatId} · eat {session.actingColor
-                                        ? requiredVictims(state, session.actingColor, attack.habitatId)
+                                        ? requiredVictims(
+                                              state,
+                                              session.actingColor,
+                                              attack.habitatId
+                                          )
                                         : 0}
                                 </div>
                                 {#each occupants as occupant (occupant.color)}
@@ -157,11 +194,19 @@
                                                     class="px-1 text-[#c9a961] hover:text-white"
                                                     aria-label="Spare one {KindLabels[kind]}"
                                                     onclick={() =>
-                                                        session.adjustVictim(attack.habitatId, occupant.color, kind, -1)}
-                                                    >−</button
+                                                        session.adjustVictim(
+                                                            attack.habitatId,
+                                                            occupant.color,
+                                                            kind,
+                                                            -1
+                                                        )}>−</button
                                                 >
                                                 <span class="font-mono"
-                                                    >{chosenVictims(attack.habitatId, occupant.color, kind)}/{occupant[kind]}</span
+                                                    >{chosenVictims(
+                                                        attack.habitatId,
+                                                        occupant.color,
+                                                        kind
+                                                    )}/{occupant[kind]}</span
                                                 >
                                                 <span class="text-[12px]">{KindLabels[kind]}</span>
                                                 <button
@@ -169,8 +214,12 @@
                                                     class="px-1 text-[#c9a961] hover:text-white"
                                                     aria-label="Eat one more {KindLabels[kind]}"
                                                     onclick={() =>
-                                                        session.adjustVictim(attack.habitatId, occupant.color, kind, 1)}
-                                                    >+</button
+                                                        session.adjustVictim(
+                                                            attack.habitatId,
+                                                            occupant.color,
+                                                            kind,
+                                                            1
+                                                        )}>+</button
                                                 >
                                             </span>
                                         {/each}
@@ -181,22 +230,24 @@
                     </div>
                 {:else if pending.kind === ActionKind.Swarm}
                     <div class="text-[#e0cfae]">
-                        Click up to <span class="font-mono text-[#ffd166]">{pending.level}</span> crowded habitat{pending.level >
-                        1
-                            ? 's'
-                            : ''} in the Swarming Zone (red counters).
+                        Click up to <span class="font-mono text-[#ffd166]">{pending.level}</span>
+                        crowded habitat{pending.level > 1 ? 's' : ''} in the Swarming Zone (red counters).
                     </div>
                 {/if}
 
                 {#if session.draftError && session.hasManualSelection}
-                    <div class="rounded border border-red-500/70 bg-red-900/40 px-2 py-1 text-red-100">
+                    <div
+                        class="rounded border border-red-500/70 bg-red-900/40 px-2 py-1 text-red-100"
+                    >
                         {session.draftError}
                     </div>
                 {/if}
                 <div class="flex flex-wrap gap-2">
                     <button
                         type="button"
-                        class="lc-btn {pending.kind === ActionKind.Swarm ? 'lc-swarm' : 'lc-primary'}"
+                        class="lc-btn {pending.kind === ActionKind.Swarm
+                            ? 'lc-swarm'
+                            : 'lc-primary'}"
                         disabled={!canConfirm}
                         onclick={() => session.confirmAction()}>Confirm</button
                     >
@@ -206,7 +257,9 @@
                         disabled={!session.hasManualSelection}
                         onclick={() => session.clearLocalSelection()}>Clear</button
                     >
-                    <button type="button" class="lc-quiet" onclick={() => session.doNothing()}>Do nothing</button>
+                    <button type="button" class="lc-quiet" onclick={() => session.doNothing()}
+                        >Do nothing</button
+                    >
                 </div>
             </div>
         </div>
@@ -214,12 +267,12 @@
         <div class="space-y-2">
             <div>
                 <span class="font-semibold text-[#e7b3f5]">SWARM!</span>
-                Fly <span class="font-mono text-[#ffd166]">{session.requiredRelocationCount}</span> locust{session.requiredRelocationCount ===
-                1
-                    ? ''
-                    : 's'} out of {state.swarm.habitatId} to any uncrowded habitat on the board
+                Fly <span class="font-mono text-[#ffd166]">{session.requiredRelocationCount}</span>
+                locust{session.requiredRelocationCount === 1 ? '' : 's'} out of {state.swarm
+                    .habitatId} to any uncrowded habitat on the board
                 <span class="font-mono text-[#ffd166]"
-                    >({session.relocationDestinations.length}/{session.requiredRelocationCount})</span
+                    >({session.relocationDestinations
+                        .length}/{session.requiredRelocationCount})</span
                 >. Locusts with nowhere to land die.
             </div>
             <div class="flex gap-2">
@@ -239,10 +292,17 @@
         </div>
     {:else if state.machineState === MachineState.AssignDuelScoring}
         <div class="space-y-2">
-            <div>Pick the colour whose <b>Vigor Points</b> count. Your other colour scores its <b>Bonus Points</b>.</div>
+            <div>
+                Pick the colour whose <b>Vigor Points</b> count. Your other colour scores its
+                <b>Bonus Points</b>.
+            </div>
             <div class="flex flex-wrap gap-2">
                 {#each state.coloniesOf(state.activePlayerIds[0] ?? '') as colony (colony.color)}
-                    <button type="button" class="lc-btn" onclick={() => session.assignVigorColor(colony.color)}>
+                    <button
+                        type="button"
+                        class="lc-btn"
+                        onclick={() => session.assignVigorColor(colony.color)}
+                    >
                         <ColonyChip color={colony.color} showPlayer={false} />
                         <span class="font-mono">{colony.vigor} VP</span>
                     </button>
@@ -256,3 +316,19 @@
         </div>
     {/if}
 </div>
+
+<style>
+    .hatch-note {
+        animation: hatch-in 400ms ease-out both;
+    }
+    @keyframes hatch-in {
+        from {
+            opacity: 0;
+            transform: translateY(-6px);
+        }
+        to {
+            opacity: 1;
+            transform: none;
+        }
+    }
+</style>

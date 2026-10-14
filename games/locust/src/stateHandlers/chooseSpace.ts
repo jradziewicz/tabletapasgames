@@ -4,7 +4,8 @@ import { MachineState } from '../definition/states.js'
 import { isPlaceCube } from '../actions/placeCube.js'
 import { MatureNymphs, isMatureNymphs } from '../actions/matureNymphs.js'
 import type { HydratedLocustGameState } from '../model/gameState.js'
-import { beginCubeTurn } from '../operations/turn.js'
+import { beginCubeTurn, finishCubeTurn } from '../operations/turn.js'
+import { ActionKind } from '../data/board.js'
 
 export class ChooseSpaceStateHandler implements MachineStateHandler<
     HydratedAction,
@@ -36,7 +37,12 @@ export class ChooseSpaceStateHandler implements MachineStateHandler<
         }
     }
 
-    onAction(action: HydratedAction, _context: MachineContext<HydratedLocustGameState>): string {
-        return isMatureNymphs(action) ? MachineState.ChooseSpace : MachineState.PerformAction
+    onAction(action: HydratedAction, context: MachineContext<HydratedLocustGameState>): string {
+        if (isMatureNymphs(action)) {
+            return MachineState.ChooseSpace
+        }
+        return context.gameState.pendingAction?.kind === ActionKind.Hatch
+            ? finishCubeTurn(context.gameState)
+            : MachineState.PerformAction
     }
 }

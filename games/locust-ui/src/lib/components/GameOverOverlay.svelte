@@ -19,17 +19,25 @@
 
 <svelte:window {onkeydown} />
 
-<div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" role="presentation" onclick={onclose}>
+<div
+    class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
+    role="presentation"
+    onclick={onclose}
+>
     <div
         class="over-card max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border-2 border-[#c9a961] bg-[#22170e] p-6 text-[#f1e6cf] shadow-2xl"
         role="presentation"
         onclick={(event) => event.stopPropagation()}
     >
-        <div class="mb-1 text-center text-xs uppercase tracking-[0.4em] text-[#c9a961]">Game over</div>
+        <div class="mb-1 text-center text-xs uppercase tracking-[0.4em] text-[#c9a961]">
+            Game over
+        </div>
         <div class="mb-5 text-center text-3xl font-black text-[#ffd166]">
             {state.result === 'Draw' ? 'Shared victory:' : 'Winner:'}
             {#each state.winningPlayerIds as playerId, index (playerId)}
-                {#if index > 0}<span class="text-[#c9a961]"> &amp; </span>{/if}<PlayerName {playerId} />
+                {#if index > 0}<span class="text-[#c9a961]"> &amp; </span>{/if}<PlayerName
+                    {playerId}
+                />
             {/each}
         </div>
         <div class="overflow-x-auto">
@@ -48,17 +56,21 @@
                     {#each rankedPlayers as player (player.playerId)}
                         {@const winner = state.winningPlayerIds.includes(player.playerId)}
                         {#each state.coloniesOf(player.playerId) as colony, index (colony.color)}
-                            {@const countsVigor = !state.isDuel || player.vigorColor === colony.color}
-                            {@const countsBonus = !state.isDuel || player.vigorColor !== colony.color}
+                            {@const countsVigor =
+                                !state.isDuel || player.vigorColor === colony.color}
+                            {@const countsBonus =
+                                !state.isDuel || player.vigorColor !== colony.color}
                             <tr
-                                class="text-right {index === 0 ? 'border-t border-[#4a3620]' : ''} {winner
-                                    ? 'font-bold text-[#ffd166]'
-                                    : ''}"
+                                class="text-right {index === 0
+                                    ? 'border-t border-[#4a3620]'
+                                    : ''} {winner ? 'font-bold text-[#ffd166]' : ''}"
                             >
                                 <td class="py-2 pr-3 text-left">
                                     {#if index === 0}<PlayerName playerId={player.playerId} />{/if}
                                 </td>
-                                <td class="py-2 pr-3 text-left"><ColonyChip color={colony.color} showPlayer={false} /></td>
+                                <td class="py-2 pr-3 text-left"
+                                    ><ColonyChip color={colony.color} showPlayer={false} /></td
+                                >
                                 <td class="py-2 pr-3 {countsVigor ? '' : 'line-through opacity-40'}"
                                     >{colonyVigorTotal(state, colony.color)}</td
                                 >
@@ -68,7 +80,9 @@
                                 <td class="py-2 pr-3 {countsBonus ? '' : 'line-through opacity-40'}"
                                     >+{colony.finalScore?.supplyPoints ?? 0}</td
                                 >
-                                <td class="py-2 text-lg">{index === 0 ? (player.score ?? 0) : ''}</td>
+                                <td class="py-2 text-lg"
+                                    >{index === 0 ? (player.score ?? 0) : ''}</td
+                                >
                             </tr>
                         {/each}
                     {/each}

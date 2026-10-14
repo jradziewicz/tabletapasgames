@@ -2,7 +2,7 @@ import * as Type from 'typebox'
 import { Compile } from 'typebox/compile'
 import { Color, GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { ActionType } from '../definition/actions.js'
-import { BonusToken } from '../data/board.js'
+import { ActionKind, BonusToken } from '../data/board.js'
 import type { HydratedLocustGameState } from '../model/gameState.js'
 import { legalCubeSpaceIds, pendingActionFor } from '../operations/rules.js'
 import { actingColony } from '../operations/turn.js'
@@ -20,7 +20,8 @@ export const PlaceCube = Type.Evaluate(
                 Type.Object({
                     color: Type.Enum(Color),
                     fromSpaceId: Type.String(),
-                    bonusToken: Type.Optional(Type.Enum(BonusToken))
+                    bonusToken: Type.Optional(Type.Enum(BonusToken)),
+                    hatched: Type.Optional(Type.Number())
                 })
             )
         })
@@ -38,7 +39,12 @@ export class HydratedPlaceCube extends HydratableAction<typeof PlaceCube> implem
     declare playerId: string
     declare spaceId: string
     declare alternative: boolean
-    declare metadata?: { color: Color; fromSpaceId: string; bonusToken?: BonusToken }
+    declare metadata?: {
+        color: Color
+        fromSpaceId: string
+        bonusToken?: BonusToken
+        hatched?: number
+    }
 
     constructor(data: PlaceCube) {
         super(data, PlaceCubeValidator)
@@ -56,13 +62,16 @@ export class HydratedPlaceCube extends HydratableAction<typeof PlaceCube> implem
         if (fromSpaceId === undefined) {
             throw Error('No cube left in the Active Region')
         }
-        state.pendingAction = pendingActionFor(state, this.spaceId, this.alternative)
+        const pending = pendingActionFor(state, this.spaceId, this.alternative)
+        state.pendingAction = pending
         state.board.removeCube(fromSpaceId)
         state.board.placeCube(this.spaceId, colony.color)
         const bonusToken = state.board.takeBonusToken(this.spaceId)
         if (bonusToken) {
             colony.tokens.push(bonusToken)
         }
-        this.metadata = { color: colony.color, fromSpaceId, bonusToken }
+        // HATCH needs no choice, so it always returns the most discs it can (Justin, 2026-10-14).
+        const hatched = pending.kind === ActionKind.Hatch ? colony.hatch(pending.level) : undefined
+        this.metadata = { color: colony.color, fromSpaceId, bonusToken, hatched }
     }
 }

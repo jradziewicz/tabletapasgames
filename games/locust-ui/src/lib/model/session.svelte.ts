@@ -7,7 +7,6 @@ import {
     Breed,
     Cannibalize,
     Habitats,
-    Hatch,
     InsectKind,
     Jump,
     LocustPreferenceDefinition,
@@ -46,13 +45,13 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
     hopOrigin: string | undefined = $state()
     hops: Hop[] = $state([])
     breedHabitatIds: string[] = $state([])
-    hatchCount = $state(0)
     attacks: Attack[] = $state([])
     swarmHabitatIds: string[] = $state([])
     relocationDestinations: string[] = $state([])
 
-    readonly preferences: TitlePreferences<typeof LocustPreferences> =
-        this.createPreferences(LocustPreferenceDefinition)
+    readonly preferences: TitlePreferences<typeof LocustPreferences> = this.createPreferences(
+        LocustPreferenceDefinition
+    )
 
     canAct = $derived(this.validActionTypes.length > 0 && !this.isViewingHistory)
 
@@ -77,7 +76,9 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
             : undefined
     )
 
-    isRelocating = $derived(this.canAct && this.gameState.machineState === MachineState.RelocateLocusts)
+    isRelocating = $derived(
+        this.canAct && this.gameState.machineState === MachineState.RelocateLocusts
+    )
 
     requiredRelocationCount = $derived.by(() => {
         const swarm = this.gameState.swarm
@@ -129,7 +130,12 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
             return undefined
         }
         if (this.isRelocating && this.gameState.swarm) {
-            return relocationError(this.gameState, color, this.gameState.swarm.habitatId, this.relocationDestinations)
+            return relocationError(
+                this.gameState,
+                color,
+                this.gameState.swarm.habitatId,
+                this.relocationDestinations
+            )
         }
         if (this.performKind === ActionKind.Cannibalize && pending) {
             return cannibalizeError(this.gameState, color, pending, this.attacks)
@@ -141,7 +147,6 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
         this.hopOrigin !== undefined ||
             this.hops.length > 0 ||
             this.breedHabitatIds.length > 0 ||
-            this.hatchCount > 0 ||
             this.attacks.length > 0 ||
             this.swarmHabitatIds.length > 0 ||
             this.relocationDestinations.length > 0
@@ -154,7 +159,8 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
         if (this.hopOrigin) {
             const origin = this.hopOrigin
             return habitatNeighbors(origin).filter(
-                (to) => !jumpError(this.gameState, color, pending, [...this.hops, { from: origin, to }])
+                (to) =>
+                    !jumpError(this.gameState, color, pending, [...this.hops, { from: origin, to }])
             )
         }
         return Habitats.map((habitat) => habitat.id).filter((from) =>
@@ -185,7 +191,9 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
         if (habitatId === sourceId) {
             return false
         }
-        const alreadyChosen = this.relocationDestinations.filter((chosen) => chosen === habitatId).length
+        const alreadyChosen = this.relocationDestinations.filter(
+            (chosen) => chosen === habitatId
+        ).length
         return this.gameState.freeRoom(habitatId) - alreadyChosen > 0
     }
 
@@ -199,7 +207,6 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
         this.hopOrigin = undefined
         this.hops = []
         this.breedHabitatIds = []
-        this.hatchCount = 0
         this.attacks = []
         this.swarmHabitatIds = []
         this.relocationDestinations = []
@@ -262,7 +269,10 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
         }
         this.attacks = this.attacks.some((attack) => attack.habitatId === habitatId)
             ? this.attacks.filter((attack) => attack.habitatId !== habitatId)
-            : [...this.attacks, { habitatId, victims: evenVictims(this.gameState, color, habitatId) }]
+            : [
+                  ...this.attacks,
+                  { habitatId, victims: evenVictims(this.gameState, color, habitatId) }
+              ]
     }
 
     adjustVictim(habitatId: string, color: Color, kind: InsectKind, change: number) {
@@ -270,15 +280,13 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
             if (attack.habitatId !== habitatId) {
                 return attack
             }
-            const existing = attack.victims.find((victim) => victim.color === color && victim.kind === kind)
+            const existing = attack.victims.find(
+                (victim) => victim.color === color && victim.kind === kind
+            )
             const count = Math.max(0, (existing?.count ?? 0) + change)
             const others = attack.victims.filter((victim) => victim !== existing)
             return { habitatId, victims: count > 0 ? [...others, { color, kind, count }] : others }
         })
-    }
-
-    setHatchCount(count: number) {
-        this.hatchCount = count
     }
 
     private async submit(actionType: ActionType, build: () => Promise<void>) {
@@ -318,13 +326,6 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
                     })
                 }
                 return
-            case ActionKind.Hatch: {
-                const count = this.hatchCount
-                await this.submit(ActionType.Hatch, async () => {
-                    await this.applyAction(this.createPlayerAction(Hatch, { count }))
-                })
-                return
-            }
             case ActionKind.Cannibalize: {
                 const attacks = this.attacks
                 await this.submit(ActionType.Cannibalize, async () => {

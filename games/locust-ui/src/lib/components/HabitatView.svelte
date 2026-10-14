@@ -2,7 +2,12 @@
     import { getHabitat, occupantDiscs } from '@tabletop/locust'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import type { Color } from '@tabletop/common'
-    import { HabitatRadius, habitatCenter, nymphPoint, quadrantPoint } from '$lib/utils/boardLayout.js'
+    import {
+        HabitatRadius,
+        habitatCenter,
+        nymphPoint,
+        quadrantPoint
+    } from '$lib/utils/boardLayout.js'
     import Disc from './Disc.svelte'
 
     let { habitatId }: { habitatId: string } = $props()
@@ -67,9 +72,21 @@
     {/each}
 
     <g transform="translate({center.x} {center.y + HabitatRadius + 30})">
-        <rect x="-34" y="-15" width="68" height="30" rx="8" fill={crowded ? '#b3261e' : '#2b2418'} opacity="0.82" />
-        <text text-anchor="middle" dominant-baseline="central" font-size="20" font-weight="700" fill="#ffffff"
-            >{discs}/{capacity}</text
+        <rect
+            x="-34"
+            y="-15"
+            width="68"
+            height="30"
+            rx="8"
+            fill={crowded ? '#b3261e' : '#2b2418'}
+            opacity="0.82"
+        />
+        <text
+            text-anchor="middle"
+            dominant-baseline="central"
+            font-size="20"
+            font-weight="700"
+            fill="#ffffff">{discs}/{capacity}</text
         >
     </g>
 

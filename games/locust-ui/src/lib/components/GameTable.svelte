@@ -21,7 +21,8 @@
     import type { HydratedLocustGameState, LocustGameState } from '@tabletop/locust'
     import { setGameSession } from '$lib/model/sessionContext.svelte.js'
 
-    let { gameSession }: { gameSession: GameSession<LocustGameState, HydratedLocustGameState> } = $props()
+    let { gameSession }: { gameSession: GameSession<LocustGameState, HydratedLocustGameState> } =
+        $props()
     if (!(gameSession instanceof LocustGameSession)) {
         throw Error('Locust needs a LocustGameSession')
     }
@@ -81,7 +82,10 @@
                     <Header />
                     <ActionPanel />
                 </div>
-                <div class="workspace-shell overflow-x-hidden overflow-y-auto" style="flex:1; min-height: 320px;">
+                <div
+                    class="workspace-shell overflow-x-hidden overflow-y-auto"
+                    style="flex:1; min-height: 320px;"
+                >
                     {#if session.preferences.ready && workspaceLayoutPreference.ready}
                         <TabWorkspace
                             bind:selected={workspaceTab}
@@ -92,7 +96,11 @@
                         >
                             {#snippet children(id, _active)}
                                 {#if id === 'board'}
-                                    <ScalingWrapper justify="center" controls="bottom-left" dragToPan>
+                                    <ScalingWrapper
+                                        justify="center"
+                                        controls="bottom-left"
+                                        dragToPan
+                                    >
                                         <Board />
                                     </ScalingWrapper>
                                 {:else if id === 'guide'}
@@ -131,7 +139,11 @@
         padding: 0.35rem 0.8rem;
         font-weight: 600;
         color: #f6ecd8;
-        background: linear-gradient(160deg, color-mix(in srgb, var(--accent) 30%, transparent), #2a1d10 72%);
+        background: linear-gradient(
+            160deg,
+            color-mix(in srgb, var(--accent) 30%, transparent),
+            #2a1d10 72%
+        );
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
         transition:
             transform 120ms ease,

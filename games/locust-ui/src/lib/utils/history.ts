@@ -24,7 +24,9 @@ function countList(habitatIds: string[]): string {
     for (const habitatId of habitatIds) {
         counts.set(habitatId, (counts.get(habitatId) ?? 0) + 1)
     }
-    return list([...counts].map(([habitatId, count]) => (count > 1 ? `${count}× ${habitatId}` : habitatId)))
+    return list(
+        [...counts].map(([habitatId, count]) => (count > 1 ? `${count}× ${habitatId}` : habitatId))
+    )
 }
 
 export function describeHistoryAction(action: GameAction): string {
@@ -32,8 +34,14 @@ export function describeHistoryAction(action: GameAction): string {
         const space = getSpace(action.spaceId)
         const label = space.kind ? `${ActionNames[space.kind]} ${space.level}` : action.spaceId
         const alternative = action.alternative ? ' (Alternative Action)' : ''
-        const bonus = action.metadata?.bonusToken ? `, taking a ${action.metadata.bonusToken} token` : ''
-        return `moved a cube to ${label} in Region ${RegionLabels[space.region]}${alternative}${bonus}`
+        const bonus = action.metadata?.bonusToken
+            ? `, taking a ${action.metadata.bonusToken} token`
+            : ''
+        const hatched =
+            action.metadata?.hatched !== undefined
+                ? ` and hatched ${action.metadata.hatched} disc${action.metadata.hatched === 1 ? '' : 's'}`
+                : ''
+        return `moved a cube to ${label} in Region ${RegionLabels[space.region]}${alternative}${bonus}${hatched}`
     }
     if (isJump(action)) {
         return action.hops.length === 0
@@ -41,10 +49,14 @@ export function describeHistoryAction(action: GameAction): string {
             : `jumped ${list(action.hops.map((hop) => `${hop.from} → ${hop.to}`))}`
     }
     if (isBreed(action)) {
-        return action.habitatIds.length === 0 ? 'passed' : `bred nymphs in ${countList(action.habitatIds)}`
+        return action.habitatIds.length === 0
+            ? 'passed'
+            : `bred nymphs in ${countList(action.habitatIds)}`
     }
     if (isHatch(action)) {
-        return action.count === 0 ? 'passed' : `hatched ${action.count} disc${action.count === 1 ? '' : 's'}`
+        return action.count === 0
+            ? 'passed'
+            : `hatched ${action.count} disc${action.count === 1 ? '' : 's'}`
     }
     if (isCannibalize(action)) {
         if (action.attacks.length === 0) return 'passed'

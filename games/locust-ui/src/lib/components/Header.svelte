@@ -9,9 +9,12 @@
     const state = $derived(session.gameState)
     const phase = $derived(phaseText(state))
     const canUndo = $derived(
-        !session.isViewingHistory && (session.hasManualSelection || session.undoableAction !== undefined)
+        !session.isViewingHistory &&
+            (session.hasManualSelection || session.undoableAction !== undefined)
     )
-    const actingColorHex = $derived(session.actingColor ? session.colors.getUiColor(session.actingColor) : undefined)
+    const actingColorHex = $derived(
+        session.actingColor ? session.colors.getUiColor(session.actingColor) : undefined
+    )
 </script>
 
 <div
@@ -25,7 +28,10 @@
         {:else if session.activePlayers.length === 0}
             <div in:fade={{ duration: 200 }}>{phase}</div>
         {:else}
-            <div in:fade={{ duration: 200 }} class="inline-flex flex-wrap items-center gap-x-1.5 leading-tight">
+            <div
+                in:fade={{ duration: 200 }}
+                class="inline-flex flex-wrap items-center gap-x-1.5 leading-tight"
+            >
                 {#if actingColorHex}
                     <span
                         class="inline-block h-3 w-3 rounded-sm border border-black/60"
@@ -57,7 +63,9 @@
             >
         </div>
         {#if canUndo}
-            <button type="button" class="lc-quiet text-[13px]" onclick={() => session.undo()}>UNDO</button>
+            <button type="button" class="lc-quiet text-[13px]" onclick={() => session.undo()}
+                >UNDO</button
+            >
         {/if}
     </div>
 </div>

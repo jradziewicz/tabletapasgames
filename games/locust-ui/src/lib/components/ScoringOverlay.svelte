@@ -14,7 +14,8 @@
         const recent = actions.slice(-6).findLast((action) => isScoreRegion(action))
         if (!recent || !isScoreRegion(recent) || !recent.metadata) return undefined
         if (recent.id === dismissedActionId) return undefined
-        return last?.id === recent.id || actions.slice(actions.indexOf(recent) + 1).every((action) => !action.playerId)
+        return last?.id === recent.id ||
+            actions.slice(actions.indexOf(recent) + 1).every((action) => !action.playerId)
             ? recent
             : undefined
     })
@@ -22,7 +23,11 @@
 
 {#if latestScoring?.metadata}
     {@const result = latestScoring.metadata}
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" role="presentation" onclick={() => (dismissedActionId = latestScoring.id)}>
+    <div
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+        role="presentation"
+        onclick={() => (dismissedActionId = latestScoring.id)}
+    >
         <div
             class="score-card w-full max-w-lg rounded-2xl border-2 border-[#c9a961] bg-[#22170e] p-6 text-[#f1e6cf] shadow-2xl"
             role="presentation"
@@ -35,7 +40,9 @@
                 Region {RegionLabels[result.scoredRegion]} is dry
             </div>
             <div class="mb-3">
-                <div class="mb-1 text-[11px] uppercase tracking-widest text-[#c9a961]">Vigor Points</div>
+                <div class="mb-1 text-[11px] uppercase tracking-widest text-[#c9a961]">
+                    Vigor Points
+                </div>
                 <div class="flex flex-wrap gap-3">
                     {#each result.vigor as entry (entry.color)}
                         <span class="inline-flex items-center gap-1"
@@ -46,7 +53,9 @@
                 </div>
             </div>
             <div class="mb-3">
-                <div class="mb-1 text-[11px] uppercase tracking-widest text-[#c9a961]">Majorities</div>
+                <div class="mb-1 text-[11px] uppercase tracking-widest text-[#c9a961]">
+                    Majorities
+                </div>
                 <ul class="space-y-0.5">
                     {#each result.majorities as majority (majority.habitatId)}
                         <li class="flex items-center gap-2">
@@ -71,8 +80,10 @@
                 </div>
             {/if}
             <div class="text-center">
-                <button type="button" class="lc-btn lc-primary" onclick={() => (dismissedActionId = latestScoring.id)}
-                    >Continue</button
+                <button
+                    type="button"
+                    class="lc-btn lc-primary"
+                    onclick={() => (dismissedActionId = latestScoring.id)}>Continue</button
                 >
             </div>
         </div>

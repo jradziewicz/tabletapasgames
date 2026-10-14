@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Color } from '@tabletop/common'
 import { ActionType } from '../definition/actions.js'
+import { isPlaceCube } from '../actions/placeCube.js'
 import { MachineState } from '../definition/states.js'
 import { InsectKind } from '../model/board.js'
 import { LocustTable } from '../testing/table.js'
@@ -48,8 +49,8 @@ describe('choosing an action space', () => {
 
     it('boosts the level by one in the region two right of the Active Region', () => {
         const { table } = threePlayerTable()
-        place(table, 'III-R6')
-        expect(table.view.pendingAction).toMatchObject({ kind: 'Hatch', level: 6 })
+        place(table, 'III-L3')
+        expect(table.view.pendingAction).toMatchObject({ kind: 'JumpOrBreed', level: 3 })
     })
 
     it('lets the next cube in line act after an action', () => {
@@ -103,6 +104,7 @@ describe('choosing an action space', () => {
 })
 
 function passEmptyAction(table: LocustTable) {
+    if (table.view.machineState !== MachineState.PerformAction) return
     const kind = table.view.pendingAction!.kind
     const empty: Record<string, [string, Record<string, unknown>]> = {
         JumpOrBreed: [ActionType.Jump, { hops: [] }],
@@ -266,22 +268,38 @@ describe('BREED', () => {
 })
 
 describe('HATCH', () => {
-    it('returns dead discs to supply up to the level', () => {
-        const { table, a } = threePlayerTable()
+    function hatchedBy(table: LocustTable): number | undefined {
+        const placed = table.processed.findLast((action) => action.type === ActionType.PlaceCube)
+        return placed && isPlaceCube(placed) ? placed.metadata?.hatched : undefined
+    }
+
+    it('automatically hatches as many dead discs as the level allows and ends the turn', () => {
+        const { table, a, b } = threePlayerTable()
         place(table, 'II-L6')
-        expect(() => table.act(ActionType.Hatch, { count: 4 })).toThrow('At most 3')
-        table.act(ActionType.Hatch, { count: 3 })
         expect(table.view.colony(a).supply).toBe(9)
         expect(table.view.colony(a).dead).toBe(3)
+        expect(hatchedBy(table)).toBe(3)
+        expect(table.view.machineState).toBe(MachineState.ChooseSpace)
+        expect(table.view.activeColor).toBe(b)
     })
 
-    it('cannot hatch more than the dead discs', () => {
+    it('hatches only the dead discs there are', () => {
         const { table, a } = threePlayerTable()
         table.edit((state) => {
             state.colony(a).dead = 1
         })
         place(table, 'II-R6')
-        expect(() => table.act(ActionType.Hatch, { count: 2 })).toThrow('dead')
+        expect(table.view.colony(a).dead).toBe(0)
+        expect(hatchedBy(table)).toBe(1)
+    })
+
+    it('gets the Level +1 boost', () => {
+        const { table, a } = threePlayerTable()
+        table.edit((state) => {
+            state.colony(a).dead = 9
+        })
+        place(table, 'III-R6')
+        expect(hatchedBy(table)).toBe(6)
     })
 })
 
