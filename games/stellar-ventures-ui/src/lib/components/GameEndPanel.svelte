@@ -22,11 +22,6 @@
             .toSorted((a, b) => b.credits - a.credits)
     )
 
-    // TESTING ONLY - see StellarVenturesGameSession.testingUndoLiquidation. Remove this button
-    // (and that method) once Backroom Deal/Accounting Gimmick testing is done.
-    function testingUndoLiquidation() {
-        void gameSession.testingUndoLiquidation()
-    }
 </script>
 
 <div class="flex flex-col items-center gap-2 px-4 pt-3 pb-2 text-[#e6e9f5]">
@@ -57,20 +52,6 @@
         class="mt-1 rounded-md bg-[#2f6fed] px-3 py-1.5 text-xs font-semibold text-white transition hover:brightness-110"
     >
         Game Summary
-    </button>
-
-    <!-- TESTING ONLY - remove once Backroom Deal/Accounting Gimmick testing is done (see
-         StellarVenturesGameSession.testingUndoLiquidation). Rewinds past the auto-resolved
-         Liquidate (and, if it was used, Backroom Deal/Decline Backroom Deal before it) so the
-         co-designer can try the other branch without replaying the whole game - the real UNDO
-         button can't reach this once Liquidation has already run, and Exploration Mode can't
-         rewrite a decision that was already committed before Explore started. -->
-    <button
-        type="button"
-        onclick={testingUndoLiquidation}
-        class="mt-1 rounded-md border border-dashed border-[#5a6178] px-3 py-1 text-[11px] text-[#9aa2c0] hover:bg-white/5"
-    >
-        Undo Liquidation (testing only)
     </button>
 </div>
 

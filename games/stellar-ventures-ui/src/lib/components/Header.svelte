@@ -49,21 +49,6 @@
                     UNDO
                 </button>
             {/if}
-            <!-- TESTING ONLY - see StellarVenturesGameSession.testingRedoLiquidation. Only ever
-                 appears right after Undo Liquidation (testing only) was used on GameEndPanel, to
-                 resubmit that same Backroom Deal/Decline decision and land back at the same
-                 EndOfGame outcome - lives here rather than on GameEndPanel itself because that
-                 panel disappears the instant the undo reverts gameState.result, taking any button
-                 on it down too. Remove once Backroom Deal/Accounting Gimmick testing is done. -->
-            {#if gameSession.testingLiquidationRedoAction}
-                <button
-                    type="button"
-                    onclick={() => gameSession.testingRedoLiquidation()}
-                    class="rounded-lg border border-dashed border-[#5a6178] px-2 py-1 text-[11px] text-[#9aa2c0] hover:bg-white/5"
-                >
-                    Redo Liquidation (testing only)
-                </button>
-            {/if}
             <!-- TESTING ONLY - see StellarVenturesGameSession.testingForceLiquidate. Covers the
                  dead-end case Redo Liquidation above can't: a bare auto-Liquidate undone with no
                  Backroom Deal decision to resubmit, which otherwise leaves the game permanently
