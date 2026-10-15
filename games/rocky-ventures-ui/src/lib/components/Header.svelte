@@ -19,41 +19,56 @@
         Math.max(0, gameSession.gameState.market.drawPile.length - (triggers.deckExhausted ? gameSession.gameState.market.drawPile.length : 1))
     )
     const dragon = $derived(gameSession.gameState.dragon)
-    // Bonus tokens still to land on the dragon tracker before it is summoned.
-    const dragonBonusesLeft = $derived(Math.max(0, BonusTokensToSummonDragon - dragon.trackerTokens.length))
     const dragonActive = $derived(dragon.summoned && !dragon.killed)
+    const gemsSpent = $derived(Math.min(gameSession.gameState.gemsSpent, gemThreshold))
 
-    type TriggerChip = { key: string; label: string; tip: string; met: boolean; alert?: boolean }
+    // Green while far off, yellow once close, red when the trigger is met.
+    const DeckWarnCardsLeft = 6
+    const GemsWarnLeft = 4
+    const DragonWarnHitsLeft = 3
+    type ChipLevel = 'far' | 'close' | 'met'
+    const ChipColors: Record<ChipLevel, { border: string; text: string; background: string }> = {
+        far: { border: '#2f8f57', text: '#7ee2a2', background: 'rgba(47, 143, 87, 0.15)' },
+        close: { border: '#e0b02a', text: '#ffd166', background: 'rgba(224, 176, 42, 0.18)' },
+        met: { border: '#e0574a', text: '#ffffff', background: '#a3241a' }
+    }
+
+    type TriggerChip = { key: string; label: string; tip: string; level: ChipLevel; pulse?: boolean }
     const triggerChips: TriggerChip[] = $derived([
         {
             key: 'deck',
             label: `DECK ${deckCardsLeft}`,
-            met: triggers.deckExhausted,
+            level: triggers.deckExhausted ? 'met' : deckCardsLeft <= DeckWarnCardsLeft ? 'close' : 'far',
             tip: triggers.deckExhausted
                 ? 'The Game Over card is next: this end trigger is met'
                 : `${deckCardsLeft} ${deckCardsLeft === 1 ? 'card' : 'cards'} left before the Game Over card`
         },
         dragon.killed
-            ? { key: 'dragon', label: 'DRAGON SLAIN', met: true, tip: 'The dragon has been killed: this end trigger is met' }
+            ? {
+                  key: 'dragon',
+                  label: `DRAGON ${DragonLevel}/${DragonLevel}`,
+                  level: 'met',
+                  tip: 'The dragon has been killed: this end trigger is met'
+              }
             : dragonActive
               ? {
                     key: 'dragon',
-                    label: `DRAGON ${dragon.hits}/${DragonLevel} HITS`,
-                    met: false,
-                    alert: true,
-                    tip: `The dragon is in play: ${dragon.hits} of ${DragonLevel} hits landed. Killing it meets this end trigger`
+                    label: `DRAGON ${dragon.hits}/${DragonLevel}`,
+                    level: DragonLevel - dragon.hits <= DragonWarnHitsLeft ? 'close' : 'far',
+                    pulse: true,
+                    tip: `The dragon is out: ${dragon.hits} of ${DragonLevel} hits landed. Killing it meets this end trigger`
                 }
               : {
                     key: 'dragon',
-                    label: `DRAGON ${dragonBonusesLeft}/${BonusTokensToSummonDragon}`,
-                    met: false,
-                    tip: `${dragonBonusesLeft} of ${BonusTokensToSummonDragon} bonus tokens still to draw before the dragon is summoned`
+                    label: `DRAGON ${Math.min(dragon.trackerTokens.length, BonusTokensToSummonDragon)}/${BonusTokensToSummonDragon}`,
+                    level: 'far',
+                    tip: `${Math.min(dragon.trackerTokens.length, BonusTokensToSummonDragon)} of ${BonusTokensToSummonDragon} bonus tokens drawn. At ${BonusTokensToSummonDragon} the dragon comes out`
                 },
         {
             key: 'gems',
-            label: `GEMS ${Math.min(gameSession.gameState.gemsSpent, gemThreshold)}/${gemThreshold}`,
-            met: triggers.gemsSpent,
-            tip: `${Math.min(gameSession.gameState.gemsSpent, gemThreshold)} of ${gemThreshold} gems spent on gem actions`
+            label: `GEMS ${gemsSpent}/${gemThreshold}`,
+            level: triggers.gemsSpent ? 'met' : gemThreshold - gemsSpent <= GemsWarnLeft ? 'close' : 'far',
+            tip: `${gemsSpent} of ${gemThreshold} gems spent on gem actions`
         }
     ])
     const phaseText = $derived.by(() => {
@@ -116,8 +131,8 @@
                 <button
                     type="button"
                     class="trigger-chip relative cursor-default rounded border px-1.5 py-0.5"
-                    class:dragon-alert={chip.alert}
-                    style="border-color: {chip.met ? '#ffd166' : chip.alert ? '#ff5a3c' : '#4a3620'}; color: {chip.met ? '#ffd166' : chip.alert ? '#ffffff' : '#8a7a5c'}; background-color: {chip.met ? '#3a2a17' : chip.alert ? '#a3241a' : 'transparent'};"
+                    class:dragon-alert={chip.pulse}
+                    style="border-color: {ChipColors[chip.level].border}; color: {ChipColors[chip.level].text}; background-color: {ChipColors[chip.level].background};"
                     aria-label={chip.tip}
                     >{chip.label}<span class="chip-tip" role="tooltip">{chip.tip}</span></button
                 >
@@ -170,10 +185,10 @@
     @keyframes dragon-alert-pulse {
         0%,
         100% {
-            box-shadow: 0 0 0 0 rgba(255, 90, 60, 0.7);
+            box-shadow: 0 0 0 0 currentColor;
         }
         50% {
-            box-shadow: 0 0 0 4px rgba(255, 90, 60, 0);
+            box-shadow: 0 0 0 4px transparent;
         }
     }
 </style>
