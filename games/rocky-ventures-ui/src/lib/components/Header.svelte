@@ -24,7 +24,8 @@
 
     // Green while far off, yellow once close, red when the trigger is met.
     const DeckWarnCardsLeft = 6
-    const GemsWarnLeft = 4
+    // Two players have a smaller gem total, so warn later there.
+    const GemsWarnLeft = $derived(gameSession.gameState.players.length === 2 ? 3 : 4)
     const DragonWarnHitsLeft = 3
     type ChipLevel = 'far' | 'close' | 'met'
     const ChipColors: Record<ChipLevel, { border: string; text: string; background: string }> = {
