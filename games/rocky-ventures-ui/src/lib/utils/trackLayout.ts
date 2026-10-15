@@ -22,3 +22,6 @@ export function victoryPointPosition(victoryPoints: number): Point {
     const value = ((victoryPoints % 100) + 100) % 100
     return VictoryPointCellCenters[value]!
 }
+
+// The printed weapon / tool grid's region of the board art.
+export const GridRegion = { x: 1580, y: 1188, width: 410, height: 215 }

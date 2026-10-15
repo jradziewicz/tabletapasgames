@@ -67,6 +67,7 @@ export class RockyVenturesGameSession extends GameSession<
     lastActionError: string | undefined = $state()
 
     zoomedImage: { url: string; alt: string } | undefined = $state()
+    gridZoomOpen = $state(false)
     hoveredCard: { url: string; alt: string } | undefined = $state()
     botSeats: Record<string, BotProfile> = $state({})
     claimHuntNodeId: string | undefined = $state()

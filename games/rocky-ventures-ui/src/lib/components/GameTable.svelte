@@ -21,6 +21,7 @@
     import GridPanel from '$lib/components/GridPanel.svelte'
     import DragonPanel from '$lib/components/DragonPanel.svelte'
     import CardZoom from '$lib/components/CardZoom.svelte'
+    import GridZoom from '$lib/components/GridZoom.svelte'
     import CardHoverPreview from '$lib/components/CardHoverPreview.svelte'
     import GameOverOverlay from '$lib/components/GameOverOverlay.svelte'
     import DragonOverlay from '$lib/components/DragonOverlay.svelte'
@@ -421,6 +422,9 @@
     {/if}
     {#if session.hoveredCard && !session.zoomedImage}
         <CardHoverPreview imageUrl={session.hoveredCard.url} alt={session.hoveredCard.alt} />
+    {/if}
+    {#if session.gridZoomOpen}
+        <GridZoom onclose={() => (session.gridZoomOpen = false)} />
     {/if}
     {#if session.zoomedImage}
         <CardZoom imageUrl={session.zoomedImage.url} alt={session.zoomedImage.alt} onclose={() => (session.zoomedImage = undefined)} />
