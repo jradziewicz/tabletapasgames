@@ -10,8 +10,12 @@
     const session = getGameSession()
     const state = $derived(session.gameState)
     const pending = $derived(session.pendingAction)
-    const actingColony = $derived(session.actingColor ? state.colony(session.actingColor) : undefined)
-    const breedLimit = $derived(pending && actingColony ? Math.min(pending.level, actingColony.supply) : 0)
+    const actingColony = $derived(
+        session.actingColor ? state.colony(session.actingColor) : undefined
+    )
+    const breedLimit = $derived(
+        pending && actingColony ? Math.min(pending.level, actingColony.supply) : 0
+    )
 
     const KindLabels: Record<InsectKind, string> = {
         [InsectKind.Grasshopper]: 'grasshopper',
@@ -22,7 +26,11 @@
     // HATCH resolves automatically, so the result is shown until the next player move.
     const lastHatch = $derived.by(() => {
         const lastPlayerAction = session.actions.findLast((action) => action.playerId !== undefined)
-        if (!lastPlayerAction || !isPlaceCube(lastPlayerAction) || lastPlayerAction.metadata?.hatched === undefined) {
+        if (
+            !lastPlayerAction ||
+            !isPlaceCube(lastPlayerAction) ||
+            lastPlayerAction.metadata?.hatched === undefined
+        ) {
             return undefined
         }
         return { playerId: lastPlayerAction.playerId, hatched: lastPlayerAction.metadata.hatched }
@@ -55,14 +63,18 @@
                 if (session.hopOrigin) {
                     return 'Click a glowing linked habitat to land (click the grasshopper again to put it back).'
                 }
-                if (session.jumpOrBreedMode === JumpOrBreedMode.Jump) return 'Click a glowing grasshopper to keep jumping.'
+                if (session.jumpOrBreedMode === JumpOrBreedMode.Jump)
+                    return 'Click a glowing grasshopper to keep jumping.'
                 if (session.jumpOrBreedMode === JumpOrBreedMode.Breed) {
                     return 'Click a glowing nymph circle to lay another nymph.'
                 }
                 return 'Click a glowing grasshopper to JUMP, or a glowing nymph circle to BREED.'
             case ActionKind.Cannibalize:
-                return session.pickingAttack
-                    ? `Choose who gets eaten in ${session.pickingAttack.habitatId}:`
+                if (session.pickingAttack) {
+                    return `Choose who gets eaten in ${session.pickingAttack.habitatId}:`
+                }
+                return session.attacks.length > 0
+                    ? 'Marked habitats will be eaten as labelled. Click another glowing habitat, or End action to eat now.'
                     : 'Click a glowing habitat where your locusts can feed.'
             case ActionKind.Swarm:
                 return 'Click a glowing crowded habitat to make it swarm.'
@@ -80,9 +92,8 @@
             <ActionBadge kind={ActionKind.Hatch} level={lastHatch.hatched} size={20} />
             <PlayerName playerId={lastHatch.playerId} />
             <span
-                >hatched <b class="font-mono text-[#ffd166]">{lastHatch.hatched}</b> disc{lastHatch.hatched === 1
-                    ? ''
-                    : 's'} back to supply</span
+                >hatched <b class="font-mono text-[#ffd166]">{lastHatch.hatched}</b>
+                disc{lastHatch.hatched === 1 ? '' : 's'} back to supply</span
             >
         </div>
     {/if}
@@ -120,7 +131,12 @@
         </div>
     {:else if state.machineState === MachineState.PerformAction && pending}
         <div class="flex items-start gap-3">
-            <ActionBadge kind={pending.kind} level={pending.level} color={pending.color} size={44} />
+            <ActionBadge
+                kind={pending.kind}
+                level={pending.level}
+                color={pending.color}
+                size={44}
+            />
             <div class="min-w-0 flex-1 space-y-2">
                 <div>
                     <div class="font-semibold tracking-wide">
@@ -136,7 +152,8 @@
                             <span class="text-[#c9a961] capitalize">· {pending.color}</span>
                         {/if}
                         {#if progress}
-                            <span class="ml-2 rounded border border-[#4a3620] px-1.5 font-mono text-[12px] text-[#ffd166]"
+                            <span
+                                class="ml-2 rounded border border-[#4a3620] px-1.5 font-mono text-[12px] text-[#ffd166]"
                                 >{progress}</span
                             >
                         {/if}
@@ -162,7 +179,9 @@
                             >
                                 <ColonyChip color={option.color} showPlayer={false} />
                                 {KindLabels[option.kind]}
-                                <span class="font-mono text-[11px] opacity-70">×{option.remaining}</span>
+                                <span class="font-mono text-[11px] opacity-70"
+                                    >×{option.remaining}</span
+                                >
                             </button>
                         {/each}
                     </div>
@@ -182,11 +201,16 @@
     {:else if state.machineState === MachineState.AssignDuelScoring}
         <div class="space-y-2">
             <div>
-                Pick the colour whose <b>Vigor Points</b> count. Your other colour scores its <b>Bonus Points</b>.
+                Pick the colour whose <b>Vigor Points</b> count. Your other colour scores its
+                <b>Bonus Points</b>.
             </div>
             <div class="flex flex-wrap gap-2">
                 {#each state.coloniesOf(state.activePlayerIds[0] ?? '') as colony (colony.color)}
-                    <button type="button" class="lc-btn" onclick={() => session.assignVigorColor(colony.color)}>
+                    <button
+                        type="button"
+                        class="lc-btn"
+                        onclick={() => session.assignVigorColor(colony.color)}
+                    >
                         <ColonyChip color={colony.color} showPlayer={false} />
                         <span class="font-mono">{colony.vigor} VP</span>
                     </button>

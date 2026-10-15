@@ -79,25 +79,37 @@
 
 {#each session.attacks as attack (attack.habitatId)}
     {@const center = centerOf(attack.habitatId)}
-    <g transform="translate({center.x} {center.y})" opacity="0.85" pointer-events="none">
-        <line
-            x1="-60"
-            y1="-60"
-            x2="60"
-            y2="60"
-            stroke="#b3261e"
-            stroke-width="14"
-            stroke-linecap="round"
+    {@const label = attack.victims.map((victim) => `−${victim.count} ${victim.color}`).join('  ')}
+    <g pointer-events="none">
+        <circle
+            cx={center.x}
+            cy={center.y}
+            r={HabitatRadius + 10}
+            fill="none"
+            stroke="#e0574a"
+            stroke-width="6"
+            stroke-dasharray="16 10"
+            opacity="0.9"
         />
-        <line
-            x1="60"
-            y1="-60"
-            x2="-60"
-            y2="60"
-            stroke="#b3261e"
-            stroke-width="14"
-            stroke-linecap="round"
-        />
+        <g transform="translate({center.x} {center.y - HabitatRadius - 26})">
+            <rect
+                x={-(label.length * 7 + 26)}
+                y="-20"
+                width={label.length * 14 + 52}
+                height="40"
+                rx="10"
+                fill="#7a1f16"
+                stroke="#1a140c"
+                stroke-width="2"
+            />
+            <text
+                text-anchor="middle"
+                dominant-baseline="central"
+                font-size="22"
+                font-weight="700"
+                fill="#fff">{label}</text
+            >
+        </g>
     </g>
 {/each}
 
