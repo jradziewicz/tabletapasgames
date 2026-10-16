@@ -22,6 +22,7 @@
     import { afterNavigate, goto, onNavigate } from '$app/navigation'
     import LoginPanel, { loginViewTitles, type LoginView } from '$lib/components/LoginPanel.svelte'
     import AuthModal from '$lib/components/AuthModal.svelte'
+    import PreferencesPanel from '$lib/components/PreferencesPanel.svelte'
     import { setLoginModal } from '$lib/stores/loginModal'
     import { onMount } from 'svelte'
     import { PUBLIC_API_HOST } from '$env/static/public'
@@ -74,6 +75,7 @@
               )
             : undefined
     )
+    let showPreferences = $state(false)
     let showCreateGameModel = $state(false)
     let showCancelPrompt = $state(false)
     let showLoginModal = $state(false)
@@ -86,6 +88,7 @@
 
     afterNavigate(() => {
         showLoginModal = false
+        showPreferences = false
     })
 
     function selectTransitionCover(titleId: string | undefined) {
@@ -192,9 +195,9 @@
         await goto('/profile')
     }
 
-    async function gotoPreferences() {
+    function openPreferences() {
         showCancelPrompt = false
-        await goto('/preferences')
+        showPreferences = true
     }
 
     async function gotoNotifications() {
@@ -454,7 +457,7 @@
                                 <DropdownItem class="w-full text-left" onclick={gotoProfile}
                                     >Profile</DropdownItem
                                 >
-                                <DropdownItem class="w-full text-left" onclick={gotoPreferences}
+                                <DropdownItem class="w-full text-left" onclick={openPreferences}
                                     >Preferences</DropdownItem
                                 >
                                 <DropdownItem class="w-full text-left" onclick={gotoNotifications}
@@ -535,6 +538,11 @@
         <LoginPanel bind:view={loginView} />
     </AuthModal>
 {/if}
+{#if sessionUser}
+    <Modal bind:open={showPreferences} title="Preferences" size="sm" outsideclose autoclose={false}>
+        <PreferencesPanel />
+    </Modal>
+{/if}
 <Modal
     bind:open={showCreateGameModel}
     size="xs"
@@ -571,7 +579,7 @@
                 size="xs"
                 color="blue">Got it</Button
             >
-            <Button onclick={() => gotoPreferences()} size="xs" outline color="light"
+            <Button onclick={openPreferences} size="xs" outline color="light"
                 >Go to Preferences</Button
             >
         </div>
