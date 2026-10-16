@@ -70,7 +70,7 @@
                 <h2 id="contribute-heading">Lend a hand</h2>
             </div>
             <p>
-                Want to contribute? Take a look at the Tabletop project on GitHub. There are plenty
+                Want to contribute? Take a look at the TableTapas Games project on GitHub. There are plenty
                 of ways to help, with or without writing code.
             </p>
             <ul class="contributions" aria-label="Ways to contribute">
@@ -81,7 +81,7 @@
             </ul>
             <a
                 class="community-link"
-                href="https://github.com/justinkwaugh/tabletop"
+                href="https://github.com/jradziewicz/tabletapasgames"
                 target="_blank"
                 rel="noreferrer"
             >
