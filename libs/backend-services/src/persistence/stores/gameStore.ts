@@ -146,7 +146,7 @@ export interface GameStore {
         validator?: UpdateValidator<Game>
     }): Promise<[Game, string[], Game]>
 
-    deleteGame(game: Game): Promise<void>
+    deleteGame(game: Game, authorize?: (existingGame: Game) => void): Promise<void>
 
     // Writes a permanent copy of a finished game (game record, final state, every action) to
     // the gameArchives collection, for later analysis. Safe to call repeatedly - it overwrites.

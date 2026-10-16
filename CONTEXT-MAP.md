@@ -6,7 +6,7 @@ Implementation contradictions, defects, deferred decisions, and disproved concer
 
 - [Game Runtime](./libs/common/CONTEXT.md): initializes and deterministically executes the finite state machine representing a Game Title’s rules
 - [Game Client](./libs/frontend-components/CONTEXT.md): maintains responsive client interaction, Game Contexts, Action drafting, history, exploration, presentation, and reconciliation
-- [Game Lifecycle](./docs/contexts/game-lifecycle/CONTEXT.md): governs Game Instances, participation, lifecycle, canonical Action history, synchronization, Fork, Undo, and deletion
+- [Game Lifecycle](./docs/contexts/game-lifecycle/CONTEXT.md): governs Game Instances, participation, lifecycle, canonical Action history, synchronization, Fork, Undo, deletion, and a User's stats over Finished games
 - [Identity and Access](./docs/contexts/identity-and-access/CONTEXT.md): governs User Accounts, authentication methods, sessions, Account status, and administrative role assignment
 - [Game Conversations](./docs/contexts/game-conversations/CONTEXT.md): governs public per-Game Message history, authorship, Read Positions, moderation, and reconciliation
 - [Notification Delivery](./docs/contexts/notification-delivery/CONTEXT.md): governs ephemeral Realtime Updates, Attention Notices, Audiences, Topics, authorization, and best-effort transport

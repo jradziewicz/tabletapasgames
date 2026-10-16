@@ -323,7 +323,7 @@ export class FirestoreGameStore implements GameStore {
         return seed
     }
 
-    async deleteGame(game: Game): Promise<void> {
+    async deleteGame(game: Game, authorize?: (existingGame: Game) => void): Promise<void> {
         const gameId = game.id
 
         try {
@@ -335,7 +335,10 @@ export class FirestoreGameStore implements GameStore {
                             await this.readDocument(this.games.doc(gameId), transaction)
                         ).data()
                         this.recordRead('game')
-                        if (existingGame) assertOrdinaryGame(existingGame)
+                        if (existingGame) {
+                            assertOrdinaryGame(existingGame)
+                            authorize?.(existingGame)
+                        }
                         await this.protectChangedLists(locks, existingGame, undefined)
                         transaction.delete(this.games.doc(gameId))
                     })
@@ -681,7 +684,7 @@ export class FirestoreGameStore implements GameStore {
 
     async findGameHistory(user: User, before?: GameHistoryCursor): Promise<GameHistoryPage> {
         return this.readFinishedGamesView({
-            guard: GameCacheKeys.history(user.id, before !== undefined),
+            guard: GameCacheKeys.finishedGamesGeneration(user.id, before !== undefined),
             key: GameCacheKeys.historyPage(user.id, JSON.stringify(before ?? null)),
             forSeconds: HISTORY_PAGE_CACHE_SECONDS,
             query: () => this.queryGameHistory(user, before),
@@ -694,7 +697,7 @@ export class FirestoreGameStore implements GameStore {
 
     async findGameStats(user: User): Promise<UserGameStats> {
         return this.readFinishedGamesView({
-            guard: GameCacheKeys.history(user.id),
+            guard: GameCacheKeys.finishedGamesGeneration(user.id),
             key: GameCacheKeys.stats(user.id),
             forSeconds: GAME_STATS_CACHE_SECONDS,
             query: async () => {
@@ -704,8 +707,7 @@ export class FirestoreGameStore implements GameStore {
                     snapshot.docs.map((document) => this.normalizeGame(document.data())),
                     user.id
                 )
-            },
-            restore: (stats) => stats
+            }
         })
     }
 
@@ -720,9 +722,9 @@ export class FirestoreGameStore implements GameStore {
         key: string
         forSeconds: number
         query: () => Promise<T>
-        restore: (cached: T) => T
+        restore?: (cached: T) => T
     }): Promise<T> {
-        const generation = await this.historyGeneration(guard)
+        const generation = await this.currentGeneration(guard)
         return this.cacheService.readConsistently({
             keys: [guard],
             read: async () => {
@@ -730,7 +732,7 @@ export class FirestoreGameStore implements GameStore {
                 if (!current.cached || current.value !== generation) return query()
                 const cached = await this.cacheService.get<{ generation: string; value: T }>(key)
                 if (cached.cached && cached.value?.generation === generation)
-                    return restore(cached.value.value)
+                    return restore ? restore(cached.value.value) : cached.value.value
                 const value = await query()
                 await this.cacheService
                     .set(key, { generation, value }, forSeconds)
@@ -743,7 +745,7 @@ export class FirestoreGameStore implements GameStore {
         })
     }
 
-    private async historyGeneration(key: string): Promise<string> {
+    private async currentGeneration(key: string): Promise<string> {
         const cached = await this.cacheService.get<string>(key)
         if (cached.cached && cached.value) return cached.value
         const lock = await this.cacheService.acquireReadLock({ key, value: cached.value })

@@ -318,17 +318,24 @@ export class GameService {
         if (game.ownerId !== user.id && !isAdmin) {
             throw new UnauthorizedAccessError({ user, gameId })
         }
-        if (!isAdmin && !ownerMayDeleteGame(game)) {
-            throw new FinishedGameDeletionError({ id: gameId })
-        }
 
-        // A finished game is archived before it's erased, so deleting it from a player's list
-        // never loses the play for later analysis. If archiving fails, the delete doesn't happen.
-        if (game.status === GameStatus.Finished) {
+        // Only an Administrator may delete a game that has ever finished. Checked here so a
+        // refused owner never triggers an archive, and again on the stored game inside the
+        // delete transaction so a delete racing the finishing move is refused too.
+        const authorizeDeletion = (existingGame: Game) => {
+            if (!isAdmin && !ownerMayDeleteGame(existingGame)) {
+                throw new FinishedGameDeletionError({ id: gameId })
+            }
+        }
+        authorizeDeletion(game)
+
+        // A game that has ever finished is archived before it's erased, so deleting it never
+        // loses the play for later analysis. If archiving fails, the delete doesn't happen.
+        if (game.status === GameStatus.Finished || game.everFinished) {
             await this.gameStore.archiveGame(gameId)
         }
 
-        await this.gameStore.deleteGame(game)
+        await this.gameStore.deleteGame(game, authorizeDeletion)
         if (game.isPublic) {
             await this.notifyGlobal(GameNotificationAction.Delete, { game })
         } else {
