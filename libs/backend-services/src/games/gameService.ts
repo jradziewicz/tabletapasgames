@@ -106,6 +106,11 @@ import {
     TournamentGameError
 } from './tournamentGames.js'
 import * as Value from 'typebox/value'
+import {
+    runFinalScoresBackfillPage,
+    startFinalScoresBackfill,
+    type FinalScoresBackfillTask
+} from './finalScoresBackfill.js'
 
 export class GameService {
     constructor(
@@ -492,6 +497,17 @@ export class GameService {
 
     async getGameStatsForUser(user: User) {
         return this.gameStore.findGameStats(user)
+    }
+
+    async startFinalScoresBackfill(write: boolean): Promise<string> {
+        return startFinalScoresBackfill(this.taskService, write)
+    }
+
+    async backfillFinalScores(task: FinalScoresBackfillTask): Promise<void> {
+        await runFinalScoresBackfillPage(
+            { store: this.gameStore, tasks: this.taskService, titles: this.availableTitles },
+            task
+        )
     }
 
     async setGameState(state: GameState): Promise<void> {
