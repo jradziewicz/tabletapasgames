@@ -1,6 +1,7 @@
 import {
     ActionSource,
     assertExists,
+    createPatch,
     findLastIndex,
     GameSyncStatus,
     type CanonicalActionReplayManifest,
@@ -189,10 +190,7 @@ export class GameReconciliation<T extends GameState, U extends HydratedGameState
         )
         assertExists(localAction, `Optimistic Action ${actionId} is unavailable`)
         let applyAccepted = optimistic.result.revealing
-        if (
-            !applyAccepted &&
-            !this.canKeepOptimisticResult(optimistic.result.processedActions, response.actions)
-        ) {
+        if (!applyAccepted && !this.canKeepOptimisticResult(optimistic, response.actions)) {
             this.context.restoreFrom(before)
             applyAccepted = true
         }
@@ -360,11 +358,11 @@ export class GameReconciliation<T extends GameState, U extends HydratedGameState
     }
 
     private canKeepOptimisticResult(
-        localActions: readonly GameAction[],
+        optimistic: OptimisticSubmission<T, U>,
         serverActions: readonly GameAction[]
     ): boolean {
-        return (
-            !serverActions.some((action) => action.forwardPatch !== undefined) &&
+        const localActions = optimistic.result.processedActions
+        const sameActions =
             localActions.length === serverActions.length &&
             localActions.every((local, index) => {
                 const server = serverActions[index]
@@ -376,6 +374,20 @@ export class GameReconciliation<T extends GameState, U extends HydratedGameState
                     local.type === server.type
                 )
             })
+        if (!sameActions) return false
+        if (!serverActions.some((action) => action.forwardPatch !== undefined)) return true
+        let confirmedState = optimistic.before.state
+        for (const action of serverActions) {
+            confirmedState = this.context.engine.applyProcessedAction({
+                action,
+                state: confirmedState,
+                game: optimistic.before.game
+            })
+        }
+        // Compare the States as the server stores and sends them, as JSON: a field cleared to
+        // undefined locally arrives removed, and an undefined array slot arrives as null.
+        return (
+            createPatch(asJson(confirmedState), asJson(optimistic.result.updatedState)).length === 0
         )
     }
 
@@ -384,4 +396,8 @@ export class GameReconciliation<T extends GameState, U extends HydratedGameState
             context.undoLastAction()
         }
     }
+}
+
+function asJson(value: unknown): unknown {
+    return JSON.parse(JSON.stringify(value))
 }
