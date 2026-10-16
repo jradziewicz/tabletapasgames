@@ -1,4 +1,5 @@
 import { getAppContext } from '$lib/stores/appContext.svelte.js'
+import { registerPwaInstallPrompt } from '$lib/stores/pwaInstallPrompt.svelte.js'
 import type { ServerInit } from '@sveltejs/kit'
 
 // After a deploy, an already-open tab can still try to lazy-load a route chunk from the
@@ -31,5 +32,6 @@ const registerPreloadErrorRecovery = () => {
 
 export const init: ServerInit = async () => {
     registerPreloadErrorRecovery()
+    registerPwaInstallPrompt()
     await getAppContext().authorizationService.initialize()
 }
