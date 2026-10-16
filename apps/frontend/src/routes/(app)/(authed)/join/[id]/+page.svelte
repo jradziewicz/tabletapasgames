@@ -9,15 +9,20 @@
 
     let joinGame: Game | undefined = $derived(data.game)
 
-    // Filling the last seat can start the game right away (autoStartGameIfReady on the backend),
-    // in which case go straight into it.
+    // Filling the last seat of an invite-only game starts it right away (autoStartGameIfReady on
+    // the backend), in which case go straight into it. A filled public game instead starts after a
+    // one-minute countdown (autoStartAt, shown on its GameCard).
     async function onJoined(game: Game) {
         joinGame = undefined
         if (game.status === GameStatus.Started) {
             await goto(`/game/${game.id}`)
             return
         }
-        toast.success(`You joined ${game.name}. It starts once every seat is filled.`)
+        toast.success(
+            game.autoStartAt
+                ? `You joined ${game.name}. Every seat is filled, so it starts in a minute.`
+                : `You joined ${game.name}. It starts once every seat is filled.`
+        )
         await goto('/dashboard')
     }
 
