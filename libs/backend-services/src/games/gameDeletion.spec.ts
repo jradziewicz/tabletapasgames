@@ -48,6 +48,7 @@ function fixture(read: Partial<Game>, stored: Partial<Game> = read) {
     const store = new FirestoreGameStore(cache, new Firestore({ projectId: 'deletion-unit-test' }))
     vi.spyOn(store, 'findGameById').mockResolvedValue(game)
     const deleted = vi.fn()
+    const archived = vi.spyOn(store, 'archiveGame').mockResolvedValue()
     const deleteGame = vi
         .spyOn(store, 'deleteGame')
         .mockImplementation(async (_game, authorize) => {
@@ -67,7 +68,7 @@ function fixture(read: Partial<Game>, stored: Partial<Game> = read) {
         cache,
         { synthetic: SyntheticDefinition }
     )
-    return { service, deleteGame, deleted, game }
+    return { service, deleteGame, deleted, archived, game }
 }
 
 const REFUSAL = 'can only be deleted by an administrator'
@@ -76,16 +77,18 @@ describe('deleting a Hosted Game', () => {
     it.each([GameStatus.WaitingForPlayers, GameStatus.WaitingToStart, GameStatus.Started])(
         'lets the Game Owner delete a game that is %s',
         async (status) => {
-            const { service, deleted, game } = fixture({ status })
+            const { service, deleted, archived, game } = fixture({ status })
             await service.deleteGame(owner, game.id)
             expect(deleted).toHaveBeenCalledTimes(1)
+            expect(archived).not.toHaveBeenCalled()
         }
     )
 
     it('refuses to let the Game Owner delete a Finished game', async () => {
-        const { service, deleted, game } = fixture({ status: GameStatus.Finished })
+        const { service, deleted, archived, game } = fixture({ status: GameStatus.Finished })
         await expect(service.deleteGame(owner, game.id)).rejects.toThrow(REFUSAL)
         expect(deleted).not.toHaveBeenCalled()
+        expect(archived).not.toHaveBeenCalled()
     })
 
     it('refuses to let the Game Owner delete a game reopened by Undo after it was Finished', async () => {
@@ -110,8 +113,9 @@ describe('deleting a Hosted Game', () => {
         { status: GameStatus.Finished },
         { status: GameStatus.Started, everFinished: true } as const
     ])('lets an Administrator delete a game that has been Finished ($status)', async (read) => {
-        const { service, deleted, game } = fixture(read)
+        const { service, deleted, archived, game } = fixture(read)
         await service.deleteGame(admin, game.id)
+        expect(archived).toHaveBeenCalledWith(game.id)
         expect(deleted).toHaveBeenCalledTimes(1)
     })
 
