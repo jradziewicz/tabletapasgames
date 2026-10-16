@@ -2,6 +2,9 @@ import type Ably from 'ably'
 import type {
     AdminAssignableRole,
     Bookmark,
+    BugReport,
+    BugReportRequest,
+    BugReportStatus,
     CanonicalActionReplay,
     Game,
     GameAction,
@@ -285,6 +288,18 @@ export class DummyRemoteApiService implements RemoteApiService {
 
     async getActiveGamesForTitle(_titleId: string): Promise<Game[]> {
         return this.fail('getActiveGamesForTitle')
+    }
+
+    async reportBug(_report: BugReportRequest): Promise<void> {
+        return this.fail('reportBug')
+    }
+
+    async getBugReports(_status?: BugReportStatus): Promise<BugReport[]> {
+        return this.fail('getBugReports')
+    }
+
+    async setBugReportStatus(_reportId: string, _status: BugReportStatus): Promise<BugReport> {
+        return this.fail('setBugReportStatus')
     }
 
     async setGameState(_state: GameState): Promise<void> {

@@ -11,6 +11,10 @@ import {
     type AdminAssignableRole,
     assertExists,
     Bookmark,
+    BugReport,
+    BugReportList,
+    BugReportStatus,
+    type BugReportRequest,
     CanonicalActionReplay,
     ProcessedActionReplay,
     Game,
@@ -893,6 +897,40 @@ export class TabletopApi {
             .json<GamesResponse>()
 
         return response.payload.games.map((game) => this.validateGame(game))
+    }
+
+    async reportBug(report: BugReportRequest): Promise<void> {
+        await this.wretch
+            .post(report, '/game/reportBug')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<void>()
+    }
+
+    async getBugReports(status?: BugReportStatus): Promise<BugReport[]> {
+        const query = status ? `?status=${encodeURIComponent(status)}` : ''
+        const response = await this.wretch
+            .get(`/admin/bugReports/list${query}`)
+            .options({ cache: 'no-store' })
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<unknown>()
+        Value.Assert(Type.Object({ payload: Type.Unknown() }), response)
+        const list = Value.Convert(BugReportList, response.payload)
+        Value.Assert(BugReportList, list)
+        return list.reports
+    }
+
+    async setBugReportStatus(reportId: string, status: BugReportStatus): Promise<BugReport> {
+        const response = await this.wretch
+            .post({ status }, `/admin/bugReports/${encodeURIComponent(reportId)}/status`)
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<unknown>()
+        Value.Assert(Type.Object({ payload: Type.Object({ report: Type.Unknown() }) }), response)
+        const report = Value.Convert(BugReport, response.payload.report)
+        Value.Assert(BugReport, report)
+        return report
     }
 
     async setGameState(state: GameState): Promise<void> {

@@ -55,3 +55,7 @@ export * from './persistence/stores/tournamentStore.js'
 export { TournamentTask } from './competitions/tournamentTasks.js'
 
 export * from './games/catalogService.js'
+
+export * from './bugReports/bugReportService.js'
+export * from './persistence/stores/bugReportStore.js'
+export * from './persistence/firestore/bugReportStore.js'
