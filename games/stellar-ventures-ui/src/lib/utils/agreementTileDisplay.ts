@@ -101,6 +101,11 @@ export const AGREEMENT_TOKEN_HEIGHT_PCT = 20 * 0.67 // 33% smaller than its orig
 export const AGREEMENT_TOKEN_TOP_PCT = 52 - AGREEMENT_TOKEN_HEIGHT_PCT / 2
 export const AGREEMENT_SHARE_HEIGHT_PCT = 26 * 1.33 // 33% larger than its original 26
 export const AGREEMENT_SHARE_TOP_PCT = 71 - AGREEMENT_SHARE_HEIGHT_PCT / 2
+// From the 4th signed Corporation on, the Shares no longer fit in one row along the bottom of the
+// Alien Shareholdings box, so they move up into its empty top half (just under the banner) and
+// use two rows of full-size certificates instead.
+export const AGREEMENT_SHARES_TWO_ROW_HEIGHT_PCT = AGREEMENT_SHARE_HEIGHT_PCT * 2 + 2
+export const AGREEMENT_SHARES_TWO_ROW_TOP_PCT = 20
 
 export function signedAgreementTileIcon(
     alienPlanetHexes: Hex[],

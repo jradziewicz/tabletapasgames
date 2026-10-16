@@ -20,6 +20,8 @@
     import {
         AGREEMENT_SHARE_HEIGHT_PCT,
         AGREEMENT_SHARE_TOP_PCT,
+        AGREEMENT_SHARES_TWO_ROW_HEIGHT_PCT,
+        AGREEMENT_SHARES_TWO_ROW_TOP_PCT,
         AGREEMENT_TOKEN_HEIGHT_PCT,
         AGREEMENT_TOKEN_TOP_PCT,
         AGREEMENT_TRACK_COLUMN_LEFT_PCT,
@@ -359,13 +361,17 @@
                     <!-- The Share(s), placed right inside the Alien Shareholdings box (below its
                          own "ALIEN SHAREHOLDINGS" banner), not below the image or off to the
                          side. -->
-                    <!-- Half-height certificates from the 4th on, so they all stay inside the box
-                         (same rule as AgreementPanel). -->
-                    {@const shareHeight =
-                        otherSignedCorporations.length + (showOwnShare ? 1 : 0) > 3 ? 'calc(50% - 2px)' : '100%'}
+                    <!-- From the 4th certificate on, two full-size rows moved up into the box's
+                         empty top half (same rule as AgreementPanel). -->
+                    {@const twoRows = otherSignedCorporations.length + (showOwnShare ? 1 : 0) > 3}
+                    {@const shareHeight = twoRows ? 'calc(50% - 2px)' : '100%'}
                     <div
                         class="absolute flex flex-wrap content-center items-center justify-center gap-1"
-                        style="left: {AGREEMENT_TRACK_COLUMN_LEFT_PCT[4]}%; width: {AGREEMENT_TRACK_COLUMN_WIDTH_PCT[4]}%; top: {AGREEMENT_SHARE_TOP_PCT}%; height: {AGREEMENT_SHARE_HEIGHT_PCT}%;"
+                        style="left: {AGREEMENT_TRACK_COLUMN_LEFT_PCT[4]}%; width: {AGREEMENT_TRACK_COLUMN_WIDTH_PCT[4]}%; top: {twoRows
+                            ? AGREEMENT_SHARES_TWO_ROW_TOP_PCT
+                            : AGREEMENT_SHARE_TOP_PCT}%; height: {twoRows
+                            ? AGREEMENT_SHARES_TWO_ROW_HEIGHT_PCT
+                            : AGREEMENT_SHARE_HEIGHT_PCT}%;"
                     >
                         {#each otherSignedCorporations as otherCorporation (otherCorporation.id)}
                             <img

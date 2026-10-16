@@ -18,6 +18,8 @@
         signedAgreementTileIcon,
         AGREEMENT_SHARE_HEIGHT_PCT,
         AGREEMENT_SHARE_TOP_PCT,
+        AGREEMENT_SHARES_TWO_ROW_HEIGHT_PCT,
+        AGREEMENT_SHARES_TWO_ROW_TOP_PCT,
         AGREEMENT_TOKEN_HEIGHT_PCT,
         AGREEMENT_TOKEN_TOP_PCT,
         AGREEMENT_TRACK_COLUMN_LEFT_PCT,
@@ -170,11 +172,15 @@
         {#if signedCorporations.length > 0}
             <div
                 class="absolute flex flex-wrap content-center items-center justify-center gap-1"
-                style="left: {AGREEMENT_TRACK_COLUMN_LEFT_PCT[4]}%; width: {AGREEMENT_TRACK_COLUMN_WIDTH_PCT[4]}%; top: {AGREEMENT_SHARE_TOP_PCT}%; height: {AGREEMENT_SHARE_HEIGHT_PCT}%;"
+                style="left: {AGREEMENT_TRACK_COLUMN_LEFT_PCT[4]}%; width: {AGREEMENT_TRACK_COLUMN_WIDTH_PCT[4]}%; top: {signedCorporations.length > 3
+                    ? AGREEMENT_SHARES_TWO_ROW_TOP_PCT
+                    : AGREEMENT_SHARE_TOP_PCT}%; height: {signedCorporations.length > 3
+                    ? AGREEMENT_SHARES_TWO_ROW_HEIGHT_PCT
+                    : AGREEMENT_SHARE_HEIGHT_PCT}%;"
             >
-                <!-- The box holds 3 full-size certificates side by side. From the 4th signer
-                     on they shrink to half height, so up to all 6 still fit inside the box
-                     instead of a 4th wrapping below it, out of view. -->
+                <!-- One row of 3 along the bottom of the box; from the 4th signer on, the row
+                     moves up into the box's empty top half as two rows of full-size
+                     certificates, so a 4th no longer wraps below the box out of view. -->
                 {#each signedCorporations as corporation (corporation.id)}
                     <img
                         src={CorporationShareCertificateIcons[corporation.id]}
