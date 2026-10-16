@@ -7,6 +7,7 @@ import {
     normalizeMasterSeed,
     assert,
     ActionSource,
+    GameResult,
     calculateActionChecksum,
     createGameFork,
     GameForkError,
@@ -1099,6 +1100,14 @@ export class GameService {
                     const lastPlayerAction = findLast(actions, (a) => a.playerId != undefined)
                     if (lastPlayerAction) {
                         gameUpdates.lastActionPlayerId = lastPlayerAction.playerId
+                    }
+                    if (
+                        !existingState.result &&
+                        newState.result &&
+                        newState.result !== GameResult.Abandoned &&
+                        definition.runtime.scoring
+                    ) {
+                        gameUpdates.finalScores = definition.runtime.scoring.finalScores(newState)
                     }
 
                     return UpdateValidationResult.Proceed

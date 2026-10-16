@@ -924,6 +924,7 @@ export class FirestoreGameStore implements GameStore {
                     gameUpdates.finishedAt = undefined
                     gameUpdates.result = undefined
                     gameUpdates.winningPlayerIds = []
+                    gameUpdates.finalScores = undefined
                 }
             }
 
@@ -1247,6 +1248,7 @@ export class FirestoreGameStore implements GameStore {
                 gameUpdates.finishedAt = undefined
                 gameUpdates.result = undefined
                 gameUpdates.winningPlayerIds = []
+                gameUpdates.finalScores = undefined
             }
 
             Object.assign(updatedGame, gameUpdates)
