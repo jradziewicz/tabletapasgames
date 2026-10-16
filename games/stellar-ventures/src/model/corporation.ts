@@ -235,6 +235,11 @@ export const CorporatePowerState = Type.Object({
 export type AgreementState = Type.Static<typeof AgreementState>
 export const AgreementState = Type.Object({
     planetCountAtSigning: Type.Number(),
+    // The Alien Planet hex whose tile this Corporation flipped to sign. Two Corporations can
+    // share a hex, so the UI can't reliably work this out from Outposts alone (it once showed the
+    // same 4-chevron tile for two Corporations). Optional: signings from before this field
+    // existed fall back to agreementTileDisplay.ts's findSignedAgreementHex matching.
+    hexId: Type.Optional(Type.String()),
     // Commit Tax Fraud (Borders & Taxes rulebook addendum, Sign The Agreement): half the Tax Box
     // (rounded up), taken into this Corporation's Treasury the instant it signs - see
     // actions/signTheAgreement.ts. Only ever set on the Borders & Taxes map (state.usesTaxes);

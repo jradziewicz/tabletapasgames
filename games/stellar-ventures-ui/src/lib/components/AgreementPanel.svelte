@@ -233,7 +233,11 @@
                                 </div>
                             {/if}
                             {#if corporation.agreement}
-                                {@const tileIcon = signedAgreementTileIcon(alienPlanetHexes, corporation.id)}
+                                {@const tileIcon = signedAgreementTileIcon(
+                                    alienPlanetHexes,
+                                    corporation.id,
+                                    gameSession.gameState.corporations
+                                )}
                                 {#if tileIcon}
                                     <!-- The actual Alien Agreement Tile this Corporation flipped
                                          to sign - takes over the same spot the handshake token

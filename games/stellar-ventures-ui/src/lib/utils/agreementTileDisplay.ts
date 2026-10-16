@@ -41,19 +41,51 @@ export const AlienAgreementTileHiddenIcon = alienHexBack
  * sign once, and a hex's tile is only ever flipped by that one signing action (Nebular Explorers
  * deals a fresh, still-hidden tile to a newly-converted hex rather than flipping one - see
  * actions/nebularExplorers.ts), so the Alien Planet hex where this Corporation holds an Outpost
- * AND the tile is no longer hidden is that one signing hex - unless two Corporations happen to
- * share that same hex (a hex can hold up to 2 Outposts) and only one of them actually signed
- * there, in which case this picks whichever matching hex comes first rather than trying to
- * disambiguate further. Returns undefined if this Corporation hasn't signed (or the signing hex
- * can't be found), same as before.
+ * AND the tile is no longer hidden is that one signing hex. Signings now record that hex
+ * (agreement.hexId); for older ones without it, two Corporations sharing a hex are told apart by
+ * matching (see below), so a single tile is never shown for both.
  */
 export function findSignedAgreementHex(
     alienPlanetHexes: Hex[],
-    corporationId: CorporationId
+    corporationId: CorporationId,
+    corporations: readonly { id: CorporationId; agreement?: { hexId?: string } }[]
 ): Hex | undefined {
-    return alienPlanetHexes.find(
-        (hex) => hex.outposts.includes(corporationId) && hex.alienAgreementTileHidden === false
+    const byId = new Map(alienPlanetHexes.map((hex) => [hex.id, hex]))
+    const recorded = corporations.find((c) => c.id === corporationId)?.agreement?.hexId
+    if (recorded) {
+        return byId.get(recorded)
+    }
+    // Older signings didn't record their hex. Each flipped tile was flipped by exactly one
+    // signing, so match signed Corporations to flipped hexes they have an Outpost on: hexes
+    // another Corporation recorded are taken, and any Corporation left with a single candidate
+    // claims it (repeating until nothing changes). This stops two Corporations that share a hex
+    // from both showing that one tile.
+    const flipped = alienPlanetHexes.filter((hex) => hex.alienAgreementTileHidden === false)
+    const claimed = new Set(
+        corporations.map((c) => c.agreement?.hexId).filter((id): id is string => !!id)
     )
+    const assigned = new Map<CorporationId, string>()
+    const unresolved = corporations.filter((c) => c.agreement && !c.agreement.hexId)
+    let progress = true
+    while (progress) {
+        progress = false
+        for (const corporation of unresolved) {
+            if (assigned.has(corporation.id)) continue
+            const candidates = flipped.filter(
+                (hex) => hex.outposts.includes(corporation.id) && !claimed.has(hex.id)
+            )
+            if (candidates.length === 1) {
+                assigned.set(corporation.id, candidates[0]!.id)
+                claimed.add(candidates[0]!.id)
+                progress = true
+            }
+        }
+    }
+    const resolved = assigned.get(corporationId)
+    if (resolved) {
+        return byId.get(resolved)
+    }
+    return flipped.find((hex) => hex.outposts.includes(corporationId) && !claimed.has(hex.id))
 }
 
 // Column widths measured directly off theAgreement.png (the co-designer's own Trackers &
@@ -109,9 +141,10 @@ export const AGREEMENT_SHARES_TWO_ROW_TOP_PCT = 20
 
 export function signedAgreementTileIcon(
     alienPlanetHexes: Hex[],
-    corporationId: CorporationId
+    corporationId: CorporationId,
+    corporations: readonly { id: CorporationId; agreement?: { hexId?: string } }[]
 ): string | undefined {
-    const hex = findSignedAgreementHex(alienPlanetHexes, corporationId)
+    const hex = findSignedAgreementHex(alienPlanetHexes, corporationId, corporations)
     if (!hex || hex.alienAgreementTileChevrons === undefined) {
         return undefined
     }
