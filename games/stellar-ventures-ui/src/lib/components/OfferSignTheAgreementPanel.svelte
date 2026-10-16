@@ -359,8 +359,12 @@
                     <!-- The Share(s), placed right inside the Alien Shareholdings box (below its
                          own "ALIEN SHAREHOLDINGS" banner), not below the image or off to the
                          side. -->
+                    <!-- Half-height certificates from the 4th on, so they all stay inside the box
+                         (same rule as AgreementPanel). -->
+                    {@const shareHeight =
+                        otherSignedCorporations.length + (showOwnShare ? 1 : 0) > 3 ? 'calc(50% - 2px)' : '100%'}
                     <div
-                        class="absolute flex flex-wrap items-center justify-center gap-1"
+                        class="absolute flex flex-wrap content-center items-center justify-center gap-1"
                         style="left: {AGREEMENT_TRACK_COLUMN_LEFT_PCT[4]}%; width: {AGREEMENT_TRACK_COLUMN_WIDTH_PCT[4]}%; top: {AGREEMENT_SHARE_TOP_PCT}%; height: {AGREEMENT_SHARE_HEIGHT_PCT}%;"
                     >
                         {#each otherSignedCorporations as otherCorporation (otherCorporation.id)}
@@ -368,8 +372,8 @@
                                 src={CorporationShareCertificateIcons[otherCorporation.id]}
                                 alt="{CorporationDisplayNames[otherCorporation.id]} Share Certificate - Alien Shareholdings"
                                 title="{CorporationDisplayNames[otherCorporation.id]} - Alien Shareholdings"
-                                class="h-full w-auto rounded-sm object-contain shadow-lg"
-                                style="aspect-ratio: {SHARE_CERTIFICATE_ASPECT};"
+                                class="w-auto rounded-sm object-contain shadow-lg"
+                                style="aspect-ratio: {SHARE_CERTIFICATE_ASPECT}; height: {shareHeight};"
                             />
                         {/each}
                         {#if showOwnShare}
@@ -378,8 +382,8 @@
                                     src={CorporationShareCertificateIcons[corporationId]}
                                     alt="{CorporationDisplayNames[corporationId]} Share Certificate - Alien Shareholdings"
                                     title="Alien Shareholdings"
-                                    class="reveal-flip h-full w-auto rounded-sm object-contain shadow-lg"
-                                    style="aspect-ratio: {SHARE_CERTIFICATE_ASPECT};"
+                                    class="reveal-flip w-auto rounded-sm object-contain shadow-lg"
+                                    style="aspect-ratio: {SHARE_CERTIFICATE_ASPECT}; height: {shareHeight};"
                                 />
                             {/key}
                         {/if}

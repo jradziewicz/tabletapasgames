@@ -169,15 +169,19 @@
         {/each}
         {#if signedCorporations.length > 0}
             <div
-                class="absolute flex flex-wrap items-center justify-center gap-1"
+                class="absolute flex flex-wrap content-center items-center justify-center gap-1"
                 style="left: {AGREEMENT_TRACK_COLUMN_LEFT_PCT[4]}%; width: {AGREEMENT_TRACK_COLUMN_WIDTH_PCT[4]}%; top: {AGREEMENT_SHARE_TOP_PCT}%; height: {AGREEMENT_SHARE_HEIGHT_PCT}%;"
             >
+                <!-- The box holds 3 full-size certificates side by side. From the 4th signer
+                     on they shrink to half height, so up to all 6 still fit inside the box
+                     instead of a 4th wrapping below it, out of view. -->
                 {#each signedCorporations as corporation (corporation.id)}
                     <img
                         src={CorporationShareCertificateIcons[corporation.id]}
                         alt="{CorporationDisplayNames[corporation.id]} Share Certificate - Alien Shareholdings"
                         title="{CorporationDisplayNames[corporation.id]} - Alien Shareholdings"
-                        class="h-full w-auto rounded-sm object-contain shadow-lg"
+                        class="w-auto rounded-sm object-contain shadow-lg"
+                        style:height={signedCorporations.length > 3 ? 'calc(50% - 2px)' : '100%'}
                     />
                 {/each}
             </div>
