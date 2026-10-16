@@ -248,6 +248,10 @@ export class StellarVenturesGameSession extends GameSession<
     }
 
     override async undo() {
+        // A finished game can't be undone (the Undo button is hidden then too).
+        if (this.gameState.result) {
+            return
+        }
         const step = this.localUndoSteps.at(-1)
         if (step) {
             this.localUndoSteps = this.localUndoSteps.slice(0, -1)
