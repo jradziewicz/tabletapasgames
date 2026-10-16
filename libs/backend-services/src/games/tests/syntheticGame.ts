@@ -220,3 +220,13 @@ export const SyntheticDefinition = {
         }
     }
 }
+
+// The same title in the public catalog, for specs about lobby rules rather than title access:
+// SyntheticDefinition is a beta title, which only beta testers and admins may play.
+export const PublicSyntheticDefinition = {
+    ...SyntheticDefinition,
+    info: {
+        ...SyntheticDefinition.info,
+        metadata: { ...SyntheticDefinition.info.metadata, beta: false }
+    }
+}

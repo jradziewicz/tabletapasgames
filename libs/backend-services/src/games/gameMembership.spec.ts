@@ -15,7 +15,7 @@ import { UserService } from '../users/userService.js'
 import { TokenService } from '../tokens/tokenService.js'
 import { LocalTaskService } from '../tasks/localTasksService.js'
 import { DefaultNotificationService } from '../notifications/defaultNotificationService.js'
-import { SyntheticDefinition } from './tests/syntheticGame.js'
+import { PublicSyntheticDefinition } from './tests/syntheticGame.js'
 
 const users: User[] = ['a', 'b', 'c'].map((id) => ({
     id,
@@ -100,7 +100,7 @@ function fixture({ isPublic = true, lastSlot = false, ownerId = 'a' } = {}) {
         tasks,
         notifications,
         cache,
-        { synthetic: SyntheticDefinition }
+        { synthetic: PublicSyntheticDefinition }
     )
     return { service, store, cache, addKeys, notifications, tasks, read: () => stored, initial }
 }
@@ -139,7 +139,13 @@ describe('lobby membership transactions', () => {
     it.each([true, false])(
         'preserves another join when declining (public: %s)',
         async (isPublic) => {
-            const { service, read, initial } = fixture({ isPublic })
+            // The join fills the lobby. An invite-only game its owner plays in would start at
+            // once (TableTapas), leaving nothing to decline, so the invite-only case uses an
+            // owner who holds no seat: its lobby stays open through the countdown.
+            const { service, read, initial } = fixture({
+                isPublic,
+                ...(isPublic ? {} : { ownerId: 'developer' })
+            })
             for (const game of [read(), initial]) {
                 Object.assign(game.players[1], {
                     userId: 'b',
@@ -312,7 +318,7 @@ describe('game auto-start', () => {
     it('ignores the task when the owner already started the game', async () => {
         const { service, read, store } = await fillLobby()
         await service.startGame({
-            definition: SyntheticDefinition,
+            definition: PublicSyntheticDefinition,
             gameId: 'lobby',
             user: users[0]
         })

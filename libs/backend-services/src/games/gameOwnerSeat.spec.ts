@@ -12,7 +12,7 @@ import {
     type Player,
     type User
 } from '@tabletop/common'
-import { SyntheticDefinition } from './tests/syntheticGame.js'
+import { PublicSyntheticDefinition, SyntheticDefinition } from './tests/syntheticGame.js'
 import { GameService } from './gameService.js'
 import { FirestoreGameStore } from '../persistence/firestore/gameStore.js'
 import { RedisCacheService } from '../cache/cacheService.js'
@@ -38,7 +38,7 @@ const regular = user('regular')
 const invitees = [user('b'), user('c'), user('d')]
 afterEach(() => vi.restoreAllMocks())
 
-function fixture() {
+function fixture(definition: typeof SyntheticDefinition = PublicSyntheticDefinition) {
     const cache: RedisCacheService = Object.create(RedisCacheService.prototype)
     const store = new FirestoreGameStore(cache, new Firestore({ projectId: 'owner-seat-test' }))
     const users: UserService = Object.create(UserService.prototype)
@@ -67,10 +67,11 @@ function fixture() {
         addTransport: vi.fn(),
         registerNotificationSubscription: unused,
         unregisterNotificationSubscription: unused,
+        findNotificationSubscriptions: unused,
         sendNotification: vi.fn(async () => {})
     }
     const service = new GameService(store, users, tokens, tasks, notifications, cache, {
-        synthetic: SyntheticDefinition
+        synthetic: definition
     })
     const write = vi.spyOn(store, 'createGame').mockImplementation(async (game) => game)
     return { service, store, tasks, notifications, write }
@@ -79,7 +80,7 @@ function fixture() {
 function inviteesOnly(): Partial<Game> {
     return {
         id: 'invitees-only',
-        typeId: SyntheticDefinition.info.id,
+        typeId: PublicSyntheticDefinition.info.id,
         name: 'Invitees only',
         isPublic: false,
         config: {},
@@ -106,7 +107,7 @@ function seat(userId: string): Player {
 function storedGame(owner: User, playerUserIds: string[]): Game {
     return {
         id: 'owned',
-        typeId: SyntheticDefinition.info.id,
+        typeId: PublicSyntheticDefinition.info.id,
         ownerId: owner.id,
         name: 'Owned',
         isPublic: false,
@@ -135,7 +136,7 @@ describe('games whose owner is not a player', () => {
     it('lets a developer create a private game of invitees and keeps them informed', async () => {
         const { service, notifications, write } = fixture()
         const created = await service.createGame({
-            definition: SyntheticDefinition,
+            definition: PublicSyntheticDefinition,
             game: inviteesOnly(),
             owner: developer
         })
@@ -151,7 +152,7 @@ describe('games whose owner is not a player', () => {
         const { service, write } = fixture()
         await expect(
             service.createGame({
-                definition: SyntheticDefinition,
+                definition: PublicSyntheticDefinition,
                 game: inviteesOnly(),
                 owner: regular
             })
@@ -168,7 +169,7 @@ describe('games whose owner is not a player', () => {
             status: PlayerStatus.Open
         }))
         const created = await service.createGame({
-            definition: SyntheticDefinition,
+            definition: PublicSyntheticDefinition,
             game: { ...inviteesOnly(), isPublic: true, players: openSeats },
             owner: developer
         })
@@ -181,7 +182,7 @@ describe('games whose owner is not a player', () => {
         const { service, write } = fixture()
         await expect(
             service.createGame({
-                definition: SyntheticDefinition,
+                definition: PublicSyntheticDefinition,
                 game: { ...inviteesOnly(), isPublic: true },
                 owner: regular
             })
@@ -290,7 +291,7 @@ describe('unlisted games', () => {
     it('lets a developer create one without telling everyone', async () => {
         const { service, notifications, write } = fixture()
         const created = await service.createGame({
-            definition: SyntheticDefinition,
+            definition: PublicSyntheticDefinition,
             game: { ...inviteesOnly(), isPublic: true, unlisted: true, players: openSeats },
             owner: developer
         })
@@ -308,7 +309,7 @@ describe('unlisted games', () => {
             return older
         })
         const created = await service.createGame({
-            definition: SyntheticDefinition,
+            definition: PublicSyntheticDefinition,
             game: { ...inviteesOnly(), isPublic: true, unlisted: true, players: openSeats },
             owner: developer
         })
@@ -330,7 +331,7 @@ describe('unlisted games', () => {
         const { service, write } = fixture()
         await expect(
             service.createGame({
-                definition: SyntheticDefinition,
+                definition: PublicSyntheticDefinition,
                 game: {
                     ...inviteesOnly(),
                     isPublic: true,
@@ -347,7 +348,7 @@ describe('unlisted games', () => {
         const { service, write } = fixture()
         await expect(
             service.createGame({
-                definition: SyntheticDefinition,
+                definition: PublicSyntheticDefinition,
                 game: { ...inviteesOnly(), unlisted: true },
                 owner: developer
             })
@@ -367,6 +368,25 @@ describe('unlisted games', () => {
         const joined = await service.joinGame({ user: regular, gameId: existing.id })
         expect(findPlayerForUserId(joined, regular.id)?.status).toBe(PlayerStatus.Joined)
         expect(sentTopics(notifications).flat()).not.toContain('global')
+    })
+
+    // TableTapas enforces alpha/beta title access on the server, so an unlisted game for a
+    // restricted title recruits only users who may play that title.
+    it('still keeps a user without access out of an unlisted beta title', async () => {
+        const { service, store } = fixture(SyntheticDefinition)
+        const existing: Game = {
+            ...storedGame(developer, ['b']),
+            isPublic: true,
+            unlisted: true,
+            players: [{ ...seat('b'), status: PlayerStatus.Joined }, ...openSeats.slice(1)]
+        }
+        acceptUpdates(store, existing)
+        await expect(service.joinGame({ user: regular, gameId: existing.id })).rejects.toThrow(
+            'is not a player'
+        )
+        const tester = { ...regular, id: 'tester', roles: [Role.User, Role.BetaTester] }
+        const joined = await service.joinGame({ user: tester, gameId: existing.id })
+        expect(findPlayerForUserId(joined, tester.id)?.status).toBe(PlayerStatus.Joined)
     })
 })
 
