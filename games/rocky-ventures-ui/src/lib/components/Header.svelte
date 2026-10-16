@@ -126,12 +126,12 @@
     </div>
 
     <div class="flex shrink-0 items-center gap-2 text-[15px] max-sm:ml-auto">
-        <div class="flex items-center gap-1 text-[10px] font-semibold sm:gap-2 sm:text-[13px]">
+        <div class="flex items-center gap-1 text-[10px] font-semibold sm:gap-2.5 sm:text-sm lg:text-base">
             {#each triggerChips as chip (chip.key)}
                 <!-- Small hover (or tap) box with the details, rather than a slow native tooltip. -->
                 <button
                     type="button"
-                    class="trigger-chip relative cursor-default rounded border px-1.5 py-0.5 sm:rounded-md sm:border-2 sm:px-2.5 sm:py-1"
+                    class="trigger-chip relative cursor-default rounded border px-1.5 py-0.5 sm:rounded-lg sm:border-2 sm:px-3 sm:py-1.5 lg:px-4 lg:py-2"
                     class:dragon-alert={chip.pulse}
                     style="border-color: {ChipColors[chip.level].border}; color: {ChipColors[chip.level].text}; background-color: {ChipColors[chip.level].background};"
                     aria-label={chip.tip}
