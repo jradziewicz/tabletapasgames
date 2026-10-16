@@ -14,7 +14,7 @@ import { UserService } from '../users/userService.js'
 import { TokenService } from '../tokens/tokenService.js'
 import { LocalTaskService } from '../tasks/localTasksService.js'
 import { DefaultNotificationService } from '../notifications/defaultNotificationService.js'
-import { SyntheticDefinition } from './tests/syntheticGame.js'
+import { SyntheticDefinition, SyntheticRuntime } from './tests/syntheticGame.js'
 import { DEFERRED_TURN_REMINDER_INDEX, TURN_REMINDER_DELAYS } from './turnReminders.js'
 
 const users: User[] = ['a', 'b', 'c'].map((id) => ({
@@ -202,6 +202,14 @@ describe('lobby membership transactions', () => {
         const createPushTask = vi
             .spyOn(LocalTaskService.prototype, 'createPushTask')
             .mockResolvedValue()
+        // The synthetic game starts with no active player; give it one so a chain starts.
+        const initializer = SyntheticRuntime.initializer
+        const initializeGameState = initializer.initializeGameState.bind(initializer)
+        vi.spyOn(initializer, 'initializeGameState').mockImplementation((...args) => {
+            const state = initializeGameState(...args)
+            state.activePlayerIds = ['p1']
+            return state
+        })
 
         const started = await service.startGame({
             definition: SyntheticDefinition,
