@@ -910,8 +910,8 @@ export class TabletopApi {
     async getBugReports(status?: BugReportStatus): Promise<BugReport[]> {
         const query = status ? `?status=${encodeURIComponent(status)}` : ''
         const response = await this.wretch
-            .get(`/admin/bugReports/list${query}`)
             .options({ cache: 'no-store' })
+            .get(`/admin/bugReports/list${query}`)
             .unauthorized(this.on401)
             .badRequest(this.handleError)
             .json<unknown>()
