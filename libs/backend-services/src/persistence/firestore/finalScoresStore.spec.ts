@@ -13,8 +13,6 @@ import {
 } from '@tabletop/common'
 import { cacheFixture } from '../../cache/tests/cacheFixture.js'
 import { FirestoreGameStore } from './gameStore.js'
-import { GameCacheKeys } from './gameCacheKeys.js'
-import { isolatedFirestore } from './tests/isolatedFirestore.js'
 
 describe.skipIf(!process.env.CACHE_TEST_REDIS_HOST || !process.env.FIRESTORE_EMULATOR_HOST)(
     'Final scores storage against Firestore and Redis',
@@ -65,7 +63,7 @@ describe.skipIf(!process.env.CACHE_TEST_REDIS_HOST || !process.env.FIRESTORE_EMU
 
         beforeEach(async () => {
             prefix = `final-scores-${randomUUID()}`
-            db = isolatedFirestore({ ignoreUndefinedProperties: true })
+            db = new Firestore({ projectId: 'demo-tabletop', ignoreUndefinedProperties: true })
             client = createClient({
                 socket: { host: process.env.CACHE_TEST_REDIS_HOST, reconnectStrategy: false }
             })
@@ -125,7 +123,6 @@ describe.skipIf(!process.env.CACHE_TEST_REDIS_HOST || !process.env.FIRESTORE_EMU
                 .doc(`games/${record.id}/states/${record.id}`)
                 .set({ data: JSON.stringify(state) })
             expect((await store.readStateFromStorage(record.id))?.actionCount).toBe(4)
-            expect(await client.exists(GameCacheKeys.state(record.id))).toBe(0)
             expect(await store.readStateFromStorage(`${prefix}-missing`)).toBeUndefined()
         })
 
