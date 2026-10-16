@@ -1,6 +1,12 @@
 <script lang="ts">
     import { Card, Hr, Button, Modal, Spinner, type ButtonProps } from 'flowbite-svelte'
-    import { Game, GameStatus, PlayerStatus, GameResult } from '@tabletop/common'
+    import {
+        Game,
+        GameStatus,
+        PlayerStatus,
+        GameResult,
+        ownerMayDeleteGame
+    } from '@tabletop/common'
     import { gameCardOptions } from '$lib/utils/gameOptions'
     import { playerSortValue, playerStatusDisplay } from '$lib/utils/player'
     import { hasPendingGameInvitation } from '$lib/utils/gameInvitation'
@@ -95,7 +101,10 @@
     let canPlay = $derived(isMine && game.status === GameStatus.Started)
     let canWatch = $derived(!isMine && game.status === GameStatus.Started)
     let canRevisit = $derived(game.status === GameStatus.Finished)
-    let canDelete = $derived(!game.tournament && (isOwnedByMe || authorizationService.isAdmin))
+    let canDelete = $derived(
+        !game.tournament &&
+            (authorizationService.isAdmin || (isOwnedByMe && ownerMayDeleteGame(game)))
+    )
 
     let confirmDelete = $state(false)
 

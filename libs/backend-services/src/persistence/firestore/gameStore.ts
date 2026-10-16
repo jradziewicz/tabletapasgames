@@ -42,7 +42,9 @@ import {
     assert,
     assertExists,
     type GameHistoryPage,
-    type GameHistoryCursor
+    type GameHistoryCursor,
+    type UserGameStats,
+    summarizeUserGames
 } from '@tabletop/common'
 import {
     AlreadyExistsError,
@@ -87,6 +89,8 @@ import {
 } from '../model/storedTournamentSchedule.js'
 
 const ACTION_CHUNK_SIZE = 200
+const HISTORY_PAGE_CACHE_SECONDS = 24 * 60 * 60
+const GAME_STATS_CACHE_SECONDS = 7 * 24 * 60 * 60
 
 export class FirestoreGameStore implements GameStore {
     readonly games: CollectionReference<Game>
@@ -676,32 +680,66 @@ export class FirestoreGameStore implements GameStore {
     }
 
     async findGameHistory(user: User, before?: GameHistoryCursor): Promise<GameHistoryPage> {
-        const guard = GameCacheKeys.history(user.id, before !== undefined)
+        return this.readFinishedGamesView({
+            guard: GameCacheKeys.history(user.id, before !== undefined),
+            key: GameCacheKeys.historyPage(user.id, JSON.stringify(before ?? null)),
+            forSeconds: HISTORY_PAGE_CACHE_SECONDS,
+            query: () => this.queryGameHistory(user, before),
+            restore: (page) => ({
+                ...page,
+                games: page.games.map((game) => this.normalizeGame(game))
+            })
+        })
+    }
+
+    async findGameStats(user: User): Promise<UserGameStats> {
+        return this.readFinishedGamesView({
+            guard: GameCacheKeys.history(user.id),
+            key: GameCacheKeys.stats(user.id),
+            forSeconds: GAME_STATS_CACHE_SECONDS,
+            query: async () => {
+                const snapshot = await this.readQuery(this.finishedGames(user))
+                this.recordRead('game', Math.max(1, snapshot.size))
+                return summarizeUserGames(
+                    snapshot.docs.map((document) => this.normalizeGame(document.data())),
+                    user.id
+                )
+            },
+            restore: (stats) => stats
+        })
+    }
+
+    private async readFinishedGamesView<T>({
+        guard,
+        key,
+        forSeconds,
+        query,
+        restore
+    }: {
+        guard: string
+        key: string
+        forSeconds: number
+        query: () => Promise<T>
+        restore: (cached: T) => T
+    }): Promise<T> {
         const generation = await this.historyGeneration(guard)
         return this.cacheService.readConsistently({
             keys: [guard],
             read: async () => {
                 const current = await this.cacheService.get<string>(guard)
-                if (!current.cached || current.value !== generation)
-                    return this.queryGameHistory(user, before)
-                const key = GameCacheKeys.historyPage(user.id, JSON.stringify(before ?? null))
-                const cached = await this.cacheService.get<{
-                    generation: string
-                    page: GameHistoryPage
-                }>(key)
-                if (cached.cached && cached.value?.generation === generation) {
-                    return {
-                        ...cached.value.page,
-                        games: cached.value.page.games.map((game) => this.normalizeGame(game))
-                    }
-                }
-                const page = await this.queryGameHistory(user, before)
-                await this.cacheService.set(key, { generation, page }, 86400).catch((error) => {
-                    console.error('Game history cache fill failed', error)
-                })
-                return page
+                if (!current.cached || current.value !== generation) return query()
+                const cached = await this.cacheService.get<{ generation: string; value: T }>(key)
+                if (cached.cached && cached.value?.generation === generation)
+                    return restore(cached.value.value)
+                const value = await query()
+                await this.cacheService
+                    .set(key, { generation, value }, forSeconds)
+                    .catch((error) => {
+                        console.error('Finished games view cache fill failed', error)
+                    })
+                return value
             },
-            fallback: () => this.queryGameHistory(user, before)
+            fallback: query
         })
     }
 
@@ -714,15 +752,19 @@ export class FirestoreGameStore implements GameStore {
         return generation
     }
 
-    private async queryGameHistory(
-        user: User,
-        before?: GameHistoryCursor
-    ): Promise<GameHistoryPage> {
-        let query = this.games
+    private finishedGames(user: User) {
+        return this.games
             .where('userIds', 'array-contains', user.id)
             .where('status', '==', GameStatus.Finished)
             .orderBy('finishedAt', 'desc')
             .orderBy(FieldPath.documentId(), 'desc')
+    }
+
+    private async queryGameHistory(
+        user: User,
+        before?: GameHistoryCursor
+    ): Promise<GameHistoryPage> {
+        let query = this.finishedGames(user)
         if (before) query = query.startAfter(new Date(before.time), before.id)
         const snapshot = await this.readQuery(query.limit(26))
         this.recordRead('game', Math.max(1, snapshot.size))
@@ -919,12 +961,9 @@ export class FirestoreGameStore implements GameStore {
                     gameUpdates.finishedAt = new Date()
                     gameUpdates.result = state.result
                     gameUpdates.winningPlayerIds = state.winningPlayerIds
+                    gameUpdates.everFinished = true
                 } else {
-                    gameUpdates.status = GameStatus.Started
-                    gameUpdates.finishedAt = undefined
-                    gameUpdates.result = undefined
-                    gameUpdates.winningPlayerIds = []
-                    gameUpdates.finalScores = undefined
+                    Object.assign(gameUpdates, this.reopenedGameFields())
                 }
             }
 
@@ -1244,11 +1283,7 @@ export class FirestoreGameStore implements GameStore {
             gameUpdates.lastActionAt = gameUpdates.updatedAt
 
             if (existingState.result !== state.result && !state.result) {
-                gameUpdates.status = GameStatus.Started
-                gameUpdates.finishedAt = undefined
-                gameUpdates.result = undefined
-                gameUpdates.winningPlayerIds = []
-                gameUpdates.finalScores = undefined
+                Object.assign(gameUpdates, this.reopenedGameFields())
             }
 
             Object.assign(updatedGame, gameUpdates)
@@ -1796,6 +1831,17 @@ export class FirestoreGameStore implements GameStore {
     ): Promise<void> {
         const keys = GameCacheKeys.changedLists(before, after)
         if (keys.length) await locks.addKeys(keys)
+    }
+
+    private reopenedGameFields(): Partial<Game> {
+        return {
+            status: GameStatus.Started,
+            finishedAt: undefined,
+            result: undefined,
+            winningPlayerIds: [],
+            finalScores: undefined,
+            everFinished: true
+        }
     }
 
     private createGameUpdateDocument(fields: Partial<Game>): DocumentData {

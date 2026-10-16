@@ -13,6 +13,7 @@ import {
     GameForkError,
     findLast,
     findPlayerForUserId,
+    ownerMayDeleteGame,
     Game,
     GameAction,
     GameDefinition,
@@ -56,6 +57,7 @@ import {
     DuplicatePlayerError,
     GameAlreadyStartedError,
     GameNotFoundError,
+    FinishedGameDeletionError,
     GameNotInProgressError,
     GameNotWaitingForPlayersError,
     GameNotWaitingToStartError,
@@ -307,8 +309,12 @@ export class GameService {
         }
         assertOrdinaryGame(game)
 
-        if (game.ownerId !== user.id && !user.roles.includes(Role.Admin)) {
+        const isAdmin = user.roles.includes(Role.Admin)
+        if (game.ownerId !== user.id && !isAdmin) {
             throw new UnauthorizedAccessError({ user, gameId })
+        }
+        if (!isAdmin && !ownerMayDeleteGame(game)) {
+            throw new FinishedGameDeletionError({ id: gameId })
         }
 
         // A finished game is archived before it's erased, so deleting it from a player's list
@@ -482,6 +488,10 @@ export class GameService {
 
     async getGameHistoryForUser(user: User, before?: GameHistoryCursor) {
         return this.gameStore.findGameHistory(user, before)
+    }
+
+    async getGameStatsForUser(user: User) {
+        return this.gameStore.findGameStats(user)
     }
 
     async setGameState(state: GameState): Promise<void> {

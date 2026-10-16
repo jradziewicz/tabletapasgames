@@ -37,7 +37,11 @@ export class GameCacheKeys {
     }
 
     static historyPage(userId: string, cursor: string): string {
-        return `game-history-page-${userId}-${cursor}`
+        return `finished-games-history-${userId}-${cursor}`
+    }
+
+    static stats(userId: string): string {
+        return `finished-games-stats-${userId}`
     }
 
     static chatRevision(gameId: string): string {
