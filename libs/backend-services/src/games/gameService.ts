@@ -7,11 +7,13 @@ import {
     normalizeMasterSeed,
     assert,
     ActionSource,
+    GameResult,
     calculateActionChecksum,
     createGameFork,
     GameForkError,
     findLast,
     findPlayerForUserId,
+    ownerMayDeleteGame,
     Game,
     GameAction,
     GameDefinition,
@@ -55,6 +57,7 @@ import {
     DuplicatePlayerError,
     GameAlreadyStartedError,
     GameNotFoundError,
+    FinishedGameDeletionError,
     GameNotInProgressError,
     GameNotWaitingForPlayersError,
     GameNotWaitingToStartError,
@@ -103,6 +106,11 @@ import {
     TournamentGameError
 } from './tournamentGames.js'
 import * as Value from 'typebox/value'
+import {
+    runFinalScoresBackfillPage,
+    startFinalScoresBackfill,
+    type FinalScoresBackfillTask
+} from './finalScoresBackfill.js'
 
 export class GameService {
     constructor(
@@ -306,17 +314,28 @@ export class GameService {
         }
         assertOrdinaryGame(game)
 
-        if (game.ownerId !== user.id && !user.roles.includes(Role.Admin)) {
+        const isAdmin = user.roles.includes(Role.Admin)
+        if (game.ownerId !== user.id && !isAdmin) {
             throw new UnauthorizedAccessError({ user, gameId })
         }
 
-        // A finished game is archived before it's erased, so deleting it from a player's list
-        // never loses the play for later analysis. If archiving fails, the delete doesn't happen.
-        if (game.status === GameStatus.Finished) {
+        // Only an Administrator may delete a game that has ever finished. Checked here so a
+        // refused owner never triggers an archive, and again on the stored game inside the
+        // delete transaction so a delete racing the finishing move is refused too.
+        const authorizeDeletion = (existingGame: Game) => {
+            if (!isAdmin && !ownerMayDeleteGame(existingGame)) {
+                throw new FinishedGameDeletionError({ id: gameId })
+            }
+        }
+        authorizeDeletion(game)
+
+        // A game that has ever finished is archived before it's erased, so deleting it never
+        // loses the play for later analysis. If archiving fails, the delete doesn't happen.
+        if (game.status === GameStatus.Finished || game.everFinished) {
             await this.gameStore.archiveGame(gameId)
         }
 
-        await this.gameStore.deleteGame(game)
+        await this.gameStore.deleteGame(game, authorizeDeletion)
         if (game.isPublic) {
             await this.notifyGlobal(GameNotificationAction.Delete, { game })
         } else {
@@ -481,6 +500,21 @@ export class GameService {
 
     async getGameHistoryForUser(user: User, before?: GameHistoryCursor) {
         return this.gameStore.findGameHistory(user, before)
+    }
+
+    async getGameStatsForUser(user: User) {
+        return this.gameStore.findGameStats(user)
+    }
+
+    async startFinalScoresBackfill(write: boolean): Promise<string> {
+        return startFinalScoresBackfill(this.taskService, write)
+    }
+
+    async backfillFinalScores(task: FinalScoresBackfillTask): Promise<void> {
+        await runFinalScoresBackfillPage(
+            { store: this.gameStore, tasks: this.taskService, titles: this.availableTitles },
+            task
+        )
     }
 
     async setGameState(state: GameState): Promise<void> {
@@ -1099,6 +1133,14 @@ export class GameService {
                     const lastPlayerAction = findLast(actions, (a) => a.playerId != undefined)
                     if (lastPlayerAction) {
                         gameUpdates.lastActionPlayerId = lastPlayerAction.playerId
+                    }
+                    if (
+                        !existingState.result &&
+                        newState.result &&
+                        newState.result !== GameResult.Abandoned &&
+                        definition.runtime.scoring
+                    ) {
+                        gameUpdates.finalScores = definition.runtime.scoring.finalScores(newState)
                     }
 
                     return UpdateValidationResult.Proceed

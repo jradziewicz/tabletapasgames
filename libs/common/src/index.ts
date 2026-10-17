@@ -25,6 +25,7 @@ export * from './game/definition/gameInitializer.js'
 export * from './game/model/startingPositionAssignment.js'
 export * from './game/definition/gameExploration.js'
 export * from './game/definition/gameStateLogger.js'
+export * from './game/definition/gameScoring.js'
 
 export * from './game/model/gameState.js'
 export * from './game/model/gameResult.js'
@@ -103,3 +104,5 @@ export * from './site/gameHistory.js'
 export * from './preferences/preferences.js'
 
 export * from './game/definition/gameMetadata.js'
+
+export * from './site/gameStats.js'

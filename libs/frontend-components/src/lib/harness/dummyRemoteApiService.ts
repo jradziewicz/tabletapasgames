@@ -2,6 +2,7 @@ import type Ably from 'ably'
 import type {
     AdminAssignableRole,
     Bookmark,
+    UserGameStats,
     CanonicalActionReplay,
     Game,
     GameAction,
@@ -36,6 +37,10 @@ export class DummyRemoteApiService implements RemoteApiService {
 
     set versionChange(_value: VersionChange | undefined) {
         return
+    }
+
+    async getMyGameStats(): Promise<UserGameStats> {
+        return this.fail('getMyGameStats')
     }
 
     async listTournaments(): Promise<TournamentList> {

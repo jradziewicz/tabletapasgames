@@ -78,6 +78,8 @@ export const Game = Type.Object({
     lastActionAt: Type.Optional(DateType()),
     result: Type.Optional(Type.Enum(GameResult)),
     winningPlayerIds: Type.Array(Type.String()),
+    finalScores: Type.Optional(Type.Record(Type.String(), Type.Number())),
+    everFinished: Type.Optional(Type.Literal(true)),
     seed: Type.Optional(Type.Number()),
     storage: Type.Optional(Type.Enum(GameStorage, { default: GameStorage.Remote })),
     parentId: Type.Optional(Type.String()),
@@ -100,6 +102,15 @@ export function findPlayerForUserId(
     userId: string
 ): Player | undefined {
     return game.players.find((player) => player.userId === userId)
+}
+
+export function ownerMayDeleteGame(
+    game: Pick<Game, 'status' | 'storage' | 'everFinished'>
+): boolean {
+    return (
+        game.storage === GameStorage.Local ||
+        (game.status !== GameStatus.Finished && !game.everFinished)
+    )
 }
 
 export const GameValidator = Compile(Game)
