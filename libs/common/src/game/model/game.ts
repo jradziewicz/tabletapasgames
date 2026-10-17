@@ -59,6 +59,7 @@ export const Game = Type.Object({
     typeId: Type.String(),
     status: Type.Enum(GameStatus),
     isPublic: Type.Boolean(),
+    unlisted: Type.Optional(Type.Literal(true)),
     deleted: Type.Boolean(),
     deletedAt: Type.Optional(DateType()),
     ownerId: Type.String(),
@@ -69,6 +70,7 @@ export const Game = Type.Object({
     hotseat: Type.Boolean(),
     protectedInformation: Type.Optional(Type.Literal(true)),
     state: Type.Optional(GameState),
+    autoStartAt: Type.Optional(DateType()),
     startedAt: Type.Optional(DateType()),
     finishedAt: Type.Optional(DateType()),
     createdAt: DateType(),
@@ -100,6 +102,21 @@ export function findPlayerForUserId(
     userId: string
 ): Player | undefined {
     return game.players.find((player) => player.userId === userId)
+}
+
+export function isListedPublicGame(game: Pick<Game, 'isPublic' | 'unlisted'>): boolean {
+    return game.isPublic && game.unlisted !== true
+}
+
+export function isListedOpenGame(game: Pick<Game, 'isPublic' | 'unlisted' | 'status'>): boolean {
+    return isListedPublicGame(game) && game.status === GameStatus.WaitingForPlayers
+}
+
+export function gameUserIds(game: Pick<Game, 'players' | 'ownerId' | 'tournament'>): string[] {
+    const playerUserIds = game.players.flatMap((player) =>
+        player.userId == null ? [] : [player.userId]
+    )
+    return [...new Set(game.tournament ? playerUserIds : [game.ownerId, ...playerUserIds])]
 }
 
 export const GameValidator = Compile(Game)
