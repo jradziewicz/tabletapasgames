@@ -4,6 +4,7 @@ import * as Value from 'typebox/value'
 import {
     type TitlePreferenceDefinition,
     ActionSource,
+    latestPlayerUndoTarget,
     Game,
     GameAction,
     GameEngine,
@@ -33,6 +34,7 @@ import { GameSessionBridge } from '$lib/services/bridges/gameSessionBridge.svelt
 import { GameContext } from './gameContext.svelte.js'
 import { GameReconciliation } from './gameReconciliation.js'
 import { GameUndo } from './gameUndo.js'
+import { viewedHistoryPosition, type ViewedHistoryPosition } from './viewedHistoryPosition.js'
 import { GameNotifications } from './gameNotifications.js'
 import { GameRepresentations, HostViewUnsupportedError } from './gameRepresentations.svelte.js'
 import {
@@ -197,6 +199,18 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
         return this.runtime.hydrator.hydrateState(this.currentVisibleContext.state)
     })
 
+    viewedHistoryPosition: ViewedHistoryPosition | undefined = $derived.by(() => {
+        if (!this.history.inHistory || !this.myPlayer) {
+            return undefined
+        }
+        return viewedHistoryPosition({
+            actionIndex: this.currentVisibleContext.state.actionCount,
+            liveActionCount: this.gameContext.state.actionCount,
+            liveActions: this.gameContext.actions,
+            playerId: this.myPlayer.id
+        })
+    })
+
     undoableAction: GameAction | undefined = $derived.by(() => {
         const superUserAccess =
             (this.isActingAdmin || this.isExploring) && !this.isViewingAsNonActivePlayer
@@ -210,70 +224,39 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
             return undefined
         }
 
-        let currentSimultaneousGroup: string | undefined
-        let undoableUserAction: GameAction | undefined
-        for (let i = this.actions.length - 1; i >= 0; i--) {
-            const action = this.actions[i]
-            if (action.undoPatch === undefined) break
-            const undoLimit =
-                this.currentModifiableContext.state.explorationState?.checkpoint?.undoLimit
-            if (undoLimit !== undefined && i < undoLimit) break
-
-            // Cannot undo beyond revealed info
-            if (!superUserAccess && action.revealsInfo) {
-                break
-            }
-
-            // Skip system actions
-            if (action.source !== ActionSource.User) {
-                continue
-            }
-
-            if (
-                superUserAccess ||
-                (this.game.hotseat &&
-                    !this.usesHostExecution(this.currentModifiableContext) &&
-                    !this.isViewingAsNonActivePlayer)
-            ) {
-                undoableUserAction = action
-                break
-            }
-
-            // Must have player if not admin {
-            if (!this.myPlayer) {
-                break
-            }
-
-            // Other player actions can be skipped if we find a simultaneous group
-            // as long as we don't leave it and enter another
-            if (action.playerId !== this.myPlayer.id) {
-                if (
-                    !action.simultaneousGroupId ||
-                    (currentSimultaneousGroup &&
-                        action.simultaneousGroupId !== currentSimultaneousGroup)
-                ) {
-                    break
-                } else {
-                    currentSimultaneousGroup = action.simultaneousGroupId
-                }
-            }
-
-            // Our actions are what we are looking for, but if we are in a simultaneous group
-            // it has to be part of that group
-            if (action.playerId === this.myPlayer.id) {
-                if (
-                    !currentSimultaneousGroup ||
-                    action.simultaneousGroupId === currentSimultaneousGroup
-                ) {
-                    // Found one
-                    undoableUserAction = action
-                }
-                break
-            }
+        const localHotseatAccess =
+            this.game.hotseat &&
+            !this.usesHostExecution(this.currentModifiableContext) &&
+            !this.isViewingAsNonActivePlayer
+        if (superUserAccess || localHotseatAccess) {
+            return this.undoableActions({ stopAtReveal: !superUserAccess }).findLast(
+                (action) => action.source === ActionSource.User
+            )
         }
 
-        return undoableUserAction
+        const player = this.myPlayer
+        return player
+            ? latestPlayerUndoTarget(this.undoableActions({ stopAtReveal: false }), player.id)
+            : undefined
     })
+
+    private undoableActions({ stopAtReveal }: { stopAtReveal: boolean }): GameAction[] {
+        const undoLimit =
+            this.currentModifiableContext.state.explorationState?.checkpoint?.undoLimit
+        let start = this.actions.length
+        while (start > 0) {
+            const action = this.actions[start - 1]
+            if (
+                action.undoPatch === undefined ||
+                (undoLimit !== undefined && start - 1 < undoLimit) ||
+                (stopAtReveal && action.revealsInfo)
+            ) {
+                break
+            }
+            start--
+        }
+        return this.actions.slice(start)
+    }
 
     private chosenAdminPlayerId: string | undefined = $derived.by(() => {
         // A writable derived keeps an explicit choice only for the current Admin activation.
