@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ArrowRightOutline, DiscordSolid, GithubSolid, GlobeOutline } from 'flowbite-svelte-icons'
+    import { ArrowRightOutline, DiscordSolid, GlobeOutline } from 'flowbite-svelte-icons'
     import { getAppContext } from '$lib/stores/appContext.svelte'
 
     const { authorizationService } = getAppContext()
@@ -35,16 +35,6 @@
                 We hope you’ve been enjoying your games here. If you have feedback, we’d love to
                 hear it.
             </p>
-            <a
-                class="community-link"
-                href="https://www.tabletapasgames.com"
-                target="_blank"
-                rel="noreferrer"
-            >
-                <GlobeOutline class="h-4 w-4" /> Visit tabletapasgames.com
-                <ArrowRightOutline class="h-4 w-4" />
-                <span class="sr-only">(opens in a new tab)</span>
-            </a>
         </div>
         <ul class="principles" aria-label="The project">
             <li><strong>Always</strong> free to play.</li>
@@ -73,28 +63,22 @@
             </a>
         </section>
 
-        <section class="community-card" aria-labelledby="contribute-heading">
+        <section class="community-card" aria-labelledby="studio-heading">
             <div class="card-heading">
-                <GithubSolid class="h-7 w-7 shrink-0" />
-                <h2 id="contribute-heading">Lend a hand</h2>
+                <GlobeOutline class="h-7 w-7 shrink-0" />
+                <h2 id="studio-heading">Meet the studio</h2>
             </div>
             <p>
-                Want to contribute? Take a look at the TableTapas Games project on GitHub. There are plenty
-                of ways to help, with or without writing code.
+                TableTapas Games is a board game studio. Find out more about us and our games on
+                our website.
             </p>
-            <ul class="contributions" aria-label="Ways to contribute">
-                <li>Design &amp; artwork</li>
-                <li>Bug fixes &amp; features</li>
-                <li>New games</li>
-                <li>Ideas &amp; feedback</li>
-            </ul>
             <a
                 class="community-link"
-                href="https://github.com/jradziewicz/tabletapasgames"
+                href="https://www.tabletapasgames.com"
                 target="_blank"
                 rel="noreferrer"
             >
-                Explore the project on GitHub <ArrowRightOutline class="h-4 w-4" />
+                Visit tabletapasgames.com <ArrowRightOutline class="h-4 w-4" />
                 <span class="sr-only">(opens in a new tab)</span>
             </a>
         </section>
@@ -188,16 +172,6 @@
         font-size: 15px;
         line-height: 1.7;
     }
-    .contributions {
-        list-style-type: disc;
-        padding-left: 18px;
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 8px 20px;
-        margin-top: 20px;
-        font-size: 14px;
-        line-height: 1.5;
-    }
     .community-link {
         display: inline-flex;
         align-items: center;
@@ -224,9 +198,6 @@
         .community-card {
             padding: 24px;
         }
-        .contributions {
-            grid-template-columns: 1fr;
-        }
     }
     @media (max-width: 700px) {
         .about-page {
@@ -249,10 +220,6 @@
             grid-template-columns: 1fr;
             gap: 16px;
             margin-top: 24px;
-        }
-        .contributions {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            column-gap: 12px;
         }
     }
 </style>
