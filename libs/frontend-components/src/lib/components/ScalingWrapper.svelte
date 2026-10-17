@@ -280,6 +280,8 @@
     }
 
     function scrollAncestorBy(deltaX: number, deltaY: number) {
+        // Full screen never hands movement to the table or page behind it.
+        if (isExpanded) return { movedX: 0, movedY: 0 }
         const scrollAncestor = findScrollableAncestor(scroller)
         if (scrollAncestor) {
             const startLeft = scrollAncestor.scrollLeft
@@ -1235,7 +1237,7 @@
     class:w-full={!isExpanded}
     class:h-full={!isExpanded}
     style={isExpanded
-        ? 'position: fixed; inset: 0; z-index: 9999; background: rgba(0, 0, 0, 0.92); backdrop-filter: blur(2px);'
+        ? 'position: fixed; inset: 0; z-index: 9999; overscroll-behavior: contain; background: rgba(0, 0, 0, 0.92); backdrop-filter: blur(2px);'
         : undefined}
 >
     <!-- The scroller is a pure layout viewport, not a control: the pointer/click handlers only
