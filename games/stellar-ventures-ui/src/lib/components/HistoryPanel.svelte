@@ -12,7 +12,10 @@
     } from '@tabletop/stellar-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { CorporationColors, CorporationDisplayNames } from '$lib/utils/corporationDisplay.js'
-    import { CorporatePowerDisplayNames } from '$lib/utils/corporatePowerDisplay.js'
+    import {
+        CorporatePowerDisplayNames,
+        CorporatePowerDescriptions
+    } from '$lib/utils/corporatePowerDisplay.js'
     import CreditsText from './CreditsText.svelte'
 
     // Same shape as the other Board Together games' History (e.g. Kaivai): newest first on a
@@ -42,6 +45,9 @@
         shares: number
         miningCapacity: number
         outposts: number
+        // Credits players have paid out of their own pocket for this Corporation (Private
+        // Contractor), so a History entry can say what a player personally spent.
+        contractorSpend: number
     }
 
     // The handful of numbers a History entry is summarised from, taken from the state just
@@ -91,7 +97,11 @@
                 cargo: corporation.cargo,
                 shares: corporation.issuedShareCount,
                 miningCapacity: effectiveMiningCapacityForCorporation(state, corporation.id),
-                outposts: hexes.filter((hex) => hex.outposts.includes(corporation.id)).length
+                outposts: hexes.filter((hex) => hex.outposts.includes(corporation.id)).length,
+                contractorSpend: Object.values(corporation.privateContractorExpenseByPlayer ?? {}).reduce(
+                    (sum, amount) => sum + amount,
+                    0
+                )
             }
         }
         return {
@@ -133,7 +143,14 @@
     const BuildActions = new Set<string>([
         ActionType.ExpandNetwork,
         ActionType.CreateWormhole,
+        ActionType.PrivateContractor,
+        ActionType.JerryRig,
         ActionType.FinishExpansion
+    ])
+    const OutpostBuildActions = new Set<string>([
+        ActionType.ExpandNetwork,
+        ActionType.PrivateContractor,
+        ActionType.JerryRig
     ])
     const BuildEndActions = new Set<string>([
         ActionType.FinishExpansion,
@@ -155,6 +172,15 @@
         after?: Snapshot
     }
 
+    // Which Corporation a build step is for: named on the action itself when it is an Investor
+    // build (Private Contractor / Jerry-Rig), otherwise the Corporation whose turn it is. (Before
+    // a Private Contractor's first Outpost, no Corporation is "expanding" yet, so the turn-based
+    // answer alone split its first Outpost off from the rest.)
+    function buildCorporation(action: GameAction, before: Snapshot | undefined) {
+        const named = (action as unknown as Record<string, unknown>)['corporationId']
+        return typeof named === 'string' ? named : before?.corporation
+    }
+
     const entries = $derived.by(() => {
         const actions = gameSession.actions
         const { before, current } = snapshots
@@ -166,6 +192,20 @@
                 i + 1 < actions.length ? before.get(actions[i + 1]!.id) : current
             const previous = result.at(-1)
             const previousAction = previous?.actions.at(-1)
+            // Consecutive Ship orders by the same Corporation in the same turn read as one entry
+            // too ("ordered 2 Level 1 Ships, spent ₮2"), including the step that ends ordering.
+            if (
+                previous &&
+                previousAction &&
+                previousAction.type === ActionType.OrderShip &&
+                (action.type === ActionType.OrderShip || action.type === ActionType.DeclineOrderShips) &&
+                previousAction.playerId === action.playerId &&
+                previous.before?.corporation === actionBefore?.corporation
+            ) {
+                previous.actions.push(action)
+                previous.after = actionAfter
+                continue
+            }
             if (
                 previous &&
                 previousAction &&
@@ -173,7 +213,8 @@
                 BuildActions.has(previousAction.type) &&
                 previousAction.type !== ActionType.FinishExpansion &&
                 previousAction.playerId === action.playerId &&
-                previous.before?.corporation === actionBefore?.corporation
+                buildCorporation(previous.actions[0]!, previous.before) ===
+                    buildCorporation(action, actionBefore)
             ) {
                 previous.actions.push(action)
                 previous.after = actionAfter
@@ -211,13 +252,18 @@
         const amount = typeof action['amount'] === 'number' ? action['amount'] : undefined
 
         if (BuildActions.has(String(action['type']))) {
-            const outposts = entry.actions.filter((a) => a.type === ActionType.ExpandNetwork).length
+            const outposts = entry.actions.filter((a) => OutpostBuildActions.has(a.type)).length
             const wormholes = entry.actions.filter((a) => a.type === ActionType.CreateWormhole).length
+            const via = entry.actions.some((a) => a.type === ActionType.PrivateContractor)
+                ? ' via Private Contractor'
+                : entry.actions.some((a) => a.type === ActionType.JerryRig)
+                  ? ' via Jerry-Rig'
+                  : ''
             const parts = [
                 outposts > 0 ? `built ${plural(outposts, 'Outpost')}` : undefined,
                 wormholes > 0 ? `created ${wormholes === 1 ? 'a Wormhole' : plural(wormholes, 'Wormhole')}` : undefined
             ].filter(Boolean)
-            return `${parts.length > 0 ? parts.join(' and ') : 'finished building'}${forCorp}`
+            return `${parts.length > 0 ? parts.join(' and ') : 'finished building'}${forCorp}${via}`
         }
 
         switch (action['type']) {
@@ -238,10 +284,24 @@
                 return typeof action['payoutPerShare'] === 'number'
                     ? `paid ₮${action['payoutPerShare']} per Share${forCorp}`
                     : `paid dividends${forCorp}`
-            case ActionType.OrderShip:
-                return typeof action['level'] === 'number'
-                    ? `ordered a Level ${action['level']} Ship${forCorp}`
-                    : `ordered a Ship${forCorp}`
+            case ActionType.OrderShip: {
+                // Every Ship ordered in this entry, counted per level: "2 Level 1 Ships and a
+                // Level 3 Ship".
+                const countByLevel = new Map<number, number>()
+                for (const order of entry.actions) {
+                    const level = (order as unknown as Record<string, unknown>)['level']
+                    if (order.type === ActionType.OrderShip && typeof level === 'number') {
+                        countByLevel.set(level, (countByLevel.get(level) ?? 0) + 1)
+                    }
+                }
+                if (countByLevel.size === 0) return `ordered a Ship${forCorp}`
+                const ships = [...countByLevel.entries()]
+                    .sort(([a], [b]) => a - b)
+                    .map(([level, count]) =>
+                        count === 1 ? `a Level ${level} Ship` : `${count} Level ${level} Ships`
+                    )
+                return `ordered ${ships.join(' and ')}${forCorp}`
+            }
             case ActionType.DeclineOrderShips:
                 return `ordered no Ships${forCorp}`
             case ActionType.PlaceBoardroomVote:
@@ -258,6 +318,54 @@
                         ? (CorporatePowerDisplayNames[action['powerId']] ?? 'a Power')
                         : 'a Power'
                 return `drafted ${power}${forCorp}`
+            }
+            // Corporate Powers - say what the Power actually did (its full text is the hover).
+            case ActionType.LeakedResearch:
+                return `used Leaked Research to research Wormhole Technology${forCorp}`
+            case ActionType.AlienAlchemist:
+                return `used Alien Alchemist to turn 2 unbuilt Outposts into an Alien Tech Cube${forCorp}`
+            case ActionType.DismantlingOutposts:
+                return `used Dismantling Outposts to return a Deep Space Outpost for ₮1${forCorp}`
+            case ActionType.NebularExplorers:
+                return `used Nebular Explorers to build on a Nebular Anomaly, revealing a new Alien Planet${forCorp}`
+            case ActionType.FinePrint:
+                return `used Fine Print to sit out the Boardroom Battle${forCorp}`
+            case ActionType.DeepSpaceSmuggling:
+                return `used Deep Space Smuggling to pay dividends on ${corp ?? 'another Corporation'}'s CARGO`
+            case ActionType.DeepSpacePirates:
+                return `used Deep Space Pirates to pay dividends on ${corp ?? 'another Corporation'}'s Mining Capacity`
+            case ActionType.SpareParts:
+                return `used Spare Parts to save a Ship from Scrapping${forCorp}`
+            case ActionType.AlienEngineering: {
+                const cubes =
+                    typeof action['cargoBoostCubesToReclaim'] === 'number'
+                        ? action['cargoBoostCubesToReclaim']
+                        : 0
+                const reclaimed = [
+                    cubes > 0 ? plural(cubes, 'CARGO Boost cube') : undefined,
+                    action['reclaimWormhole'] === true ? 'the Wormhole cube' : undefined
+                ].filter(Boolean)
+                return `used Alien Engineering to reclaim ${reclaimed.join(' and ') || 'Alien Tech'}${forCorp}`
+            }
+            case ActionType.InsuranceFraud:
+                return typeof action['shipLevel'] === 'number'
+                    ? `used Insurance Fraud to scrap a Level ${action['shipLevel']} Ship${forCorp}`
+                    : `used Insurance Fraud${forCorp}`
+            case ActionType.DeclineSpareParts:
+                return `chose not to use Spare Parts${forCorp}`
+            case ActionType.DeclineFinePrint:
+                return `chose not to use Fine Print${forCorp}`
+            case ActionType.DeclineBackroomDeal:
+                return 'chose not to use Backroom Deal'
+            case ActionType.DeclinePayDividendsPower:
+                return `chose not to use its dividend Power${forCorp}`
+            case ActionType.BlackMarket:
+                return 'used Black Market to trade a Voting Disc for an Alien Tech Cube'
+            case ActionType.ResearchWormhole:
+                return `researched Wormhole Technology${forCorp}`
+            case ActionType.DevelopPlanets: {
+                const count = Array.isArray(action['hexIds']) ? action['hexIds'].length : 0
+                return `developed ${plural(count, 'Planet')}${forCorp}`
             }
             case ActionType.SignTheAgreement:
                 return `signed The Agreement${forCorp}`
@@ -290,6 +398,20 @@
         }
     }
 
+    // A Corporate Power's full text, shown on hover over the line for any step that drafted or
+    // used one ("LeakedResearch" action -> "leakedResearch" Power).
+    function powerHoverText(entry: Entry): string | undefined {
+        const action = entry.actions[0] as unknown as Record<string, unknown>
+        const powerId =
+            action['type'] === ActionType.DraftPower && typeof action['powerId'] === 'string'
+                ? action['powerId']
+                : String(action['type']).charAt(0).toLowerCase() + String(action['type']).slice(1)
+        const description = CorporatePowerDescriptions[powerId]
+        return description
+            ? `${CorporatePowerDisplayNames[powerId] ?? ''}: ${description}`
+            : undefined
+    }
+
     // What the step changed for its Corporation (and the Aliens), from the before/after
     // snapshots. Things the verb phrase already says (Outposts built, a Share issued) are not
     // repeated.
@@ -320,6 +442,8 @@
             const treasury = now.treasury - was.treasury
             if (treasury < 0) parts.push(`spent ₮${-treasury}`)
             if (treasury > 0) parts.push(`earned ₮${treasury}`)
+            const contractor = now.contractorSpend - was.contractorSpend
+            if (contractor > 0) parts.push(`paid ₮${contractor} out of pocket`)
         }
         const alien = after.alienMiningCapacity - before.alienMiningCapacity
         if (alien !== 0) {
@@ -338,6 +462,7 @@
             {@const corporationIsActor =
                 !!corp && !!entry.before?.corporationIsActor && !PlayerActsActions.has(action.type)}
             {@const details = summary(entry, corporationId)}
+            {@const powerHover = powerHoverText(entry)}
             <li class="mb-3 ms-4">
                 <div
                     class="absolute -start-1.5 mt-1 h-3 w-3 rounded-full border border-[#0b0e1a]"
@@ -351,7 +476,10 @@
                         · <PlayerName playerId={action.playerId} />
                     {/if}
                 </div>
-                <div class="text-sm leading-snug">
+                <div
+                    class="text-sm leading-snug {powerHover ? 'cursor-help underline decoration-dotted decoration-[#7f88ad] underline-offset-2' : ''}"
+                    title={powerHover}
+                >
                     {#if corporationIsActor && corporationId}
                         <span class="font-semibold" style="color: {CorporationColors[corporationId]};"
                             >{corp}</span
