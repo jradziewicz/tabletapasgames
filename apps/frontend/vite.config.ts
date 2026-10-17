@@ -38,6 +38,7 @@ export default defineProject(
             }
         },
         plugins: [sveltekit(), devtoolsJson()],
+        test: { exclude: ['**/*.client.spec.ts'] },
         assetsInclude: ['**/*.gltf'],
         build: {
             commonjsOptions: { include: [/node_modules/] },

@@ -35,7 +35,7 @@ const notificationService = new NotificationService(
 )
 const chatService = new ChatService(authorizationService, notificationService, api)
 
-const appContext: AppContext & { catalogService: CatalogService } = {
+const appContext: AppContext & { catalogService: CatalogService; gameService: GameService } = {
     catalogService: new CatalogService(api),
     manifestService,
     libraryService,
