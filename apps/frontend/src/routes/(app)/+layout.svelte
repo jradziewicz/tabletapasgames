@@ -22,6 +22,7 @@
     import { afterNavigate, goto, onNavigate } from '$app/navigation'
     import LoginPanel, { loginViewTitles, type LoginView } from '$lib/components/LoginPanel.svelte'
     import AuthModal from '$lib/components/AuthModal.svelte'
+    import PreferencesPanel from '$lib/components/PreferencesPanel.svelte'
     import { setLoginModal } from '$lib/stores/loginModal'
     import { onMount } from 'svelte'
     import { PUBLIC_API_HOST } from '$env/static/public'
@@ -36,7 +37,11 @@
     } from '@tabletop/frontend-components'
     import { toast } from 'svelte-sonner'
     import { onceMounted } from '$lib/components/RunOnceMounted.svelte'
-    import { BellSolid } from 'flowbite-svelte-icons'
+    import { BellSolid, DownloadOutline, RefreshOutline } from 'flowbite-svelte-icons'
+    import {
+        pwaInstallPrompt,
+        registerPwaInstallPrompt
+    } from '$lib/stores/pwaInstallPrompt.svelte.js'
     import { nextTurnGame, otherTurnGames } from '$lib/utils/dashboardGames'
 
     let {
@@ -74,10 +79,20 @@
               )
             : undefined
     )
+    let showPreferences = $state(false)
     let showCreateGameModel = $state(false)
     let showCancelPrompt = $state(false)
     let showLoginModal = $state(false)
     let loginView = $state<LoginView>('signin')
+    // An installed PWA has no browser reload button, so the gentle (minor/patch) update nudge
+    // also gets a header refresh control there. Browser tabs keep just the toast.
+    let isInstalledPwa = $state(false)
+    let showPwaRefresh = $derived(
+        isInstalledPwa &&
+            (api.versionChange === VersionChange.MinorUpgrade ||
+                api.versionChange === VersionChange.PatchUpgrade)
+    )
+    let canInstallPwa = $derived(pwaInstallPrompt.available)
 
     const openLoginModal = setLoginModal(() => {
         loginView = 'signin'
@@ -86,6 +101,7 @@
 
     afterNavigate(() => {
         showLoginModal = false
+        showPreferences = false
     })
 
     function selectTransitionCover(titleId: string | undefined) {
@@ -192,9 +208,9 @@
         await goto('/profile')
     }
 
-    async function gotoPreferences() {
+    function openPreferences() {
         showCancelPrompt = false
-        await goto('/preferences')
+        showPreferences = true
     }
 
     async function gotoNotifications() {
@@ -208,6 +224,10 @@
 
     async function gotoAdmin() {
         await goto('/admin')
+    }
+
+    async function installPwa() {
+        await pwaInstallPrompt.prompt()
     }
 
     function setAdminCapabilities(event: Event) {
@@ -280,6 +300,8 @@
     })
 
     onMount(() => {
+        registerPwaInstallPrompt()
+        isInstalledPwa = window.matchMedia('(display-mode: standalone)').matches
         notificationService.onMounted()
         visibilityService.setDocument(document)
         if (/mobile/i.test(navigator.userAgent ?? '') && !location.hash) {
@@ -422,9 +444,29 @@
                             <Button
                                 size="xs"
                                 color="blue"
-                                class="me-4 h-[30px] bg-[#7165ad] hover:bg-[#5b4f95] dark:bg-[#7165ad] dark:hover:bg-[#5b4f95] focus-within:ring-[#7165ad] dark:focus-within:ring-[#5b4f95]"
+                                class="{showPwaRefresh || canInstallPwa
+                                    ? 'me-1'
+                                    : 'me-4'} h-[30px] bg-[#7165ad] hover:bg-[#5b4f95] dark:bg-[#7165ad] dark:hover:bg-[#5b4f95] focus-within:ring-[#7165ad] dark:focus-within:ring-[#5b4f95]"
                                 onclick={gotoDashboard}>My Games</Button
                             >
+                        {/if}
+                        {#if showPwaRefresh}
+                            <button
+                                class="pwa-refresh me-1 cursor-pointer text-[#7165ad] hover:text-[#5b4f95] dark:text-[#a59bd6] dark:hover:text-white"
+                                aria-label="Refresh to update"
+                                onclick={() => location.reload()}
+                            >
+                                <RefreshOutline class="h-6 w-6" aria-hidden="true" />
+                            </button>
+                        {/if}
+                        {#if canInstallPwa}
+                            <button
+                                class="pwa-install me-2 cursor-pointer text-[#7165ad] hover:text-[#5b4f95] dark:text-[#a59bd6] dark:hover:text-white"
+                                aria-label="Install TableTapas Games"
+                                onclick={installPwa}
+                            >
+                                <DownloadOutline class="h-6 w-6" aria-hidden="true" />
+                            </button>
                         {/if}
 
                         <Avatar id="user-drop" class="cursor-pointer" />
@@ -454,7 +496,7 @@
                                 <DropdownItem class="w-full text-left" onclick={gotoProfile}
                                     >Profile</DropdownItem
                                 >
-                                <DropdownItem class="w-full text-left" onclick={gotoPreferences}
+                                <DropdownItem class="w-full text-left" onclick={openPreferences}
                                     >Preferences</DropdownItem
                                 >
                                 <DropdownItem class="w-full text-left" onclick={gotoNotifications}
@@ -515,6 +557,15 @@
                             </DropdownGroup>
                         </Dropdown>
                     {:else}
+                        {#if canInstallPwa}
+                            <button
+                                class="pwa-install me-2 cursor-pointer text-[#7165ad] hover:text-[#5b4f95] dark:text-[#a59bd6] dark:hover:text-white"
+                                aria-label="Install TableTapas Games"
+                                onclick={installPwa}
+                            >
+                                <DownloadOutline class="h-6 w-6" aria-hidden="true" />
+                            </button>
+                        {/if}
                         <Button onclick={openLoginModal} size="sm" color="blue">Sign in</Button>
                     {/if}
                 </div>
@@ -534,6 +585,11 @@
     >
         <LoginPanel bind:view={loginView} />
     </AuthModal>
+{/if}
+{#if sessionUser}
+    <Modal bind:open={showPreferences} title="Preferences" size="sm" outsideclose autoclose={false}>
+        <PreferencesPanel />
+    </Modal>
 {/if}
 <Modal
     bind:open={showCreateGameModel}
@@ -571,7 +627,7 @@
                 size="xs"
                 color="blue">Got it</Button
             >
-            <Button onclick={() => gotoPreferences()} size="xs" outline color="light"
+            <Button onclick={openPreferences} size="xs" outline color="light"
                 >Go to Preferences</Button
             >
         </div>
@@ -611,3 +667,19 @@
     >
 {/if}
 {@render children()}
+
+<style>
+    .pwa-refresh,
+    .pwa-install {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+    }
+    .pwa-refresh:focus-visible,
+    .pwa-install:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
+</style>

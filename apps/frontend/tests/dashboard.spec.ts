@@ -1,6 +1,15 @@
 import { expect, test } from '@playwright/test'
 import { GameStatus, PlayerStatus, Role, UserStatus, type Game, type User } from '@tabletop/common'
+import { readFileSync } from 'node:fs'
 import { mockLibrary } from './fixtures/library'
+
+// A server version one minor release ahead of this frontend build, so the client sees a
+// minor upgrade (the persistent "please refresh" toast, never the forced reload).
+const frontendVersion: string = JSON.parse(
+    readFileSync(new URL('../package.json', import.meta.url), 'utf8')
+).version
+const [frontendMajor, frontendMinor] = frontendVersion.split('.').map(Number)
+const minorUpgradeVersion = `${frontendMajor}.${frontendMinor + 1}.0`
 
 const user: User = {
     id: 'dashboard-user',
@@ -55,6 +64,121 @@ test.beforeEach(async ({ page }) => {
             json: { payload: { games: Array.from({ length: 12 }, (_, index) => game(index)) } }
         })
     })
+})
+
+test('an installed PWA offers a header refresh for a minor frontend update', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.addInitScript(() => {
+        const browserMatchMedia = window.matchMedia.bind(window)
+        window.matchMedia = (query) =>
+            query === '(display-mode: standalone)'
+                ? {
+                      matches: true,
+                      media: query,
+                      onchange: null,
+                      addListener: () => {},
+                      removeListener: () => {},
+                      addEventListener: () => {},
+                      removeEventListener: () => {},
+                      dispatchEvent: () => false
+                  }
+                : browserMatchMedia(query)
+    })
+    await page.route('**/api/v1/games/mine*', (route) =>
+        route.fulfill({
+            headers: { 'X-Tabletop-Version': minorUpgradeVersion },
+            json: { payload: { games: [] } }
+        })
+    )
+
+    await page.goto('/dashboard')
+
+    await expect(page.getByText(/please refresh the page when you have a moment/i)).toBeVisible()
+    const games = page.getByRole('button', { name: 'My Games', exact: true })
+    const refresh = page.getByRole('button', { name: 'Refresh to update' })
+    await expect(refresh).toBeVisible()
+    await expect(refresh).toHaveCSS('width', '40px')
+    await expect(refresh).toHaveCSS('height', '40px')
+    await expect(refresh.locator('svg')).toHaveCSS('width', '24px')
+    await expect(refresh.locator('svg')).toHaveCSS('height', '24px')
+    expect(
+        await games.evaluate((element) => {
+            const refreshButton = document.querySelector('.pwa-refresh')
+            return refreshButton
+                ? Boolean(element.compareDocumentPosition(refreshButton) & 4)
+                : false
+        })
+    ).toBe(true)
+    expect(
+        await refresh.evaluate((element) => {
+            const menuButton = document.querySelector('#user-drop')
+            return menuButton ? Boolean(element.compareDocumentPosition(menuButton) & 4) : false
+        })
+    ).toBe(true)
+})
+
+test('a browser tab does not show the PWA refresh for a minor frontend update', async ({ page }) => {
+    await page.route('**/api/v1/games/mine*', (route) =>
+        route.fulfill({
+            headers: { 'X-Tabletop-Version': minorUpgradeVersion },
+            json: { payload: { games: [] } }
+        })
+    )
+
+    await page.goto('/dashboard')
+
+    await expect(page.getByText(/please refresh the page when you have a moment/i)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Refresh to update' })).toHaveCount(0)
+})
+
+test('the browser install offer exposes a one-shot PWA install control', async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto('/dashboard')
+    await expect(page.getByRole('button', { name: 'Install TableTapas Games' })).toHaveCount(0)
+    const games = page.getByRole('button', { name: 'My Games', exact: true })
+    await expect(games).toBeVisible()
+
+    await page.evaluate(() => {
+        class InstallPromptEvent extends Event {
+            readonly platforms = ['web']
+            readonly userChoice = Promise.resolve({
+                outcome: 'accepted' as const,
+                platform: 'web'
+            })
+
+            async prompt() {
+                document.documentElement.dataset.installPrompted = 'true'
+            }
+        }
+
+        window.dispatchEvent(new InstallPromptEvent('beforeinstallprompt', { cancelable: true }))
+    })
+
+    const install = page.getByRole('button', { name: 'Install TableTapas Games' })
+    await expect(install).toBeVisible()
+    await expect(install).toHaveCSS('width', '40px')
+    await expect(install).toHaveCSS('height', '40px')
+    await expect(install.locator('svg')).toHaveCSS('width', '24px')
+    await expect(install.locator('svg')).toHaveCSS('height', '24px')
+    expect(
+        await games.evaluate((element) => {
+            const installButton = document.querySelector('.pwa-install')
+            return installButton
+                ? Boolean(element.compareDocumentPosition(installButton) & 4)
+                : false
+        })
+    ).toBe(true)
+    expect(
+        await install.evaluate((element) => {
+            const menuButton = document.querySelector('#user-drop')
+            return menuButton ? Boolean(element.compareDocumentPosition(menuButton) & 4) : false
+        })
+    ).toBe(true)
+
+    await install.click()
+
+    await expect(page.locator('html')).toHaveAttribute('data-install-prompted', 'true')
+    await expect(install).toHaveCount(0)
 })
 
 for (const expanded of [false, true]) {
