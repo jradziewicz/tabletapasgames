@@ -1,11 +1,13 @@
 <script lang="ts">
     import AdminUsersTab from '$lib/components/admin/AdminUsersTab.svelte'
     import AdminGamesTab from '$lib/components/admin/AdminGamesTab.svelte'
+    import AdminBugReportsTab from '$lib/components/admin/AdminBugReportsTab.svelte'
 
-    type AdminTab = 'users' | 'games'
+    type AdminTab = 'users' | 'games' | 'bugReports'
     const tabs: { id: AdminTab; label: string }[] = [
         { id: 'users', label: 'Users' },
-        { id: 'games', label: 'Games' }
+        { id: 'games', label: 'Games' },
+        { id: 'bugReports', label: 'Bug reports' }
     ]
     let tab = $state<AdminTab>('users')
 
@@ -49,8 +51,10 @@
     <div id="admin-panel" role="tabpanel" aria-labelledby={`admin-tab-${tab}`} class="pt-5">
         {#if tab === 'users'}
             <AdminUsersTab />
-        {:else}
+        {:else if tab === 'games'}
             <AdminGamesTab />
+        {:else}
+            <AdminBugReportsTab />
         {/if}
     </div>
 </main>

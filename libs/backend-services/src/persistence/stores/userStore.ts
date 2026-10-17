@@ -1,4 +1,4 @@
-import { ExternalAuthService, User } from '@tabletop/common'
+import { ExternalAuthService, Role, User } from '@tabletop/common'
 import { StoredUser } from '../model/storedUser'
 import { UpdateValidator } from './validator'
 
@@ -9,6 +9,7 @@ export interface UserStore {
     findById(id: string): Promise<User | undefined>
     findByUsernameAndPassword(username: string, password: string): Promise<User | undefined>
     findAllUsernames(): Promise<string[]>
+    findByRole(role: Role): Promise<User[]>
 
     createUser(user: User, password?: string): Promise<User>
     updatePassword(userId: string, password: string): Promise<void>

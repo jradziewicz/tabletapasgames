@@ -1,4 +1,4 @@
-import { Game, GameDefinition, User } from '@tabletop/common'
+import { BugReport, Game, GameDefinition, User } from '@tabletop/common'
 
 export enum AccountChangeType {
     Email = 'email',
@@ -49,6 +49,17 @@ export interface EmailService {
         title: string
         gameName: string
         url: string
+        toEmail: string
+    }): Promise<void>
+    sendBugReportEmail({
+        report,
+        gameUrl,
+        adminUrl,
+        toEmail
+    }: {
+        report: BugReport
+        gameUrl: string
+        adminUrl: string
         toEmail: string
     }): Promise<void>
 }

@@ -412,6 +412,12 @@ export class UserService {
         return updatedUser
     }
 
+    /** Active, undeleted users holding the Admin role. */
+    async getAdmins(): Promise<User[]> {
+        const admins = await this.userStore.findByRole(Role.Admin)
+        return admins.filter((user) => user.status === UserStatus.Active && !user.deleted)
+    }
+
     async searchUsernames(query: string): Promise<string[]> {
         await this.initializeUsernames()
         const [indexes, info, order] = this.uFuzzy.search(this.usernames, query.trim())

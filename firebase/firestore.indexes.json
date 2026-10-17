@@ -1,6 +1,20 @@
 {
     "indexes": [
         {
+            "collectionGroup": "bugReports",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "createdAt",
+                    "order": "DESCENDING"
+                }
+            ]
+        },
+        {
             "collectionGroup": "tournaments",
             "queryScope": "COLLECTION",
             "fields": [
