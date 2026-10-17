@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { ArrowRightOutline, DiscordSolid, GithubSolid } from 'flowbite-svelte-icons'
+    import { ArrowRightOutline, DiscordSolid, GithubSolid, GlobeOutline } from 'flowbite-svelte-icons'
     import { getAppContext } from '$lib/stores/appContext.svelte'
 
     const { authorizationService } = getAppContext()
@@ -26,9 +26,8 @@
         <div class="intro-copy">
             <p class="lead">
                 <span class="whitespace-nowrap font-sans tracking-normal"
-                    ><span class="font-bold text-[#427ac7]">Board</span><span
-                        class="font-light text-gray-300">Together</span
-                    ></span
+                    ><span class="font-bold text-[#7165ad]">TableTapas</span>
+                    <span class="font-light text-gray-300">Games</span></span
                 >
                 is a place to play board games online with friends.
             </p>
@@ -36,6 +35,16 @@
                 We hope you’ve been enjoying your games here. If you have feedback, we’d love to
                 hear it.
             </p>
+            <a
+                class="community-link"
+                href="https://www.tabletapasgames.com"
+                target="_blank"
+                rel="noreferrer"
+            >
+                <GlobeOutline class="h-4 w-4" /> Visit tabletapasgames.com
+                <ArrowRightOutline class="h-4 w-4" />
+                <span class="sr-only">(opens in a new tab)</span>
+            </a>
         </div>
         <ul class="principles" aria-label="The project">
             <li><strong>Always</strong> free to play.</li>
@@ -55,7 +64,7 @@
             </p>
             <a
                 class="community-link"
-                href="https://discord.gg/5ggK5VGGvA"
+                href="https://discord.gg/rfNCYB8UQh"
                 target="_blank"
                 rel="noreferrer"
             >
