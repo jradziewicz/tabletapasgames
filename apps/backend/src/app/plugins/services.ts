@@ -7,8 +7,10 @@ import {
     EmailService,
     FirestoreTokenStore,
     FirestoreUserStore,
+    FirestoreSiteStatsStore,
     LocalTaskService,
     TaskService,
+    SiteStatsService,
     TokenService,
     UserService,
     SecretsService,
@@ -63,6 +65,7 @@ declare module 'fastify' {
         catalogService: CatalogService
         tournamentService: TournamentService
         preferenceService: PreferenceService
+        siteStatsService: SiteStatsService
     }
 }
 
@@ -97,11 +100,12 @@ export default fp(async (fastify: FastifyInstance) => {
         ? new LocalTaskService(TASKS_HOST)
         : new CloudTasksTaskService(TASKS_HOST)
     const tokenService = new TokenService(new FirestoreTokenStore(fastify.firestore))
-    const userService = new UserService(
-        new FirestoreUserStore(redisCacheService, fastify.firestore, service === 'local'),
-        tokenService,
-        taskService
+    const userStore = new FirestoreUserStore(
+        redisCacheService,
+        fastify.firestore,
+        service === 'local'
     )
+    const userService = new UserService(userStore, tokenService, taskService)
 
     let pubSubService: PubSubService = new NullPubSubService()
     if (!useAbly) {
@@ -113,14 +117,25 @@ export default fp(async (fastify: FastifyInstance) => {
         pubSubService
     )
 
+    const gameStore = new FirestoreGameStore(redisCacheService, fastify.firestore)
     const gameService = new GameService(
-        new FirestoreGameStore(redisCacheService, fastify.firestore),
+        gameStore,
         userService,
         tokenService,
         taskService,
         notificationService,
         redisCacheService,
         availableTitles
+    )
+
+    fastify.decorate(
+        'siteStatsService',
+        new SiteStatsService(
+            gameStore,
+            userStore,
+            new FirestoreSiteStatsStore(fastify.firestore),
+            taskService
+        )
     )
 
     // The site bot (DMs to linked accounts) only exists when a bot token is configured.

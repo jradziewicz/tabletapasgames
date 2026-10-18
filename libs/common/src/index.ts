@@ -103,3 +103,4 @@ export * from './site/gameHistory.js'
 export * from './preferences/preferences.js'
 
 export * from './game/definition/gameMetadata.js'
+export * from './site/siteStats.js'
