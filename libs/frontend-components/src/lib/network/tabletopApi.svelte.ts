@@ -900,7 +900,9 @@ export class TabletopApi {
 
     async getSiteStatsReport(range: UtcDayRange): Promise<SiteStatsReport> {
         const response = await this.wretch
-            .get(`/admin/stats/report?from=${range.from}&to=${range.to}`)
+            .get(
+                `/admin/stats/report?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`
+            )
             .unauthorized(this.on401)
             .badRequest(this.handleError)
             .json<unknown>()

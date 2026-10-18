@@ -43,7 +43,8 @@ import {
     assert,
     assertExists,
     type GameHistoryPage,
-    type GameHistoryCursor
+    type GameHistoryCursor,
+    type TimeWindow
 } from '@tabletop/common'
 import {
     AlreadyExistsError,
@@ -85,8 +86,7 @@ import { TournamentCacheKeys } from './tournamentCacheKeys.js'
 import type {
     GameTimestampField,
     PlayActions,
-    SiteStatsGameSource,
-    TimeWindow
+    SiteStatsGameSource
 } from '../stores/siteStatsStore.js'
 import {
     StoredTournamentSchedule,
@@ -941,9 +941,7 @@ export class FirestoreGameStore implements GameStore, SiteStatsGameSource {
             (action) => action.createdAt !== undefined && action.createdAt >= start
         )
         if (firstDuring === -1) return false
-        return !actions
-            .slice(0, firstDuring)
-            .some((action) => action.source === ActionSource.User)
+        return !actions.slice(0, firstDuring).some((action) => action.source === ActionSource.User)
     }
 
     private async readGames(query: Query<Game>, label: string): Promise<Game[]> {
