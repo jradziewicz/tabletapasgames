@@ -40,7 +40,8 @@
 
     <div class="header-grid grid shrink-0 text-[15px]">
         <div class="flex items-center gap-2">
-            {#if gameSession.undoableAction || gameSession.hasLocalUndo}
+            <!-- No Undo once the game is over: the result is final. -->
+            {#if !gameSession.gameState.result && (gameSession.undoableAction || gameSession.hasLocalUndo)}
                 <button
                     type="button"
                     onclick={() => gameSession.undo()}

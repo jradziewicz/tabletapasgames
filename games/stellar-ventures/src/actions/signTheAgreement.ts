@@ -108,7 +108,7 @@ export class HydratedSignTheAgreement
 
         // 3. Place the Agreement Token.
         const planetCount = alienPlanetOutpostCount(state.board, corporationId)
-        corporation.agreement = { planetCountAtSigning: planetCount }
+        corporation.agreement = { planetCountAtSigning: planetCount, hexId: hex.id }
 
         // 4. Bonus Dividend.
         const { bonusDividendPerShare } = agreementTrackEntryForPlanetCount(planetCount)

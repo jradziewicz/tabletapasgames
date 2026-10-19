@@ -119,14 +119,48 @@ export class HydratedBoardState extends Hydratable<typeof BoardState> implements
         return hex
     }
 
+    // Mega-Earth (and Mini-Earth) is printed across several physical hexes but is ONE hex for
+    // every rule - adjacency, reaching it, expanding out of it, Wormhole distance. An Outpost
+    // built there sits on whichever physical hex was clicked, so every check below works on the
+    // whole group: neighbors of any of its hexes count, and an Outpost on any of them counts.
+    // Every other hex is a group of one.
+    private hexGroup(hex: Hex): Hex[] {
+        if (!this.sharedValueTrackForHex(hex)) {
+            return [hex]
+        }
+        return Object.values(this.hexes).filter((other) => other.type === hex.type)
+    }
+
+    // Physical (hexA', hexB') pairs, one from each group, that actually touch.
+    private touchingPairs(hexA: Hex, hexB: Hex): [Hex, Hex][] {
+        const groupA = this.hexGroup(hexA)
+        const groupB = this.hexGroup(hexB)
+        if (groupA.includes(hexB)) {
+            return []
+        }
+        const pairs: [Hex, Hex][] = []
+        for (const a of groupA) {
+            for (const coordinate of neighborCoordinates(a.coordinate)) {
+                const b = groupB.find((candidate) => candidate.id === hexIdForCoordinate(coordinate))
+                if (b) {
+                    pairs.push([a, b])
+                }
+            }
+        }
+        return pairs
+    }
+
+    private groupHasOutpost(hex: Hex, corporationId: CorporationId): boolean {
+        return this.hexGroup(hex).some((member) => member.outposts.includes(corporationId))
+    }
+
     isAdjacent(hexIdA: string, hexIdB: string): boolean {
         const hexA = this.hexes[hexIdA]
-        if (!hexA) {
+        const hexB = this.hexes[hexIdB]
+        if (!hexA || !hexB) {
             return false
         }
-        return neighborCoordinates(hexA.coordinate).some(
-            (coordinate) => hexIdForCoordinate(coordinate) === hexIdB
-        )
+        return this.touchingPairs(hexA, hexB).length > 0
     }
 
     currentValue(hex: Hex): number {
@@ -328,14 +362,22 @@ export class HydratedBoardState extends Hydratable<typeof BoardState> implements
     // Planet Outpost).
     distanceToNearestOutpost(hexId: string, corporationId: CorporationId): number | undefined {
         const target = this.requireHex(hexId)
+        const targetGroup = this.hexGroup(target)
         let nearest: number | undefined
         for (const hex of Object.values(this.hexes)) {
             if (!hex.outposts.includes(corporationId)) {
                 continue
             }
-            const distance = hexDistance(target.coordinate, hex.coordinate)
-            if (nearest === undefined || distance < nearest) {
-                nearest = distance
+            // Measured between the closest physical hexes of each (Mega-Earth counts as one hex).
+            for (const from of this.hexGroup(hex)) {
+                for (const to of targetGroup) {
+                    const distance = targetGroup.includes(from)
+                        ? 0
+                        : hexDistance(to.coordinate, from.coordinate)
+                    if (nearest === undefined || distance < nearest) {
+                        nearest = distance
+                    }
+                }
             }
         }
         return nearest
@@ -346,23 +388,27 @@ export class HydratedBoardState extends Hydratable<typeof BoardState> implements
     // (or off another Outpost being built in the same action - see operations/network.ts).
     isAdjacentToOutpost(hexId: string, corporationId: CorporationId): boolean {
         const hex = this.requireHex(hexId)
-        return neighborCoordinates(hex.coordinate).some((coordinate) => {
-            const neighborHex = this.hexes[hexIdForCoordinate(coordinate)]
-            return (
-                !!neighborHex &&
-                neighborHex.outposts.includes(corporationId) &&
-                !this.crossesClosedBorder(hex, neighborHex)
-            )
-        })
+        const group = this.hexGroup(hex)
+        return group.some((member) =>
+            neighborCoordinates(member.coordinate).some((coordinate) => {
+                const neighborHex = this.hexes[hexIdForCoordinate(coordinate)]
+                return (
+                    !!neighborHex &&
+                    !group.includes(neighborHex) &&
+                    this.groupHasOutpost(neighborHex, corporationId) &&
+                    !this.crossesClosedBorder(member, neighborHex)
+                )
+            })
+        )
     }
 
     isBuildAdjacent(hexIdA: string, hexIdB: string): boolean {
+        const hexA = this.hexes[hexIdA]
         const hexB = this.hexes[hexIdB]
-        return (
-            !!hexB &&
-            this.isAdjacent(hexIdA, hexIdB) &&
-            !this.crossesClosedBorder(this.requireHex(hexIdA), hexB)
-        )
+        if (!hexA || !hexB) {
+            return false
+        }
+        return this.touchingPairs(hexA, hexB).some(([a, b]) => !this.crossesClosedBorder(a, b))
     }
 
     isInsideBorder(hex: Hex, borderLevel: number): boolean {

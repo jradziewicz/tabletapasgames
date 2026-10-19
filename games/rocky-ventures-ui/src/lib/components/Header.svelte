@@ -1,20 +1,75 @@
 <script lang="ts">
     import { fade } from 'svelte/transition'
     import { PlayerName } from '@tabletop/frontend-components'
-    import { MachineState, endTriggers, gemTriggerThreshold } from '@tabletop/rocky-ventures'
+    import {
+        BonusTokensToSummonDragon,
+        DragonLevel,
+        MachineState,
+        endTriggers,
+        gemTriggerThreshold
+    } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
     const gameSession = getGameSession()
 
     const triggers = $derived(endTriggers(gameSession.gameState))
     const gemThreshold = $derived(gemTriggerThreshold(gameSession.gameState.players.length))
-    const triggerChips = $derived([
-        { label: 'DECK', met: triggers.deckExhausted, title: 'Development deck reached the End of Era 3 card' },
-        { label: 'DRAGON', met: triggers.dragonKilled, title: 'The dragon has been summoned and killed' },
+    // Cards still to come before the face-up Game Over card at the bottom of the draw pile.
+    const deckCardsLeft = $derived(
+        Math.max(0, gameSession.gameState.market.drawPile.length - (triggers.deckExhausted ? gameSession.gameState.market.drawPile.length : 1))
+    )
+    const dragon = $derived(gameSession.gameState.dragon)
+    const dragonActive = $derived(dragon.summoned && !dragon.killed)
+    const gemsSpent = $derived(Math.min(gameSession.gameState.gemsSpent, gemThreshold))
+
+    // Green while far off, yellow once close, red when the trigger is met.
+    const DeckWarnCardsLeft = 6
+    // Two players have a smaller gem total, so warn later there.
+    const GemsWarnLeft = $derived(gameSession.gameState.players.length === 2 ? 3 : 4)
+    const DragonWarnHitsLeft = 3
+    type ChipLevel = 'far' | 'close' | 'met'
+    const ChipColors: Record<ChipLevel, { border: string; text: string; background: string }> = {
+        far: { border: '#2f8f57', text: '#7ee2a2', background: 'rgba(47, 143, 87, 0.15)' },
+        close: { border: '#e0b02a', text: '#ffd166', background: 'rgba(224, 176, 42, 0.18)' },
+        met: { border: '#e0574a', text: '#ffffff', background: '#a3241a' }
+    }
+
+    type TriggerChip = { key: string; label: string; tip: string; level: ChipLevel; pulse?: boolean }
+    const triggerChips: TriggerChip[] = $derived([
         {
-            label: `GEMS ${Math.min(gameSession.gameState.gemsSpent, gemThreshold)}/${gemThreshold}`,
-            met: triggers.gemsSpent,
-            title: 'Gems spent on gem actions'
+            key: 'deck',
+            label: `DECK ${deckCardsLeft}`,
+            level: triggers.deckExhausted ? 'met' : deckCardsLeft <= DeckWarnCardsLeft ? 'close' : 'far',
+            tip: triggers.deckExhausted
+                ? 'The Game Over card is next: this end trigger is met'
+                : `${deckCardsLeft} ${deckCardsLeft === 1 ? 'card' : 'cards'} left before the Game Over card`
+        },
+        dragon.killed
+            ? {
+                  key: 'dragon',
+                  label: `DRAGON ${DragonLevel}/${DragonLevel}`,
+                  level: 'met',
+                  tip: 'The dragon has been killed: this end trigger is met'
+              }
+            : dragonActive
+              ? {
+                    key: 'dragon',
+                    label: `DRAGON ${dragon.hits}/${DragonLevel}`,
+                    level: DragonLevel - dragon.hits <= DragonWarnHitsLeft ? 'close' : 'far',
+                    pulse: true,
+                    tip: `The dragon is out: ${dragon.hits} of ${DragonLevel} hits landed. Killing it meets this end trigger`
+                }
+              : {
+                    key: 'dragon',
+                    label: `DRAGON ${Math.min(dragon.trackerTokens.length, BonusTokensToSummonDragon)}/${BonusTokensToSummonDragon}`,
+                    level: 'far',
+                    tip: `${Math.min(dragon.trackerTokens.length, BonusTokensToSummonDragon)} of ${BonusTokensToSummonDragon} bonus tokens drawn. At ${BonusTokensToSummonDragon} the dragon comes out`
+                },
+        {
+            key: 'gems',
+            label: `GEMS ${gemsSpent}/${gemThreshold}`,
+            level: triggers.gemsSpent ? 'met' : gemThreshold - gemsSpent <= GemsWarnLeft ? 'close' : 'far',
+            tip: `${gemsSpent} of ${gemThreshold} gems spent on gem actions`
         }
     ])
     const phaseText = $derived.by(() => {
@@ -45,7 +100,7 @@
 
 <div
     id="rocky-ventures-header"
-    class="flex min-h-[44px] items-center justify-between gap-x-2 border-b border-[#4a3620] px-4 py-1.5 max-sm:flex-wrap max-sm:gap-y-1 max-sm:px-2 text-[#f1e6cf] tracking-[0.06em]"
+    class="relative z-30 flex min-h-[44px] items-center justify-between gap-x-2 border-b border-[#4a3620] px-4 py-1.5 max-sm:flex-wrap max-sm:gap-y-1 max-sm:px-2 text-[#f1e6cf] tracking-[0.06em]"
 >
     <div class="grid min-w-0 text-[13px] max-sm:basis-full sm:text-[15px]">
         {#if gameSession.isViewingHistory}
@@ -71,12 +126,16 @@
     </div>
 
     <div class="flex shrink-0 items-center gap-2 text-[15px] max-sm:ml-auto">
-        <div class="flex items-center gap-1 text-[10px] font-semibold" title="Game ends when 2 of 3 triggers are met">
-            {#each triggerChips as chip (chip.label)}
-                <span
-                    class="rounded border px-1.5 py-0.5"
-                    style="border-color: {chip.met ? '#ffd166' : '#4a3620'}; color: {chip.met ? '#ffd166' : '#8a7a5c'}; background-color: {chip.met ? '#3a2a17' : 'transparent'};"
-                    title={chip.title}>{chip.label}</span
+        <div class="flex items-center gap-1 text-[10px] font-semibold sm:gap-2.5 sm:text-sm lg:text-base">
+            {#each triggerChips as chip (chip.key)}
+                <!-- Small hover (or tap) box with the details, rather than a slow native tooltip. -->
+                <button
+                    type="button"
+                    class="trigger-chip relative cursor-default rounded border px-1.5 py-0.5 sm:rounded-lg sm:border-2 sm:px-3 sm:py-1.5 lg:px-4 lg:py-2"
+                    class:dragon-alert={chip.pulse}
+                    style="border-color: {ChipColors[chip.level].border}; color: {ChipColors[chip.level].text}; background-color: {ChipColors[chip.level].background};"
+                    aria-label={chip.tip}
+                    >{chip.label}<span class="chip-tip" role="tooltip">{chip.tip}</span></button
                 >
             {/each}
         </div>
@@ -91,3 +150,46 @@
         {/if}
     </div>
 </div>
+
+<style>
+    .chip-tip {
+        position: absolute;
+        top: calc(100% + 6px);
+        right: 0;
+        z-index: 50;
+        display: none;
+        width: max-content;
+        max-width: 220px;
+        padding: 4px 8px;
+        border: 1px solid #8a6d3b;
+        border-radius: 6px;
+        background: #1a120b;
+        color: #f1e6cf;
+        font-size: 11px;
+        font-weight: 500;
+        letter-spacing: normal;
+        line-height: 1.3;
+        white-space: normal;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+        pointer-events: none;
+    }
+    .trigger-chip:hover .chip-tip,
+    .trigger-chip:focus .chip-tip {
+        display: block;
+    }
+    .trigger-chip:focus {
+        outline: none;
+    }
+    .dragon-alert {
+        animation: dragon-alert-pulse 1.6s ease-in-out infinite;
+    }
+    @keyframes dragon-alert-pulse {
+        0%,
+        100% {
+            box-shadow: 0 0 0 0 currentColor;
+        }
+        50% {
+            box-shadow: 0 0 0 4px transparent;
+        }
+    }
+</style>

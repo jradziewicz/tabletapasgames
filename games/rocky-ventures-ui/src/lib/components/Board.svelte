@@ -35,7 +35,7 @@
     import { CityRouteColors, routePolylinePoints } from '$lib/utils/routePath.js'
     import { DummyColor } from '$lib/utils/dummyDisplay.js'
     import { GemHexRadius, GemTrackFillOrder, hexagonPoints } from '$lib/utils/gemTrack.js'
-    import { gridCellPosition, victoryPointPosition } from '$lib/utils/trackLayout.js'
+    import { GridRegion, gridCellPosition, victoryPointPosition } from '$lib/utils/trackLayout.js'
     import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
     import { agreementImageUrl, agreementTooltip } from '$lib/utils/agreementImages.js'
     import { AgreementBoxes } from '$lib/utils/agreementBoxLayout.js'
@@ -638,6 +638,25 @@
         {/if}
     {/each}
 
+    <!-- Click the weapon/tool grid to pop it out (acquire targets drawn later stay clickable) -->
+    <rect
+        x={GridRegion.x}
+        y={GridRegion.y}
+        width={GridRegion.width}
+        height={GridRegion.height}
+        fill="transparent"
+        class="grid-zoom-target"
+        role="button"
+        tabindex="0"
+        aria-label="Enlarge the weapon / tool grid"
+        onclick={() => (gameSession.gridZoomOpen = true)}
+        onkeydown={(event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                gameSession.gridZoomOpen = true
+            }
+        }}
+    />
+
     <!-- Player discs: weapon/tool grid -->
     {#each players as player (player.playerId)}
         {@const group = gridGroups.get(`${player.weaponLevel},${player.toolLevel}`) ?? []}
@@ -983,6 +1002,10 @@
     .buildable-box,
     .claimable-mine {
         cursor: pointer;
+    }
+    .grid-zoom-target {
+        cursor: zoom-in;
+        outline: none;
     }
     .buildable-box,
     .buildable-box *,

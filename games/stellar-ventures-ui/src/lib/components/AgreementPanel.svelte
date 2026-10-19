@@ -18,6 +18,8 @@
         signedAgreementTileIcon,
         AGREEMENT_SHARE_HEIGHT_PCT,
         AGREEMENT_SHARE_TOP_PCT,
+        AGREEMENT_SHARES_TWO_ROW_HEIGHT_PCT,
+        AGREEMENT_SHARES_TWO_ROW_TOP_PCT,
         AGREEMENT_TOKEN_HEIGHT_PCT,
         AGREEMENT_TOKEN_TOP_PCT,
         AGREEMENT_TRACK_COLUMN_LEFT_PCT,
@@ -169,15 +171,23 @@
         {/each}
         {#if signedCorporations.length > 0}
             <div
-                class="absolute flex flex-wrap items-center justify-center gap-1"
-                style="left: {AGREEMENT_TRACK_COLUMN_LEFT_PCT[4]}%; width: {AGREEMENT_TRACK_COLUMN_WIDTH_PCT[4]}%; top: {AGREEMENT_SHARE_TOP_PCT}%; height: {AGREEMENT_SHARE_HEIGHT_PCT}%;"
+                class="absolute flex flex-wrap content-center items-center justify-center gap-1"
+                style="left: {AGREEMENT_TRACK_COLUMN_LEFT_PCT[4]}%; width: {AGREEMENT_TRACK_COLUMN_WIDTH_PCT[4]}%; top: {signedCorporations.length > 3
+                    ? AGREEMENT_SHARES_TWO_ROW_TOP_PCT
+                    : AGREEMENT_SHARE_TOP_PCT}%; height: {signedCorporations.length > 3
+                    ? AGREEMENT_SHARES_TWO_ROW_HEIGHT_PCT
+                    : AGREEMENT_SHARE_HEIGHT_PCT}%;"
             >
+                <!-- One row of 3 along the bottom of the box; from the 4th signer on, the row
+                     moves up into the box's empty top half as two rows of full-size
+                     certificates, so a 4th no longer wraps below the box out of view. -->
                 {#each signedCorporations as corporation (corporation.id)}
                     <img
                         src={CorporationShareCertificateIcons[corporation.id]}
                         alt="{CorporationDisplayNames[corporation.id]} Share Certificate - Alien Shareholdings"
                         title="{CorporationDisplayNames[corporation.id]} - Alien Shareholdings"
-                        class="h-full w-auto rounded-sm object-contain shadow-lg"
+                        class="w-auto rounded-sm object-contain shadow-lg"
+                        style:height={signedCorporations.length > 3 ? 'calc(50% - 2px)' : '100%'}
                     />
                 {/each}
             </div>
@@ -223,16 +233,22 @@
                                 </div>
                             {/if}
                             {#if corporation.agreement}
-                                {@const tileIcon = signedAgreementTileIcon(alienPlanetHexes, corporation.id)}
+                                {@const tileIcon = signedAgreementTileIcon(
+                                    alienPlanetHexes,
+                                    corporation.id,
+                                    gameSession.gameState.corporations
+                                )}
                                 {#if tileIcon}
                                     <!-- The actual Alien Agreement Tile this Corporation flipped
                                          to sign - takes over the same spot the handshake token
                                          occupied before signing. -->
+                                    <!-- Grows on hover (from its left edge, over the rows around
+                                         it) so the chevrons can actually be read. -->
                                     <img
                                         src={tileIcon}
                                         alt="Alien Agreement Tile - signed The Agreement"
                                         title="Alien Agreement Tile - signed The Agreement"
-                                        class="h-8 w-8 shrink-0 rounded-md bg-black/20 object-contain p-1 drop-shadow"
+                                        class="relative h-8 w-8 shrink-0 origin-left rounded-md bg-black/20 object-contain p-1 drop-shadow transition-transform duration-150 hover:z-20 hover:scale-[4] hover:bg-[#12162b]"
                                     />
                                 {/if}
                             {:else if CorporationAgreementTokenIcons[corporation.id]}
@@ -242,12 +258,15 @@
                                      Amethyst Agency has no token at all here (see
                                      CorporationAgreementTokenIcons) since the rules never let it
                                      sign in the first place, so it shows neither branch. -->
-                                <img
-                                    src={CorporationAgreementTokenIcons[corporation.id]}
-                                    alt="Has not signed The Agreement"
-                                    title="Has not signed The Agreement"
-                                    class="h-6 w-auto drop-shadow"
-                                />
+                                <div class="flex items-center gap-1">
+                                    <img
+                                        src={CorporationAgreementTokenIcons[corporation.id]}
+                                        alt="Has not signed The Agreement"
+                                        title="Has not signed The Agreement"
+                                        class="h-6 w-auto drop-shadow"
+                                    />
+                                    <span class="text-[10px] text-[#7f88ad]">(unsigned)</span>
+                                </div>
                             {/if}
                         </div>
                     </div>

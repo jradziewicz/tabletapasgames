@@ -808,7 +808,6 @@
                 {@const selected = gameSession.huntSelected.includes(index)}
                 {@const focused = gameSession.huntFocusHit === index && selected}
                 {@const url = weaponTokenImageUrl(kind)}
-                {@const assignedIndex = targets.findIndex((target) => target.id === gameSession.huntHitTargets[index])}
                 <button
                     type="button"
                     onclick={() => gameSession.toggleHuntToken(index)}
@@ -819,13 +818,6 @@
                         <img src={url} alt={kind} class="block h-[72px] w-[72px]" draggable="false" />
                     {:else}
                         <span class="block h-[72px] w-[72px]">{kind}</span>
-                    {/if}
-                    {#if selected && kind === WeaponTokenKind.Hit && assignedIndex >= 0}
-                        <span
-                            class="absolute -right-1 -top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#1a120b] bg-[#ffd166] text-xs font-black text-[#1a120b]"
-                        >
-                            {assignedIndex + 1}
-                        </span>
                     {/if}
                 </button>
             {/each}
@@ -840,7 +832,7 @@
         </div>
         {#if pending.drawn.includes(WeaponTokenKind.Hit) && targets.length > 0}
             <div class="mt-3 flex flex-wrap items-end gap-3">
-                {#each targets as target, targetIndex (target.id)}
+                {#each targets as target (target.id)}
                     {@const targetUrl = target.id === DragonHuntRegion ? DragonTileImageUrl : scourgeImageUrl(target.id)}
                     {@const assigned = gameSession.huntAssignedCount(target.id)}
                     {@const killed = target.hits + assigned >= target.level}
@@ -851,11 +843,6 @@
                         class="relative flex flex-col items-center gap-1 rounded border-2 p-1 transition enabled:hover:border-[#ffd166]"
                         style="border-color: {assigned > 0 ? '#ffd166' : '#8a6d3b'};"
                     >
-                        <span
-                            class="absolute left-1 top-1 flex h-6 w-6 items-center justify-center rounded-full border-2 border-[#1a120b] bg-[#ffd166] text-xs font-black text-[#1a120b]"
-                        >
-                            {targetIndex + 1}
-                        </span>
                         {#if targetUrl}
                             <img
                                 src={targetUrl}

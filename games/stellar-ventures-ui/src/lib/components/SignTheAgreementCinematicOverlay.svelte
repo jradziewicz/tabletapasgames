@@ -106,7 +106,11 @@
         const alienPlanetHexes = Object.values(gameSession.gameState.board.hexes).filter(
             (hex) => hex.type === HexType.AlienPlanet
         )
-        const hex = findSignedAgreementHex(alienPlanetHexes, corporation.id)
+        const hex = findSignedAgreementHex(
+            alienPlanetHexes,
+            corporation.id,
+            gameSession.gameState.corporations
+        )
         const chevrons = hex?.alienAgreementTileChevrons
         // Whoever actually submitted the signing (the President at that moment - the President
         // may have changed since, for a player catching up later).

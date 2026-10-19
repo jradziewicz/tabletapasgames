@@ -163,7 +163,7 @@ describe('OfferSignTheAgreementStateHandler', () => {
         expect(corporation.availableShareCount).toBe(availableSharesBefore - 1)
 
         // 3. Agreement Token placed - 2 Alien Planets at the moment of signing.
-        expect(corporation.agreement).toEqual({ planetCountAtSigning: 2 })
+        expect(corporation.agreement).toEqual({ planetCountAtSigning: 2, hexId: '1,1' })
 
         // 4. Bonus Dividend paid to every Shareholder's Frozen Funds (2-Planet section: 6/share).
         expect(state.getPlayerState('p1').frozenFunds).toBe(frozenFundsBefore + 6)
