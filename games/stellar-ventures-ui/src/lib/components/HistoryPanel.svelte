@@ -48,6 +48,9 @@
         // Credits players have paid out of their own pocket for this Corporation (Private
         // Contractor), so a History entry can say what a player personally spent.
         contractorSpend: number
+        // Running dividend totals per player (Pay Dividends and the Sign The Agreement bonus), so
+        // a payout entry can list who received how much.
+        dividendsByPlayer: Record<string, number>
     }
 
     // The handful of numbers a History entry is summarised from, taken from the state just
@@ -101,7 +104,8 @@
                 contractorSpend: Object.values(corporation.privateContractorExpenseByPlayer ?? {}).reduce(
                     (sum, amount) => sum + amount,
                     0
-                )
+                ),
+                dividendsByPlayer: { ...(corporation.dividendsReceivedByPlayer ?? {}) }
             }
         }
         return {
@@ -412,6 +416,24 @@
             : undefined
     }
 
+    // Who received dividends in this step and how much (Pay Dividends, or the Bonus Dividend
+    // when signing The Agreement), largest first.
+    function dividendRecipients(
+        entry: Entry,
+        corporationId: CorporationId | undefined
+    ): { playerId: string; amount: number }[] {
+        const was = corporationId ? entry.before?.corporations[corporationId] : undefined
+        const now = corporationId ? entry.after?.corporations[corporationId] : undefined
+        if (!was || !now) return []
+        return Object.entries(now.dividendsByPlayer)
+            .map(([playerId, total]) => ({
+                playerId,
+                amount: total - (was.dividendsByPlayer[playerId] ?? 0)
+            }))
+            .filter((recipient) => recipient.amount > 0)
+            .sort((a, b) => b.amount - a.amount)
+    }
+
     // What the step changed for its Corporation (and the Aliens), from the before/after
     // snapshots. Things the verb phrase already says (Outposts built, a Share issued) are not
     // repeated.
@@ -463,6 +485,7 @@
                 !!corp && !!entry.before?.corporationIsActor && !PlayerActsActions.has(action.type)}
             {@const details = summary(entry, corporationId)}
             {@const powerHover = powerHoverText(entry)}
+            {@const recipients = dividendRecipients(entry, corporationId)}
             <li class="mb-3 ms-4">
                 <div
                     class="absolute -start-1.5 mt-1 h-3 w-3 rounded-full border border-[#0b0e1a]"
@@ -496,6 +519,16 @@
                     <div class="mt-0.5 text-xs text-[#aeb5d6]">
                         <CreditsText text={details.join(' · ')} />
                     </div>
+                {/if}
+                {#if recipients.length > 0}
+                    <ul class="mt-0.5 list-disc ps-5 text-xs text-[#aeb5d6]">
+                        {#each recipients as recipient (recipient.playerId)}
+                            <li>
+                                <PlayerName playerId={recipient.playerId} />
+                                <CreditsText text={`received ₮${recipient.amount}`} />
+                            </li>
+                        {/each}
+                    </ul>
                 {/if}
             </li>
         {/each}
