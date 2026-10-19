@@ -1,7 +1,7 @@
 import type { GameUiDefinition } from '@tabletop/frontend-components/definition/gameUiDefinition'
 import { Definition } from '@tabletop/locust'
 import type { LocustGameState, HydratedLocustGameState } from '@tabletop/locust'
-import coverImg from '$lib/images/cover.jpg'
+import coverImg from '$lib/images/cover.png'
 
 export const UiDefinition: GameUiDefinition<LocustGameState, HydratedLocustGameState> = {
     info: {
