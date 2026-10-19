@@ -3,7 +3,8 @@
 export const StartingMoney = 15
 export const StartingGems = 2
 export const StartingClaimTokens = 4
-export const StartingVictoryPoints = 10
+// Was 10 while VP could be sold for money; that option is gone, so new games start at 0.
+export const StartingVictoryPoints = 0
 export const StartingWeaponLevel = 1
 export const StartingToolLevel = 1
 

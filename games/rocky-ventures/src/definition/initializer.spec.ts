@@ -1,7 +1,7 @@
 import { GameEngine, PlayerStatus, defaultGameConfig, normalizeGameConfig } from '@tabletop/common'
 import { describe, expect, it } from 'vitest'
 import { Definition } from './gameDefinition.js'
-import { StartingMoney } from '../data/setup.js'
+import { StartingMoney, StartingVictoryPoints } from '../data/setup.js'
 
 const engine = new GameEngine(Definition.runtime)
 
@@ -37,6 +37,19 @@ describe.each([2, 3, 4, 5])('starting money with %i players', (playerCount) => {
             )
             if (playerCount === 2) {
                 expect(state.dummy?.money).toBe(StartingMoney)
+            }
+        }
+    })
+})
+
+describe('starting victory points', () => {
+    it('starts every player (and the 2-player dummy) at 0 VP', () => {
+        expect(StartingVictoryPoints).toBe(0)
+        for (const playerCount of [2, 3, 4, 5]) {
+            const state = startedState(playerCount, 1)
+            expect(state.players.map((player) => player.victoryPoints)).toEqual(Array(playerCount).fill(0))
+            if (playerCount === 2) {
+                expect(state.dummy?.victoryPoints).toBe(0)
             }
         }
     })
