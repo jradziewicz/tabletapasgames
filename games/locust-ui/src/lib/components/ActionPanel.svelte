@@ -61,7 +61,9 @@
         switch (pending.kind) {
             case ActionKind.JumpOrBreed:
                 if (session.hopOrigin) {
-                    return 'Hover a glowing habitat to preview the hop, then click to land it (click the grasshopper again to put it back).'
+                    return session.hops.length > 0
+                        ? `Click a glowing habitat to send another from ${session.hopOrigin}, pick a different grasshopper, or End action.`
+                        : 'Hover a glowing habitat to preview the hop, then click to land it (click the grasshopper again to put it back).'
                 }
                 if (session.jumpOrBreedMode === JumpOrBreedMode.Jump)
                     return 'Pick another glowing grasshopper to jump again. Several can land in the same habitat. Or End action.'

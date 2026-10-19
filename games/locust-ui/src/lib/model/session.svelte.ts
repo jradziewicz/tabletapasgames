@@ -120,7 +120,6 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
             !pending ||
             this.performKind !== ActionKind.JumpOrBreed ||
             this.jumpOrBreedMode === JumpOrBreedMode.Breed ||
-            this.hopOrigin !== undefined ||
             this.hops.length >= pending.level
         ) {
             return []
@@ -272,6 +271,16 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
         await super.undo()
     }
 
+    // The origin stays picked while it can still send grasshoppers; otherwise a lone remaining
+    // origin (such as the grasshopper that just landed, for a chained jump) is picked for the player.
+    private nextHopOrigin(previous: string): string | undefined {
+        const origins = this.jumpOriginIds
+        if (origins.includes(previous)) {
+            return previous
+        }
+        return origins.length === 1 ? origins[0] : undefined
+    }
+
     async selectGrasshopper(habitatId: string) {
         if (!this.acceptingInput) {
             return
@@ -316,8 +325,9 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
         switch (this.performKind) {
             case ActionKind.JumpOrBreed:
                 if (this.hopOrigin) {
-                    this.hops = [...this.hops, { from: this.hopOrigin, to: habitatId }]
-                    this.hopOrigin = undefined
+                    const origin = this.hopOrigin
+                    this.hops = [...this.hops, { from: origin, to: habitatId }]
+                    this.hopOrigin = this.nextHopOrigin(origin)
                 }
                 break
             case ActionKind.Cannibalize:
