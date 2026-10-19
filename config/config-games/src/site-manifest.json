@@ -46,6 +46,14 @@
         "0.0.9",
         "0.0.8"
       ]
+    },
+    {
+      "gameId": "locust",
+      "packageId": "locust",
+      "logicVersion": "0.0.1",
+      "uiVersion": "0.0.1",
+      "priorLogicVersions": [],
+      "priorUiVersions": []
     }
   ]
 }
