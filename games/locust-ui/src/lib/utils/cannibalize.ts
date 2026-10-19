@@ -18,7 +18,9 @@ function takenFrom(victims: Victim[], color: Color, kind?: InsectKind): number {
 }
 
 function opponentsIn(state: HydratedLocustGameState, attacker: Color, habitatId: string) {
-    return state.board.habitat(habitatId).occupants.filter((occupant) => isOpponent(state, attacker, occupant.color))
+    return state.board
+        .habitat(habitatId)
+        .occupants.filter((occupant) => isOpponent(state, attacker, occupant.color))
 }
 
 // Picking one insect at a time from an opponent with the fewest losses so far always ends
@@ -49,7 +51,11 @@ export function victimOptions(
 }
 
 // True when the attacker could end up removing a different set of insects than the default split.
-export function hasVictimChoice(state: HydratedLocustGameState, attacker: Color, habitatId: string): boolean {
+export function hasVictimChoice(
+    state: HydratedLocustGameState,
+    attacker: Color,
+    habitatId: string
+): boolean {
     const opposing = opponentsIn(state, attacker, habitatId).reduce(
         (sum, occupant) => sum + occupantDiscs(occupant),
         0
@@ -69,6 +75,8 @@ export function hasVictimChoice(state: HydratedLocustGameState, attacker: Color,
 export function addVictim(picked: Victim[], color: Color, kind: InsectKind): Victim[] {
     const existing = picked.find((victim) => victim.color === color && victim.kind === kind)
     return existing
-        ? picked.map((victim) => (victim === existing ? { ...victim, count: victim.count + 1 } : victim))
+        ? picked.map((victim) =>
+              victim === existing ? { ...victim, count: victim.count + 1 } : victim
+          )
         : [...picked, { color, kind, count: 1 }]
 }

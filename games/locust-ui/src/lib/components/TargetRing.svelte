@@ -17,6 +17,14 @@
 <!-- A legal target: dark outline for contrast on pale board art, thick bright ring, light tint,
      stacked glow and a gentle pulse, so it reads on yellow, salmon and blue habitats alike. -->
 <g class="lc-target lc-target-{tone}" pointer-events="none">
-    <circle {cx} {cy} {r} fill={color.fill} fill-opacity="0.22" stroke={color.outline} stroke-width="13" />
+    <circle
+        {cx}
+        {cy}
+        {r}
+        fill={color.fill}
+        fill-opacity="0.22"
+        stroke={color.outline}
+        stroke-width="13"
+    />
     <circle {cx} {cy} {r} fill="none" stroke={color.stroke} stroke-width="7" />
 </g>

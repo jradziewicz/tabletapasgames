@@ -1,7 +1,9 @@
 <script lang="ts">
     import { getHabitat } from '@tabletop/locust'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
-    import { HabitatRadius, habitatCenter } from '$lib/utils/boardLayout.js'
+    import { HabitatRadius, habitatCenter, quadrantPoint } from '$lib/utils/boardLayout.js'
+    import { trimmedArc } from '$lib/utils/arc.js'
+    import GhostHop from './GhostHop.svelte'
 
     const session = getGameSession()
 
@@ -16,37 +18,170 @@
     }
 
     const breedCounts = $derived(countBy(session.breedHabitatIds))
+
+    const actingFill = $derived(
+        session.actingColor ? session.colors.getUiColor(session.actingColor) : '#ffffff'
+    )
+
+    function actingQuadrant(habitatId: string): number {
+        const occupants = session.gameState.board.habitat(habitatId).occupants
+        const index = occupants.findIndex((occupant) => occupant.color === session.actingColor)
+        return index === -1 ? occupants.length : index
+    }
+
+    function grasshopperSpot(habitatId: string) {
+        return quadrantPoint(centerOf(habitatId), actingQuadrant(habitatId))
+    }
+
+    // Ghosts stack slightly so several jumps into one habitat read as several grasshoppers.
+    function landingSpot(habitatId: string, index: number) {
+        return quadrantPoint(centerOf(habitatId), actingQuadrant(habitatId), {
+            x: index * 12,
+            y: -index * 10
+        })
+    }
+
+    const previewHop = $derived(
+        session.hopOrigin &&
+            session.hoverHabitatId &&
+            session.selectableHabitatIds.includes(session.hoverHabitatId)
+            ? { from: session.hopOrigin, to: session.hoverHabitatId }
+            : undefined
+    )
+
+    const hopArcs = $derived(
+        [
+            ...session.hops.map((hop) => ({ hop, preview: false })),
+            ...(previewHop ? [{ hop: previewHop, preview: true }] : [])
+        ].map(({ hop, preview }) => ({
+            preview,
+            path: trimmedArc(grasshopperSpot(hop.from), centerOf(hop.to), 0.12, 0.22)
+        }))
+    )
+
+    const ghosts = $derived.by(() => {
+        const landed = new Map<string, number>()
+        const staged = [...session.hops, ...(previewHop ? [previewHop] : [])]
+        return staged.map((hop, index) => {
+            const count = landed.get(hop.to) ?? 0
+            landed.set(hop.to, count + 1)
+            return {
+                key: `${index}-${hop.from}-${hop.to}`,
+                from: grasshopperSpot(hop.from),
+                to: landingSpot(hop.to, count),
+                fill: actingFill,
+                delay: 0
+            }
+        })
+    })
+
+    const landingBadges = $derived(
+        countBy(session.hops.map((hop) => hop.to)).map(([habitatId, count]) => ({
+            habitatId,
+            count,
+            point: { x: centerOf(habitatId).x, y: centerOf(habitatId).y - HabitatRadius - 24 }
+        }))
+    )
+
+    const leavingBadges = $derived(
+        countBy(session.hops.map((hop) => hop.from)).map(([habitatId, count]) => {
+            const spot = grasshopperSpot(habitatId)
+            return { habitatId, count, point: { x: spot.x, y: spot.y + 44 } }
+        })
+    )
     const relocationCounts = $derived(countBy(session.relocationDestinations))
 </script>
 
 <defs>
     <marker
         id="hop-arrow"
-        viewBox="0 0 10 10"
-        refX="7"
-        refY="5"
-        markerWidth="5"
-        markerHeight="5"
+        viewBox="0 0 12 12"
+        refX="6"
+        refY="6"
+        markerWidth="4"
+        markerHeight="4"
         orient="auto"
     >
-        <path d="M0,0 L10,5 L0,10 z" fill="#ffffff" />
+        <path
+            d="M1,1 L11,6 L1,11 Q4,6 1,1 z"
+            fill="#ffffff"
+            stroke="#1a140c"
+            stroke-width="1.2"
+            stroke-linejoin="round"
+        />
     </marker>
 </defs>
 
-{#each session.hops as hop, index (index)}
-    {@const from = centerOf(hop.from)}
-    {@const to = centerOf(hop.to)}
-    <line
-        x1={from.x}
-        y1={from.y}
-        x2={from.x + (to.x - from.x) * 0.8}
-        y2={from.y + (to.y - from.y) * 0.8}
-        stroke="#ffffff"
-        stroke-width="12"
-        stroke-linecap="round"
-        marker-end="url(#hop-arrow)"
-        opacity="0.9"
-    />
+{#each hopArcs as arc, index (index)}
+    <g pointer-events="none" class="hop-arc" class:hop-arc-preview={arc.preview}>
+        <path
+            d={arc.path}
+            fill="none"
+            stroke="#1a140c"
+            stroke-width="15"
+            stroke-linecap="round"
+            opacity="0.55"
+        />
+        <path
+            d={arc.path}
+            fill="none"
+            stroke="#ffffff"
+            stroke-width="8"
+            stroke-linecap="round"
+            stroke-dasharray={arc.preview ? '14 12' : undefined}
+            marker-end="url(#hop-arrow)"
+            class:hop-dash={arc.preview}
+        />
+    </g>
+{/each}
+
+{#each ghosts as ghost (ghost.key)}
+    <GhostHop from={ghost.from} to={ghost.to} fill={ghost.fill} delay={ghost.delay} />
+{/each}
+
+{#each landingBadges as badge (badge.habitatId)}
+    <g transform="translate({badge.point.x} {badge.point.y})" pointer-events="none">
+        <rect
+            x="-30"
+            y="-17"
+            width="60"
+            height="34"
+            rx="17"
+            fill="#3ddc84"
+            stroke="#06371b"
+            stroke-width="3"
+        />
+        <text
+            text-anchor="middle"
+            dominant-baseline="central"
+            font-size="20"
+            font-weight="800"
+            fill="#06371b">+{badge.count}</text
+        >
+    </g>
+{/each}
+
+{#each leavingBadges as badge (badge.habitatId)}
+    <g transform="translate({badge.point.x} {badge.point.y})" pointer-events="none">
+        <rect
+            x="-30"
+            y="-17"
+            width="60"
+            height="34"
+            rx="17"
+            fill="#2b2418"
+            stroke="#ffd66e"
+            stroke-width="3"
+            opacity="0.92"
+        />
+        <text
+            text-anchor="middle"
+            dominant-baseline="central"
+            font-size="20"
+            font-weight="800"
+            fill="#ffd66e">−{badge.count}</text
+        >
+    </g>
 {/each}
 
 {#each breedCounts as [habitatId, count] (habitatId)}
@@ -126,3 +261,21 @@
         pointer-events="none"
     />
 {/each}
+
+<style>
+    .hop-arc {
+        filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.85))
+            drop-shadow(0 0 10px rgba(255, 214, 110, 0.55));
+    }
+    .hop-arc-preview {
+        opacity: 0.8;
+    }
+    .hop-dash {
+        animation: hop-dash-flow 0.9s linear infinite;
+    }
+    @keyframes hop-dash-flow {
+        to {
+            stroke-dashoffset: -26;
+        }
+    }
+</style>

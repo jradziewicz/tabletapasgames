@@ -61,10 +61,10 @@
         switch (pending.kind) {
             case ActionKind.JumpOrBreed:
                 if (session.hopOrigin) {
-                    return 'Click a glowing linked habitat to land (click the grasshopper again to put it back).'
+                    return 'Hover a glowing habitat to preview the hop, then click to land it (click the grasshopper again to put it back).'
                 }
                 if (session.jumpOrBreedMode === JumpOrBreedMode.Jump)
-                    return 'Click a glowing grasshopper to keep jumping.'
+                    return 'Pick another glowing grasshopper to jump again. Several can land in the same habitat. Or End action.'
                 if (session.jumpOrBreedMode === JumpOrBreedMode.Breed) {
                     return 'Click a glowing nymph circle to lay another nymph.'
                 }

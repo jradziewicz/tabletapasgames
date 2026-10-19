@@ -1,5 +1,10 @@
 import { GameSession, TitlePreferences } from '@tabletop/frontend-components'
-import { addVictim, hasVictimChoice, victimOptions, type VictimOption } from '$lib/utils/cannibalize.js'
+import {
+    addVictim,
+    hasVictimChoice,
+    victimOptions,
+    type VictimOption
+} from '$lib/utils/cannibalize.js'
 import type { Color } from '@tabletop/common'
 import {
     ActionKind,
@@ -43,6 +48,7 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
     lastActionError: string | undefined = $state()
 
     useAlternative = $state(false)
+    hoverHabitatId: string | undefined = $state()
     hopOrigin: string | undefined = $state()
     hops: Hop[] = $state([])
     breedHabitatIds: string[] = $state([])
@@ -244,6 +250,7 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
 
     clearLocalSelection() {
         this.hopOrigin = undefined
+        this.hoverHabitatId = undefined
         this.hops = []
         this.breedHabitatIds = []
         this.attacks = []
@@ -346,13 +353,18 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
             this.pickingAttack = { habitatId, victims: [] }
             return
         }
-        this.attacks = [...this.attacks, { habitatId, victims: evenVictims(this.gameState, color, habitatId) }]
+        this.attacks = [
+            ...this.attacks,
+            { habitatId, victims: evenVictims(this.gameState, color, habitatId) }
+        ]
     }
 
     victimChoices: VictimOption[] = $derived.by(() => {
         const picking = this.pickingAttack
         const color = this.actingColor
-        return picking && color ? victimOptions(this.gameState, color, picking.habitatId, picking.victims) : []
+        return picking && color
+            ? victimOptions(this.gameState, color, picking.habitatId, picking.victims)
+            : []
     })
 
     async pickVictim(color: Color, kind: InsectKind) {
@@ -360,10 +372,16 @@ export class LocustGameSession extends GameSession<LocustGameState, HydratedLocu
             return
         }
         const picking = this.pickingAttack
-        if (!picking || !this.victimChoices.some((option) => option.color === color && option.kind === kind)) {
+        if (
+            !picking ||
+            !this.victimChoices.some((option) => option.color === color && option.kind === kind)
+        ) {
             return
         }
-        const updated = { habitatId: picking.habitatId, victims: addVictim(picking.victims, color, kind) }
+        const updated = {
+            habitatId: picking.habitatId,
+            victims: addVictim(picking.victims, color, kind)
+        }
         this.pickingAttack = updated
         if (this.victimChoices.length === 0) {
             this.attacks = [...this.attacks, updated]

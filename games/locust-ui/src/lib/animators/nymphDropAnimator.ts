@@ -2,7 +2,12 @@ import type { AnimationContext } from '@tabletop/frontend-components'
 import type { Color, GameAction } from '@tabletop/common'
 import { gsap } from 'gsap'
 import { tick } from 'svelte'
-import { InsectKind, isBreed, type HydratedLocustGameState, type LocustGameState } from '@tabletop/locust'
+import {
+    InsectKind,
+    isBreed,
+    type HydratedLocustGameState,
+    type LocustGameState
+} from '@tabletop/locust'
 import { StateAnimator } from './stateAnimator.js'
 import type { LocustGameSession } from '$lib/model/session.svelte.js'
 
@@ -65,7 +70,12 @@ export class NymphDropAnimator extends StateAnimator<
                 return
             }
             if (cinematic) {
-                gsap.set(element, { y: -DropHeight, scale: 1.5, opacity: 0, transformOrigin: 'center center' })
+                gsap.set(element, {
+                    y: -DropHeight,
+                    scale: 1.5,
+                    opacity: 0,
+                    transformOrigin: 'center center'
+                })
                 const start = index * DropStagger
                 animationContext.actionTimeline.to(
                     element,

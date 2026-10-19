@@ -20,7 +20,9 @@
         !session.gameState.result && session.gameState.nextCubeSpaceId() === spaceId
     )
     const spaceTitle = $derived(
-        space.kind ? `${ActionNames[space.kind]} ${space.level}${space.color ? ` (${space.color})` : ''}` : spaceId
+        space.kind
+            ? `${ActionNames[space.kind]} ${space.level}${space.color ? ` (${space.color})` : ''}`
+            : spaceId
     )
     const bonusToken = $derived(session.gameState.board.bonusTokens[spaceId])
     const BonusFill: Record<string, string> = {
