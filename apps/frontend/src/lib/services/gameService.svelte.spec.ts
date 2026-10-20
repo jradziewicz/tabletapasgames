@@ -84,6 +84,8 @@ it('keeps a game created while an older list response is in flight', async () =>
     getMyGames.mockReturnValueOnce(olderResponse.promise).mockResolvedValueOnce([game('new')])
 
     const loading = service.loadGames()
+    // Our load waits for the library before fetching, so let the first fetch start.
+    await vi.waitFor(() => expect(getMyGames).toHaveBeenCalledTimes(1))
     await emit(created(game('new')))
     olderResponse.resolve([])
     await loading
@@ -98,6 +100,7 @@ it('fetches again when a load is requested while one is running', async () => {
     getMyGames.mockReturnValueOnce(olderResponse.promise).mockResolvedValueOnce([game('later')])
 
     const first = service.loadGames()
+    await vi.waitFor(() => expect(getMyGames).toHaveBeenCalledTimes(1))
     const second = service.loadGames()
     olderResponse.resolve([])
     await Promise.all([first, second])
