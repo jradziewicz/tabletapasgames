@@ -108,3 +108,4 @@ export * from './preferences/preferences.js'
 export * from './game/definition/gameMetadata.js'
 
 export * from './site/gameStats.js'
+export * from './site/siteStats.js'

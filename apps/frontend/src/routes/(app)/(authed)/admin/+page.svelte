@@ -2,11 +2,13 @@
     import AdminUsersTab from '$lib/components/admin/AdminUsersTab.svelte'
     import AdminGamesTab from '$lib/components/admin/AdminGamesTab.svelte'
     import AdminBugReportsTab from '$lib/components/admin/AdminBugReportsTab.svelte'
+    import AdminStatsTab from '$lib/components/admin/AdminStatsTab.svelte'
 
-    type AdminTab = 'users' | 'games' | 'bugReports'
+    type AdminTab = 'users' | 'games' | 'stats' | 'bugReports'
     const tabs: { id: AdminTab; label: string }[] = [
         { id: 'users', label: 'Users' },
         { id: 'games', label: 'Games' },
+        { id: 'stats', label: 'Stats' },
         { id: 'bugReports', label: 'Bug reports' }
     ]
     let tab = $state<AdminTab>('users')
@@ -53,6 +55,8 @@
             <AdminUsersTab />
         {:else if tab === 'games'}
             <AdminGamesTab />
+        {:else if tab === 'stats'}
+            <AdminStatsTab />
         {:else}
             <AdminBugReportsTab />
         {/if}
