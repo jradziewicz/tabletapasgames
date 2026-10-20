@@ -1,10 +1,10 @@
 import { CompanyId } from '@tabletop/rocky-ventures'
 
-// Wizard Cannonball's blue is kept dark and Winged Wyrm's pink light (Stellar Ventures' Pink Inc
-// share pink, which the Winged Wyrm share art was recoloured to), so the two differ in lightness
-// and not only in hue (a colour-blind player could not tell them apart otherwise).
+// Winged Wyrm uses Stellar Ventures' Pink Inc share pink (its share art was recoloured to match),
+// light enough to differ in lightness from Wizard Cannonball's mid blue, which in turn stays well
+// lighter than Goblin Central's grey (a colour-blind player confused the old pink and blue).
 const StandardColors: Record<CompanyId, string> = {
-    [CompanyId.WizardCannonball]: '#2a4fb5',
+    [CompanyId.WizardCannonball]: '#3f6fd6',
     [CompanyId.DwarvenPacific]: '#e8892b',
     [CompanyId.GoblinCentral]: '#4a4a4a',
     [CompanyId.WingedWyrm]: '#f474c4'
