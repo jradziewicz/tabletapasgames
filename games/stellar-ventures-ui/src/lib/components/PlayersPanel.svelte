@@ -6,7 +6,7 @@
         dividendRowForCargo,
         MAX_CARGO,
         dividendRowForMiningCapacity,
-        shareValuePerShare,
+        corporateShareValuePerShare,
         totalCredits,
         CorporationId,
         CorporationStatus,
@@ -122,24 +122,25 @@
             .filter(({ count }) => count > 0)
     }
 
-    // A live "if Share Liquidation happened right now" estimate (Liquid + Frozen Funds, plus
-    // every held Share's current liquidation value - see operations/liquidation.ts's
-    // shareValuePerShare, the same per-Share payout Share Liquidation itself uses at Era end).
-    // Alien-held Shares aren't this player's to count. Distinct from totalCredits, which only
-    // exists after Share Liquidation has actually run.
+    // A live estimate of what this player is worth (Liquid + Frozen Funds, plus every held
+    // Share at its current Corporate Share Value - operations/liquidation.ts's
+    // corporateShareValuePerShare). Deliberately NOT Hostile-Takeover-aware: a signed
+    // Corporation currently below the Aliens still shows its real Share value rather than ₮1,
+    // since the takeover is only decided at the final Liquidation. Alien-held Shares aren't this
+    // player's to count. Distinct from totalCredits, which only exists after Share Liquidation
+    // has actually run.
     function liquidationValueForPlayer(playerId: string) {
         const player = gameSession.gameState.players.find((p) => p.playerId === playerId)
         if (!player) {
             return 0
         }
-        const alienMiningCapacity = gameSession.gameState.alienCorporation.miningCapacity
         let shareValue = 0
         for (const corporation of activeCorporations) {
             const miningCapacity = effectiveMiningCapacityForCorporation(
                 gameSession.gameState,
                 corporation.id
             )
-            const perShare = shareValuePerShare(miningCapacity, corporation, alienMiningCapacity)
+            const perShare = corporateShareValuePerShare(miningCapacity, corporation)
             if (perShare <= 0) {
                 continue
             }
