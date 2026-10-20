@@ -13,6 +13,12 @@
     // than a click, so clicking a hex/piece inside the content never turns into a tiny pan.
     const MOUSE_DRAG_THRESHOLD_PX = 4
 
+    type PlacedView = {
+        width: number
+        height: number
+        expanded: boolean
+    }
+
     type FocusRect = {
         x: number
         y: number
@@ -96,6 +102,8 @@
     let currentTranslateX = $state(0)
     let currentTranslateY = $state(0)
     let isExpanded = $state(false)
+    // The view size the content was last placed for, so a resize keeps the content point at its old centre.
+    let placedView: PlacedView = { width: 0, height: 0, expanded: false }
     // Full screen lifts the frame out to <body>. Left in place, its position: fixed / z-index
     // stayed trapped in whatever stacking context it lived in (a TabWorkspace panel is
     // position: absolute; z-index: 2), so neighbouring panels painted over the expanded view.
@@ -306,10 +314,10 @@
         }
     }
 
-    function getViewportCenterContentPoint() {
+    function getViewportCenterContentPoint(centerX = wrapperWidth / 2, centerY = wrapperHeight / 2) {
         return {
-            x: clamp((wrapperWidth / 2 - currentTranslateX) / currentScale, 0, contentWidth),
-            y: clamp((wrapperHeight / 2 - currentTranslateY) / currentScale, 0, contentHeight)
+            x: clamp((centerX - currentTranslateX) / currentScale, 0, contentWidth),
+            y: clamp((centerY - currentTranslateY) / currentScale, 0, contentHeight)
         }
     }
 
@@ -610,9 +618,17 @@
             const nextBaseScale = computeFitScale()
             const previousBaseScale = baseScale
             const wasAtFitScale = initialized && Math.abs(currentScale - baseScale) < EPSILON
+            const previousView = placedView
             const centerPoint = initialized
-                ? getViewportCenterContentPoint()
+                ? getViewportCenterContentPoint(previousView.width / 2, previousView.height / 2)
                 : { x: contentWidth / 2, y: contentHeight / 2 }
+            const resized =
+                initialized &&
+                (Math.abs(wrapperWidth - previousView.width) > EPSILON ||
+                    Math.abs(wrapperHeight - previousView.height) > EPSILON)
+            if (resized || !initialized) {
+                placedView = { width: wrapperWidth, height: wrapperHeight, expanded: isExpanded }
+            }
 
             baseScale = nextBaseScale
             updateDiscreteLevels(nextBaseScale)
@@ -628,7 +644,7 @@
             const targetScale =
                 !initialized || wasAtFitScale || Math.abs(currentScale - previousBaseScale) < EPSILON
                     ? nextBaseScale
-                    : clampScale(currentScale)
+                    : clampScale(resized ? scaleKeepingShownArea(previousView) : currentScale)
             const targetView = getViewForContentPointAtViewportPoint(
                 centerPoint.x,
                 centerPoint.y,
@@ -643,6 +659,16 @@
         } finally {
             syncingView = false
         }
+    }
+
+    // Only entering or leaving full screen refits, so a phone's toolbar showing and hiding never
+    // drifts the zoom. Leaving full screen zooms out until the area it showed fits the smaller view.
+    function scaleKeepingShownArea(previousView: PlacedView) {
+        if (previousView.expanded === isExpanded) return currentScale
+        return (
+            currentScale *
+            Math.min(1, wrapperWidth / previousView.width, wrapperHeight / previousView.height)
+        )
     }
 
     function getDiscreteScaleStep() {
