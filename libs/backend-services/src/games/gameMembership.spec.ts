@@ -209,18 +209,14 @@ describe('lobby membership transactions', () => {
     })
 
     it('starts a deferred turn reminder chain for the first active player when the game starts', async () => {
-        const { service, store, cache, transaction, read } = fixture({ isPublic: false })
+        // An invite-only game whose owner plays starts the moment its last seat fills.
+        const { service, store, cache, transaction, tasks, read } = fixture({ isPublic: false })
         vi.spyOn(transaction, 'set').mockReturnValue(transaction)
-        await Promise.all(users.slice(1).map((user) => service.joinGame({ user, gameId: 'lobby' })))
-        expect(read().status).toBe(GameStatus.WaitingToStart)
         vi.spyOn(store, 'findGameById').mockImplementation(async () => structuredClone(read()))
         vi.spyOn(UserService.prototype, 'getUser').mockImplementation(async (userId) =>
             users.find((user) => user.id === userId)
         )
         vi.spyOn(cache, 'set').mockResolvedValue()
-        const createPushTask = vi
-            .spyOn(LocalTaskService.prototype, 'createPushTask')
-            .mockResolvedValue()
         // The synthetic game starts with no active player; give it one so a chain starts.
         const initializer = SyntheticRuntime.initializer
         const initializeGameState = initializer.initializeGameState.bind(initializer)
@@ -230,17 +226,17 @@ describe('lobby membership transactions', () => {
             return state
         })
 
-        const started = await service.startGame({
-            definition: PublicSyntheticDefinition,
-            gameId: 'lobby',
-            user: users[0]
-        })
+        for (const user of users.slice(1)) {
+            await service.joinGame({ user, gameId: 'lobby' })
+        }
 
+        const started = read()
+        expect(started.status).toBe(GameStatus.Started)
         const [firstPlayerId] = started.activePlayerIds ?? []
         const firstUserId = started.players.find((player) => player.id === firstPlayerId)?.userId
         expect(firstUserId).toBeDefined()
         const delay = TURN_REMINDER_DELAYS[DEFERRED_TURN_REMINDER_INDEX]
-        expect(createPushTask).toHaveBeenLastCalledWith({
+        expect(tasks.createPushTask).toHaveBeenCalledWith({
             queue: 'turn-notification',
             path: '/notification/sendTurnNotification',
             inSeconds: delay,

@@ -16,14 +16,17 @@ vi.mock('@tabletop/backend-services', async () => {
     return {
         ...Object.fromEntries(
             [
+                'BugReportService',
                 'CatalogService',
                 'ChatService',
                 'CloudTasksTaskService',
                 'DiscordService',
+                'FirestoreBugReportStore',
                 'FirestoreChatStore',
                 'FirestoreGameStore',
                 'FirestoreNotificationStore',
                 'FirestorePreferenceStore',
+                'FirestoreSiteStatsStore',
                 'FirestoreTokenStore',
                 'FirestoreTournamentStore',
                 'FirestoreUserStore',
@@ -31,6 +34,7 @@ vi.mock('@tabletop/backend-services', async () => {
                 'NullPubSubService',
                 'PreferenceService',
                 'PubSubTransport',
+                'SiteStatsService',
                 'TokenService',
                 'TournamentService',
                 'UserService',
