@@ -36,7 +36,7 @@
         padding: 3px 12px 3px 0;
         text-align: left;
         font-weight: 400;
-        color: var(--color-gray-300);
+        color: var(--stats-gray-300);
         white-space: nowrap;
     }
     .bar-cell {
@@ -58,7 +58,7 @@
         white-space: nowrap;
     }
     .count {
-        color: var(--color-gray-500);
+        color: var(--stats-gray-500);
         font-size: 12px;
     }
 </style>

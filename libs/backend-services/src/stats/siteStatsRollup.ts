@@ -6,7 +6,6 @@ import {
     GameCategory,
     GameResult,
     isCountedGame,
-    isListedPublicGame,
     MILLISECONDS_PER_DAY,
     SITE_FILL_TIME_LIMITS_SECONDS,
     SITE_GAME_LENGTH_LIMITS_DAYS,
@@ -33,7 +32,6 @@ export type SiteDayGame = Pick<
     | 'parentId'
     | 'category'
     | 'isPublic'
-    | 'unlisted'
     | 'result'
     | 'createdAt'
     | 'startedAt'
@@ -107,7 +105,7 @@ class SiteDayTally {
 
     started(game: SiteDayGame) {
         for (const tally of this.siteAndTitle(game)) tally.games.started += 1
-        if (isListedPublicGame(game) && game.createdAt && game.startedAt)
+        if (game.isPublic && game.createdAt && game.startedAt)
             addToHistogram(
                 this.publicFillTimes,
                 SITE_FILL_TIME_LIMITS_SECONDS,

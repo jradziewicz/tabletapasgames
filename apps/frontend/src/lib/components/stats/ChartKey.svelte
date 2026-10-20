@@ -17,7 +17,7 @@
         flex-wrap: wrap;
         gap: 6px 18px;
         margin-top: 10px;
-        color: var(--color-gray-400);
+        color: var(--stats-gray-400);
         font-size: 12px;
     }
     .swatch {

@@ -55,7 +55,7 @@ function setup(latest?: UtcDay, earliestGame?: Date) {
             })
         },
         { createPushTask },
-        { cachingGet: async () => undefined },
+        { get: async () => ({ value: undefined, cached: false }), set: async () => undefined },
         () => new Date('2026-10-18T00:10:00Z')
     )
     const firstTask = () => createPushTask.mock.calls[0]?.[0].payload

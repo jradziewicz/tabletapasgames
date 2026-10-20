@@ -116,7 +116,7 @@ export const SiteStatsNow = Type.Object(
             { additionalProperties: false }
         ),
         notificationClients: Type.Object(
-            { webPush: Count, discord: Count },
+            { webPush: Count, discord: Count, discordWebhook: Count },
             { additionalProperties: false }
         )
     },

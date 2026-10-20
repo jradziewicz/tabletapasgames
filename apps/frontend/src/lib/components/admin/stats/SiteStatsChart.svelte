@@ -140,16 +140,16 @@
         overflow: visible;
     }
     line.grid {
-        stroke: rgb(54 65 83 / 0.7);
+        stroke: var(--stats-line);
     }
     line.baseline {
-        stroke: var(--color-gray-600);
+        stroke: var(--stats-gray-600);
     }
     line.cursor {
-        stroke: var(--color-gray-500);
+        stroke: var(--stats-gray-500);
     }
     text {
-        fill: var(--color-gray-400);
+        fill: var(--stats-gray-400);
         font-size: 11px;
     }
     path.column.blue {

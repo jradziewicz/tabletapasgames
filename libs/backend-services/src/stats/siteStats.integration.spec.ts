@@ -260,7 +260,7 @@ describe.skipIf(!process.env.CACHE_TEST_REDIS_HOST || !process.env.FIRESTORE_EMU
                     data: '{}'
                 })
             const first = await service.getNow()
-            expect(first.notificationClients).toEqual({ webPush: 1, discord: 0 })
+            expect(first.notificationClients).toEqual({ webPush: 1, discord: 0, discordWebhook: 0 })
             await vi.waitFor(async () =>
                 expect(await client.keys('*site-stats-now*')).not.toHaveLength(0)
             )

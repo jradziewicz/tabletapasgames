@@ -24,7 +24,7 @@
         display: flex;
         flex-direction: column;
         padding: 0 18px;
-        border-left: 1px solid var(--color-gray-700);
+        border-left: 1px solid var(--stats-gray-700);
     }
     .figure:first-child {
         padding-left: 0;
@@ -38,16 +38,16 @@
         line-height: 1.1;
         font-variant-numeric: tabular-nums;
         white-space: nowrap;
-        color: var(--color-gray-100);
+        color: var(--stats-gray-100);
     }
     dt {
         margin-top: 2px;
         font-size: 14px;
-        color: var(--color-gray-300);
+        color: var(--stats-gray-300);
     }
     .note {
         font-size: 12px;
-        color: var(--color-gray-400);
+        color: var(--stats-gray-400);
     }
     .small {
         grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));

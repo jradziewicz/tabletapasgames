@@ -153,6 +153,7 @@
             <dt>Notification clients</dt>
             <dd>
                 {now.notificationClients.webPush} web push · {now.notificationClients.discord} Discord
+                DM · {now.notificationClients.discordWebhook} Discord webhook
             </dd>
             {#if latest}
                 <dt>Latest day rolled up</dt>
@@ -219,9 +220,9 @@
     }
     .panel {
         min-width: 0;
-        border: 1px solid rgb(54 65 83 / 0.6);
+        border: 1px solid var(--stats-line);
         border-radius: 12px;
-        background: rgb(30 41 57 / 0.5);
+        background: var(--stats-panel);
         padding: 18px 20px;
     }
     .panel.wide {
@@ -235,15 +236,15 @@
         margin-bottom: 12px;
         font-size: 13px;
         font-weight: 500;
-        color: var(--color-gray-300);
+        color: var(--stats-gray-300);
     }
     h3 span {
         margin-left: 6px;
         font-weight: 400;
-        color: var(--color-gray-500);
+        color: var(--stats-gray-500);
     }
     h3 .badge {
-        border: 1px solid var(--color-gray-700);
+        border: 1px solid var(--stats-gray-700);
         border-radius: 999px;
         padding: 1px 8px;
         font-size: 11px;
@@ -254,12 +255,12 @@
     .pending {
         font-family: 'Source Sans 3', sans-serif;
         font-size: 22px;
-        color: var(--color-gray-400);
+        color: var(--stats-gray-400);
     }
     .footnote {
         margin-top: 12px;
         font-size: 12px;
-        color: var(--color-gray-500);
+        color: var(--stats-gray-500);
     }
     .facts {
         display: grid;
@@ -268,7 +269,7 @@
         font-size: 13px;
     }
     .facts dt {
-        color: var(--color-gray-400);
+        color: var(--stats-gray-400);
     }
     .table-scroll {
         overflow-x: auto;
@@ -291,10 +292,10 @@
     thead th {
         font-size: 13px;
         font-weight: 500;
-        color: var(--color-gray-400);
+        color: var(--stats-gray-400);
     }
     tbody tr {
-        border-top: 1px solid rgb(54 65 83 / 0.6);
+        border-top: 1px solid var(--stats-line);
     }
     .number {
         text-align: right;
@@ -311,7 +312,7 @@
         background: #3b8eff;
     }
     .empty {
-        color: var(--color-gray-500);
+        color: var(--stats-gray-500);
     }
     @media (max-width: 760px) {
         .panels {

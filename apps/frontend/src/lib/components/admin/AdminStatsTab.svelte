@@ -165,8 +165,40 @@
 </div>
 
 <style>
+    /* The panels were drawn for a dark page; these tokens keep them readable in light mode too.
+       --stats-gray-N is the dark-mode gray-N, mirrored on the gray scale in light mode. */
     .site-stats {
-        color: var(--color-gray-100);
+        --stats-gray-100: var(--color-gray-900);
+        --stats-gray-200: var(--color-gray-800);
+        --stats-gray-300: var(--color-gray-700);
+        --stats-gray-400: var(--color-gray-600);
+        --stats-gray-500: var(--color-gray-500);
+        --stats-gray-600: var(--color-gray-400);
+        --stats-gray-700: var(--color-gray-300);
+        --stats-gray-800: var(--color-gray-100);
+        --stats-gray-900: var(--color-gray-50);
+        --stats-warning: var(--color-amber-700);
+        --stats-error: var(--color-red-600);
+        --stats-line: var(--color-gray-200);
+        --stats-panel: var(--color-gray-50);
+        --stats-scheme: light;
+        color: var(--stats-gray-100);
+    }
+    :global(.dark) .site-stats {
+        --stats-gray-100: var(--color-gray-100);
+        --stats-gray-200: var(--color-gray-200);
+        --stats-gray-300: var(--color-gray-300);
+        --stats-gray-400: var(--color-gray-400);
+        --stats-gray-500: var(--color-gray-500);
+        --stats-gray-600: var(--color-gray-600);
+        --stats-gray-700: var(--color-gray-700);
+        --stats-gray-800: var(--color-gray-800);
+        --stats-gray-900: var(--color-gray-900);
+        --stats-warning: var(--color-amber-300);
+        --stats-error: var(--color-red-300);
+        --stats-line: rgb(54 65 83 / 0.6);
+        --stats-panel: rgb(30 41 57 / 0.5);
+        --stats-scheme: dark;
     }
     .controls {
         display: flex;
@@ -176,50 +208,50 @@
     }
     .presets {
         display: inline-flex;
-        border: 1px solid var(--color-gray-700);
+        border: 1px solid var(--stats-gray-700);
         border-radius: 8px;
         overflow: hidden;
     }
     .presets button {
         padding: 5px 12px;
         font-size: 13px;
-        color: var(--color-gray-300);
+        color: var(--stats-gray-300);
     }
     .presets button + button {
-        border-left: 1px solid var(--color-gray-700);
+        border-left: 1px solid var(--stats-gray-700);
     }
     .presets button.selected {
-        background: var(--color-gray-700);
-        color: var(--color-gray-100);
+        background: var(--stats-gray-700);
+        color: var(--stats-gray-100);
     }
     label {
         display: inline-flex;
         align-items: center;
         gap: 6px;
         font-size: 13px;
-        color: var(--color-gray-400);
+        color: var(--stats-gray-400);
     }
     input[type='date'] {
-        border: 1px solid var(--color-gray-700);
+        border: 1px solid var(--stats-gray-700);
         border-radius: 6px;
-        background: var(--color-gray-800);
-        color: var(--color-gray-100);
+        background: var(--stats-gray-800);
+        color: var(--stats-gray-100);
         padding: 4px 8px;
         font-size: 13px;
-        color-scheme: dark;
+        color-scheme: var(--stats-scheme);
     }
     .spacer {
         flex: 1;
     }
     .action {
-        border: 1px solid var(--color-gray-700);
+        border: 1px solid var(--stats-gray-700);
         border-radius: 8px;
         padding: 5px 12px;
         font-size: 13px;
-        color: var(--color-gray-200);
+        color: var(--stats-gray-200);
     }
     .action:hover {
-        background: var(--color-gray-800);
+        background: var(--stats-gray-800);
     }
     .action:disabled {
         opacity: 0.5;
@@ -227,26 +259,26 @@
     .status {
         margin-top: 10px;
         font-size: 13px;
-        color: var(--color-gray-400);
+        color: var(--stats-gray-400);
     }
     .status strong {
         font-weight: 500;
-        color: var(--color-amber-300);
+        color: var(--stats-warning);
     }
     .error {
         margin-top: 10px;
         font-size: 14px;
-        color: var(--color-red-300);
+        color: var(--stats-error);
     }
     h2 {
         margin: 26px 0 12px;
         font-size: 13px;
         font-weight: 500;
-        color: var(--color-gray-400);
+        color: var(--stats-gray-400);
     }
     .footnote {
         margin-top: 12px;
         font-size: 12px;
-        color: var(--color-gray-500);
+        color: var(--stats-gray-500);
     }
 </style>

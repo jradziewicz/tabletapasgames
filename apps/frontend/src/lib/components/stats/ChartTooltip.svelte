@@ -19,8 +19,8 @@
         z-index: 1;
         pointer-events: none;
         transform: translate(-12px, -100%);
-        background: var(--color-gray-100);
-        color: var(--color-gray-900);
+        background: var(--stats-gray-100);
+        color: var(--stats-gray-900);
         border-radius: 6px;
         padding: 6px 9px;
         font-size: 12px;

@@ -10,16 +10,31 @@ The sketch stores no user ids: up to 512 users a day it is a sorted list of 32-b
 - `POST /tasks/stats/rollup` rolls up one day and enqueues the next on the `maintenance` queue until the chain's last day. Each step is a named task (`site-stats-<run>-<day>`), so a retried step cannot start a second chain.
 - `POST /api/v1/admin/stats/rollup` (admin, the tab's **Rebuild…** button) starts a chain from the first game's creation day through yesterday.
 
-Each day logs `Site stats rollup {...}` with its counts, the games it read and its duration; read them with `tools/investigate logs --grep "Site stats rollup"`. The Health panel shows the same for the latest day rolled up.
+Each day logs `Site stats rollup {...}` with its counts, the games it read and its duration; read them with `gcloud logging read 'textPayload:"Site stats rollup"' --project stellar-ventures-509504 --freshness 1d`. The Health panel shows the same for the latest day rolled up.
 
 A day reads the games in play that day and, for each, the action chunks updated since the day began. For yesterday that is the current chunk; during a rebuild it is every later chunk of each game, so a rebuild reads more than the daily run. Hotseat, forked and exploration games are dropped before their chunks are read.
 
 ## First deployment
 
-1. Deploy the Firestore indexes and field exemptions in `firebase/firestore.indexes.json` (`games`: `lastActionAt`+`startedAt` and `status`+`lastActionAt`; `siteStatsMonths.days` and `.activeUsers` exempt), and wait until they are ready.
-2. Release the backend, then the frontend.
-3. Press **Rebuild…** on the Stats tab once and watch the log until `"event":"complete"`.
-4. Create the daily Cloud Scheduler job (below).
+1. Deploy the Firestore indexes and field exemptions in `firebase/firestore.indexes.json` (`games`: `lastActionAt`+`startedAt` and `status`+`lastActionAt`; `siteStatsMonths.days` and `.activeUsers` exempt), and wait until they are ready:
+   `cd firebase && npx firebase-tools deploy --only firestore:indexes --project stellar-ventures-509504`.
+2. Create the `maintenance` Cloud Tasks queue (below).
+3. Release the backend (`backend` and `tasks`), then the frontend.
+4. Press **Rebuild…** on the Stats tab once and watch the log until `"event":"complete"`.
+5. Create the daily Cloud Scheduler job (below).
+
+## Maintenance queue
+
+The rollup chain runs one day per task on the `maintenance` queue in `us-central1`, the location `CloudTasksTaskService` uses. One dispatch at a time keeps a rebuild's reads steady:
+
+```sh
+gcloud tasks queues create maintenance \
+  --project stellar-ventures-509504 \
+  --location us-central1 \
+  --max-concurrent-dispatches 1 \
+  --max-dispatches-per-second 1 \
+  --min-backoff 30s --max-backoff 600s --max-attempts 5
+```
 
 ## After a release that changes the day shape
 
@@ -27,11 +42,11 @@ Days saved in an older shape read as not rolled up: the tab shows them as gaps a
 
 ## Daily Cloud Scheduler job
 
-The tasks service accepts internal traffic only, and Cloud Scheduler in the same project counts as internal, so the job needs no token. Confirm the tasks service URL with `gcloud run services describe tasks --region us-central1 --format 'value(status.url)'`.
+The tasks service accepts internal traffic only, and Cloud Scheduler in the same project counts as internal, so the job needs no token. Confirm the tasks service URL with `gcloud run services describe tasks --project stellar-ventures-509504 --region us-central1 --format 'value(status.url)'`.
 
 ```sh
 gcloud scheduler jobs create http site-stats-daily \
-  --project tabletop-426201 \
+  --project stellar-ventures-509504 \
   --location us-central1 \
   --schedule '10 0 * * *' \
   --time-zone Etc/UTC \
@@ -42,7 +57,7 @@ gcloud scheduler jobs create http site-stats-daily \
   --attempt-deadline 60s
 ```
 
-Run it once by hand with `gcloud scheduler jobs run site-stats-daily --location us-central1` and check the log.
+Run it once by hand with `gcloud scheduler jobs run site-stats-daily --project stellar-ventures-509504 --location us-central1` and check the log.
 
 If the tab says **Behind by N days**, the job has not run; check its last attempt in the Cloud Scheduler console, or press **Rebuild…**.
 
@@ -53,5 +68,5 @@ If the tab says **Behind by N days**, the job has not run; check its last attemp
 - **User actions** are moves by human players. Automatic actions and bot moves are counted apart.
 - **"vs previous N days"** is shown only when the previous period lies wholly inside the rolled-up history.
 - **Turn time** is estimated: the time from the previous player's action to this player's next action, or from the game's start for the first move. Simultaneous phases make it look faster than it is.
-- **Right now** figures are `count()` queries over every game, user and notification subscription, cached in Redis for 10 minutes.
+- **Right now** figures are `count()` queries over every game, user and notification subscription (web push, Discord DM and Discord webhook), cached in Redis for 10 minutes.
 - **Notifications and reminders** show "Not collected yet" until the reminder log exists.

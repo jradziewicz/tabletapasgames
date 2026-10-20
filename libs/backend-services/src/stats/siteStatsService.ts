@@ -74,7 +74,7 @@ export class SiteStatsService {
         private readonly sources: SiteStatsSources,
         private readonly store: SiteStatsStore,
         private readonly tasks: Pick<TaskService, 'createPushTask'>,
-        private readonly cache: Pick<RedisCacheService, 'cachingGet'>,
+        private readonly cache: Pick<RedisCacheService, 'get' | 'set'>,
         private readonly now: () => Date = () => new Date()
     ) {}
 
@@ -174,12 +174,13 @@ export class SiteStatsService {
     }
 
     async getNow(): Promise<SiteStatsNow> {
-        const now = await this.cache.cachingGet<unknown>(
-            NOW_CACHE_KEY,
-            () => this.countNow(),
-            NOW_CACHE_SECONDS
-        )
-        Value.Assert(SiteStatsNow, now)
+        // Our cachingGet has no expiry, so the live counts use a plain expiring set instead.
+        const cached = await this.cache.get<unknown>(NOW_CACHE_KEY)
+        if (cached.cached && Value.Check(SiteStatsNow, cached.value)) return cached.value
+        const now = await this.countNow()
+        this.cache.set(NOW_CACHE_KEY, now, NOW_CACHE_SECONDS).catch((error) => {
+            console.log('unable to update cache', NOW_CACHE_KEY, error)
+        })
         return now
     }
 
@@ -200,7 +201,8 @@ export class SiteStatsService {
             quietFor7Days,
             quietFor30Days,
             webPush,
-            discord
+            discord,
+            discordWebhook
         ] = await Promise.all([
             users.countUsersWithStatus(UserStatus.Active),
             users.countUsersWithStatus(UserStatus.Incomplete),
@@ -213,7 +215,8 @@ export class SiteStatsService {
             quietSince(7),
             quietSince(30),
             subscriptions.countSubscriptionsWithTransport(TransportType.WebPush),
-            subscriptions.countSubscriptionsWithTransport(TransportType.Discord)
+            subscriptions.countSubscriptionsWithTransport(TransportType.Discord),
+            subscriptions.countSubscriptionsWithTransport(TransportType.DiscordWebhook)
         ])
         return {
             asOf: now.getTime(),
@@ -226,7 +229,7 @@ export class SiteStatsService {
                 quietFor7Days,
                 quietFor30Days
             },
-            notificationClients: { webPush, discord }
+            notificationClients: { webPush, discord, discordWebhook }
         }
     }
 
