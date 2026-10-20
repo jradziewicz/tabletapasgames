@@ -2,6 +2,7 @@ import { Role, UserStatus, type User } from '@tabletop/common'
 import { goto } from '$app/navigation'
 import { redirect } from '@sveltejs/kit'
 import type { TabletopApi } from '@tabletop/frontend-components'
+import { browserTimeZone } from '$lib/utils/timeZones'
 
 /**
  *
@@ -110,7 +111,7 @@ export class AuthorizationService {
     }
 
     public async onLogin(user: User) {
-        this.setSessionUser(user)
+        this.adoptSessionUser(user)
 
         if (this.continueUrl) {
             await goto(this.continueUrl)
@@ -133,10 +134,34 @@ export class AuthorizationService {
                 sessionUser.status !== UserStatus.Deleted &&
                 sessionUser.status !== UserStatus.Inactive
             ) {
-                this.setSessionUser(sessionUser)
+                this.adoptSessionUser(sessionUser)
             }
         } catch {
             // do nothing
+        }
+    }
+
+    private adoptSessionUser(user: User) {
+        this.setSessionUser(user)
+        void this.fillMissingTimeZone(user)
+    }
+
+    // Turn reminders honour Reminder Hours in the account's time zone, which only a browser
+    // knows. Fill it once from this browser; onlyIfUnset keeps a zone chosen meanwhile (e.g.
+    // in another tab). After that it only changes when the player picks one.
+    private async fillMissingTimeZone(user: User) {
+        if (user.timeZone) {
+            return
+        }
+        try {
+            const updatedUser = await this.api.updateUserTimeZone(browserTimeZone(), {
+                onlyIfUnset: true
+            })
+            if (this.sessionUser?.id === updatedUser.id) {
+                this.setSessionUser(updatedUser)
+            }
+        } catch (error) {
+            console.error('Could not save the browser time zone', error)
         }
     }
 

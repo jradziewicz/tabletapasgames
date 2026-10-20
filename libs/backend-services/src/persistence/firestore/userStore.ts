@@ -326,6 +326,11 @@ export class FirestoreUserStore implements UserStore {
                 updatedFields.push('preferences')
             }
 
+            if (fieldsToUpdate.timeZone && existingUser.timeZone !== fieldsToUpdate.timeZone) {
+                updatedUser.timeZone = fieldsToUpdate.timeZone
+                updatedFields.push('timeZone')
+            }
+
             // Only the admin roles route passes roles; the self-service user update never does
             if (
                 fieldsToUpdate.roles &&

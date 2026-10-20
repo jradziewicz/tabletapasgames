@@ -7,6 +7,7 @@ import {
     Role,
     UserNotificationAction,
     UserStatus,
+    weekReminderHours,
     type Game,
     type User
 } from '@tabletop/common'
@@ -24,7 +25,13 @@ import { TURN_REMINDER_DELAYS, TurnReminderTask } from './turnReminders.js'
 
 const LAST_REMINDER_INDEX = TURN_REMINDER_DELAYS.length - 1
 
-afterEach(() => vi.restoreAllMocks())
+const HOUR = 60 * 60
+const DAY = 24 * HOUR
+
+afterEach(() => {
+    vi.restoreAllMocks()
+    vi.useRealTimers()
+})
 
 const players: User[] = ['a', 'b'].map((id) => ({
     id,
@@ -34,7 +41,11 @@ const players: User[] = ['a', 'b'].map((id) => ({
     externalIds: []
 }))
 
-function fixture({ activePlayerIds = ['p0'], local = false } = {}) {
+function fixture({
+    activePlayerIds = ['p0'],
+    local = false,
+    recipient = {}
+}: { activePlayerIds?: string[]; local?: boolean; recipient?: Partial<User> } = {}) {
     const game: Game = {
         id: 'turns',
         typeId: 'synthetic',
@@ -67,9 +78,10 @@ function fixture({ activePlayerIds = ['p0'], local = false } = {}) {
     })
     const store = new FirestoreGameStore(cache, new Firestore({ projectId: 'turn-reminder-test' }))
     vi.spyOn(store, 'findGameById').mockResolvedValue(structuredClone(game))
-    vi.spyOn(UserService.prototype, 'getUser').mockImplementation(async (id) =>
-        players.find((player) => player.id === id)
-    )
+    vi.spyOn(UserService.prototype, 'getUser').mockImplementation(async (id) => {
+        const player = players.find((candidate) => candidate.id === id)
+        return player && id === 'a' ? { ...player, ...recipient } : player
+    })
     const notifications: DefaultNotificationService = Object.create(
         DefaultNotificationService.prototype
     )
@@ -105,7 +117,18 @@ function fixture({ activePlayerIds = ['p0'], local = false } = {}) {
             .mocked(tasks.createPushTask)
             .mock.calls.map(([{ payload }]) => payload)
             .filter((payload) => Value.Check(TurnReminderTask, payload))
-    return { service, cached, chainKey, startChain, sentReminders, sentStages, queuedReminders }
+    const queuedDelays = () =>
+        vi.mocked(tasks.createPushTask).mock.calls.map(([{ inSeconds }]) => inSeconds)
+    return {
+        service,
+        cached,
+        chainKey,
+        startChain,
+        sentReminders,
+        sentStages,
+        queuedReminders,
+        queuedDelays
+    }
 }
 
 describe('turn reminder chain', () => {
@@ -178,5 +201,29 @@ describe('turn reminder chain', () => {
         expect(queuedReminders()).toEqual([
             expect.objectContaining({ reminderIndex: 2, delay: 24 * 60 * 60 - 5 * 60 })
         ])
+    })
+
+    it('queues a later reminder for the start of the next reminder hour', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        // 7:00 am Friday in Chicago; the next daily reminder falls due at 7:00 am Saturday.
+        vi.setSystemTime(new Date('2026-10-16T12:00:00.000Z'))
+        const { service, cached, chainKey, startChain, queuedReminders, queuedDelays } = fixture({
+            recipient: {
+                timeZone: 'America/Chicago',
+                preferences: {
+                    preventWebNotificationPrompt: false,
+                    preferredColorsEnabled: false,
+                    preferredColors: [],
+                    reminderHours: weekReminderHours([18, 19, 20, 21])
+                }
+            }
+        })
+        await service.notifyIsYourTurn(startChain({ reminderIndex: 2 }))
+
+        const [next] = queuedReminders()
+        expect(next).toEqual(expect.objectContaining({ reminderIndex: 3, delay: DAY }))
+        // Held until 6:00 pm Saturday Chicago time, 11 hours after it fell due.
+        expect(queuedDelays()).toEqual([DAY + 11 * HOUR])
+        expect(cached.get(chainKey)).toBe(next.notificationId)
     })
 })
