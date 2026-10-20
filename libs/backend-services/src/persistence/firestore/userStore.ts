@@ -128,20 +128,6 @@ export class FirestoreUserStore implements UserStore {
         }
     }
 
-    // A single array-contains filter, so Firestore's automatic single-field index serves it.
-    async findByRole(role: Role): Promise<User[]> {
-        try {
-            const userDocs = await this.users.where('roles', 'array-contains', role).get()
-            this.recordRead()
-            return userDocs.docs
-                .map((doc) => this.sanitize(doc.data() as StoredUser))
-                .filter((user) => user !== undefined)
-        } catch (error) {
-            this.handleError(error, role)
-            throw Error('unreachable')
-        }
-    }
-
     async createUser(user: User, password?: string): Promise<User> {
         const newStoredUser = structuredClone(user) as StoredUser
 

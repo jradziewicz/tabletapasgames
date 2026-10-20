@@ -6,20 +6,12 @@ import {
     AccountChangeNotification,
     GameInvitation,
     GameEnd,
-    YourTurn,
-    BugReportFiled
+    YourTurn
 } from '@tabletop/email'
 
 import { Resend } from 'resend'
 import { SecretsService } from '../secrets/secretsService'
-import {
-    BugReport,
-    bugReportViewLabel,
-    bugReportVersionsLabel,
-    Game,
-    GameDefinition,
-    User
-} from '@tabletop/common'
+import { Game, GameDefinition, User } from '@tabletop/common'
 import { AccountChangeType, EmailService } from './emailService.js'
 import { NullEmailService } from './nullEmailService.js'
 
@@ -190,62 +182,4 @@ export class ResendEmailService implements EmailService {
             throw new Error(`Failed to send email via Resend: ${error.message}`)
         }
     }
-
-    async sendBugReportEmail({
-        report,
-        gameUrl,
-        adminUrl,
-        toEmail
-    }: {
-        report: BugReport
-        gameUrl: string
-        adminUrl: string
-        toEmail: string
-    }): Promise<void> {
-        const emailHTML = await render(
-            BugReportFiled({
-                reporterName: report.reporterName,
-                title: report.titleName,
-                gameName: report.gameName,
-                description: report.description,
-                details: bugReportDetails(report),
-                gameUrl,
-                adminUrl
-            })
-        )
-        const { error } = await this.resend.emails.send({
-            from: 'noreply@playtest.tabletapasgames.com',
-            to: toEmail,
-            subject: `Bug report: ${report.titleName}, ${report.gameName}`,
-            html: emailHTML,
-            headers: {
-                'X-Entity-Ref-ID': nanoid()
-            }
-        })
-        if (error) {
-            throw new Error(`Failed to send email via Resend: ${error.message}`)
-        }
-    }
-}
-
-function bugReportDetails(report: BugReport): { label: string; value: string }[] {
-    const { context } = report
-    const details = [
-        { label: 'Seat', value: context.seat ?? 'Unknown' },
-        { label: 'Status', value: context.gameStatus },
-        { label: 'Actions', value: context.liveActionCount?.toString() ?? 'Not started' },
-        { label: 'Viewing', value: bugReportViewLabel(context.view, context.liveActionCount) },
-        {
-            label: 'Active players',
-            value: context.activePlayers.length > 0 ? context.activePlayers.join(', ') : 'None'
-        },
-        { label: 'Versions', value: bugReportVersionsLabel(context.versions) },
-        {
-            label: 'Client',
-            value: `${context.client.userAgent} · ${context.client.viewport}${
-                context.client.installedApp ? ' · installed app' : ''
-            }`
-        }
-    ]
-    return details
 }

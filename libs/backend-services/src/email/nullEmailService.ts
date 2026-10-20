@@ -24,8 +24,4 @@ export class NullEmailService implements EmailService {
     async sendTurnNotificationEmail(): Promise<void> {
         console.log(`EMAIL NOT CONFIGURED: Turn Notification Email`)
     }
-
-    async sendBugReportEmail(): Promise<void> {
-        console.log(`EMAIL NOT CONFIGURED: Bug Report Email`)
-    }
 }

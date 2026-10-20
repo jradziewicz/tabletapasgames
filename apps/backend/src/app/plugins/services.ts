@@ -76,7 +76,6 @@ const SITE_MANIFEST_PATH =
     process.env['SITE_MANIFEST_PATH'] ?? path.join(STATIC_ROOT, 'config', 'site-manifest.json')
 
 const useAbly = !!process.env['ABLY_API_KEY']
-const FRONTEND_HOST = process.env['FRONTEND_HOST'] ?? ''
 
 export default fp(async (fastify: FastifyInstance) => {
     const secretsService = new EnvSecretsService()
@@ -201,12 +200,6 @@ export default fp(async (fastify: FastifyInstance) => {
     )
     fastify.decorate(
         'bugReportService',
-        new BugReportService(
-            gameService,
-            userService,
-            emailService,
-            new FirestoreBugReportStore(fastify.firestore),
-            { frontendHost: FRONTEND_HOST }
-        )
+        new BugReportService(gameService, new FirestoreBugReportStore(fastify.firestore))
     )
 })
