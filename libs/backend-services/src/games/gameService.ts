@@ -106,6 +106,7 @@ import * as Value from 'typebox/value'
 import {
     DEFERRED_TURN_REMINDER_INDEX,
     enqueueTurnReminder,
+    isPastTurnReminderCutoff,
     FIRST_TURN_REMINDER_INDEX,
     nextTurnReminderIndex,
     turnReminderDelaySeconds,
@@ -1636,7 +1637,7 @@ export class GameService {
             if (!user) {
                 continue
             }
-            await this.scheduleTurnNotification(user, game.id, reminderIndex)
+            await this.scheduleTurnNotification(user, game.id, reminderIndex, Date.now())
         }
     }
 
@@ -1644,12 +1645,18 @@ export class GameService {
     private async scheduleTurnNotification(
         user: User,
         gameId: string,
-        reminderIndex: number
+        reminderIndex: number,
+        // Tasks queued before the 7-day cutoff existed carry no start; they keep the count limit.
+        turnStartedAt: number | undefined
     ): Promise<void> {
         const notificationId = nanoid()
         const cacheKey = this.makeTurnNotificationCacheKey(user.id, gameId)
+        const now = new Date()
+        const inSeconds = turnReminderDelaySeconds(reminderIndex, now, user)
+        if (turnStartedAt !== undefined && isPastTurnReminderCutoff(turnStartedAt, now, inSeconds)) {
+            return
+        }
         // The chain guard must outlive the (possibly Reminder Hours-delayed) task.
-        const inSeconds = turnReminderDelaySeconds(reminderIndex, new Date(), user)
         await this.cacheService.set(cacheKey, notificationId, inSeconds + 60)
         enqueueTurnReminder(
             this.taskService,
@@ -1657,7 +1664,8 @@ export class GameService {
                 userId: user.id,
                 gameId,
                 notificationId,
-                reminderIndex
+                reminderIndex,
+                ...(turnStartedAt !== undefined ? { turnStartedAt } : {})
             },
             inSeconds
         ).catch((e) => {
@@ -1712,7 +1720,12 @@ export class GameService {
                 ? undefined
                 : nextTurnReminderIndex(reminderIndex)
             if (nextReminderIndex !== undefined) {
-                await this.scheduleTurnNotification(user, gameId, nextReminderIndex)
+                await this.scheduleTurnNotification(
+                    user,
+                    gameId,
+                    nextReminderIndex,
+                    task.turnStartedAt
+                )
             }
         } catch (e) {
             console.log('error in notifyIsYourTurn', e)

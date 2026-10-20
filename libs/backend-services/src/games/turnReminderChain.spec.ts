@@ -100,7 +100,9 @@ function fixture({
     )
 
     const chainKey = 'turn-notification-a-turns'
-    const startChain = (fields: Pick<TurnReminderTask, 'reminderIndex' | 'delay'>) => {
+    const startChain = (
+        fields: Pick<TurnReminderTask, 'reminderIndex' | 'delay' | 'turnStartedAt'>
+    ) => {
         cached.set(chainKey, 'current')
         return { userId: 'a', gameId: 'turns', notificationId: 'current', ...fields }
     }
@@ -225,5 +227,45 @@ describe('turn reminder chain', () => {
         // Held until 6:00 pm Saturday Chicago time, 11 hours after it fell due.
         expect(queuedDelays()).toEqual([DAY + 11 * HOUR])
         expect(cached.get(chainKey)).toBe(next.notificationId)
+    })
+
+    it('carries the turn start along the chain', async () => {
+        const { service, startChain, queuedReminders } = fixture()
+        const turnStartedAt = Date.now() - DAY * 1000
+        await service.notifyIsYourTurn(startChain({ reminderIndex: 2, turnStartedAt }))
+        expect(queuedReminders()).toEqual([expect.objectContaining({ reminderIndex: 3, turnStartedAt })])
+    })
+
+    it('sends nothing more than 7 days into the turn, however far reminder hours push it', async () => {
+        vi.useFakeTimers({ toFake: ['Date'] })
+        // 6:00 pm Friday in Chicago, 6 days into the turn; weekend hours start 10 am Sunday.
+        vi.setSystemTime(new Date('2026-10-16T23:00:00.000Z'))
+        const turnStartedAt = Date.now() - 6 * DAY * 1000
+        const weekday = [18, 19, 20, 21]
+        const { service, startChain, sentReminders, queuedReminders } = fixture({
+            recipient: {
+                timeZone: 'America/Chicago',
+                preferences: {
+                    preventWebNotificationPrompt: false,
+                    preferredColorsEnabled: false,
+                    preferredColors: [],
+                    reminderHours: {
+                        ...weekReminderHours(weekday),
+                        sat: [10, 11, 12],
+                        sun: [10, 11, 12]
+                    }
+                }
+            }
+        })
+        await service.notifyIsYourTurn(startChain({ reminderIndex: 7, turnStartedAt }))
+        expect(sentReminders()).toHaveLength(1)
+        expect(queuedReminders()).toEqual([])
+    })
+
+    it('keeps the plain schedule up to its last daily reminder', async () => {
+        const { service, startChain, queuedReminders } = fixture()
+        const turnStartedAt = Date.now() - 6 * DAY * 1000
+        await service.notifyIsYourTurn(startChain({ reminderIndex: 7, turnStartedAt }))
+        expect(queuedReminders()).toEqual([expect.objectContaining({ reminderIndex: 8 })])
     })
 })

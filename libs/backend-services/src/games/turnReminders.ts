@@ -7,6 +7,10 @@ const MINUTE_SECONDS = 60
 const HOUR_SECONDS = 60 * MINUTE_SECONDS
 const DAY_SECONDS = 24 * HOUR_SECONDS
 const REMINDER_DAYS = 7
+// No reminder goes out later than this into a turn, however far Reminder Hours push them.
+// The extra hour absorbs task queue latency, so the plain schedule's last daily reminder,
+// due exactly 7 days in, is never cut.
+export const TURN_REMINDER_CUTOFF_SECONDS = REMINDER_DAYS * DAY_SECONDS + HOUR_SECONDS
 
 export type TurnAlertStage = 'initial' | 'email' | 'reminder'
 
@@ -49,7 +53,9 @@ export const TurnReminderTask = Type.Object(
         gameId: Type.String(),
         notificationId: Type.String(),
         reminderIndex: Type.Optional(Type.Number()),
-        delay: Type.Optional(Type.Number())
+        delay: Type.Optional(Type.Number()),
+        // When the chain started (epoch ms), for the 7-day cutoff. Older tasks have none.
+        turnStartedAt: Type.Optional(Type.Number())
     },
     { additionalProperties: false }
 )
@@ -117,6 +123,15 @@ export function turnReminderDelaySeconds(
         console.error('Could not apply reminder hours', recipient.timeZone, error)
         return delay
     }
+}
+
+/** Whether a reminder sent `inSeconds` from `now` would land past the turn's 7-day cutoff. */
+export function isPastTurnReminderCutoff(
+    turnStartedAt: number,
+    now: Date,
+    inSeconds: number
+): boolean {
+    return now.getTime() + inSeconds * 1000 > turnStartedAt + TURN_REMINDER_CUTOFF_SECONDS * 1000
 }
 
 export async function enqueueTurnReminder(
