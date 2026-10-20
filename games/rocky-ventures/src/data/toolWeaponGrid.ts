@@ -38,13 +38,23 @@ export const PrintedBlockedUpFrom: GridCell[] = [
     { weapon: 1, tool: 3 }
 ]
 
-const BlockedUpFrom: GridCell[] = [...PrintedBlockedUpFrom, ...AddedBlockedUpFrom]
-
-const BlockedRightFrom: GridCell[] = [
+export const PrintedBlockedRightFrom: GridCell[] = [
     { weapon: 5, tool: 2 },
     { weapon: 4, tool: 7 },
     { weapon: 2, tool: 5 }
 ]
+
+// Printed walls taken out of the game (2026-10-20): the wall to the right of weapon 4 / tool 7,
+// and the wall above weapon 2 / tool 7. The UI paints over them on the board art.
+export const RemovedBlockedUpFrom: GridCell[] = [{ weapon: 2, tool: 7 }]
+export const RemovedBlockedRightFrom: GridCell[] = [{ weapon: 4, tool: 7 }]
+
+const isRemoved = (removed: GridCell[]) => (cell: GridCell) =>
+    !removed.some((candidate) => cellKey(candidate) === cellKey(cell))
+
+const BlockedUpFrom: GridCell[] = [...PrintedBlockedUpFrom.filter(isRemoved(RemovedBlockedUpFrom)), ...AddedBlockedUpFrom]
+
+const BlockedRightFrom: GridCell[] = PrintedBlockedRightFrom.filter(isRemoved(RemovedBlockedRightFrom))
 
 export const RedGemCells: GridCell[] = [
     { weapon: 3, tool: 3 },

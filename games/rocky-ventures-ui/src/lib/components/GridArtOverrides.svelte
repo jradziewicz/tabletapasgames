@@ -1,5 +1,12 @@
 <script lang="ts">
-    import { AddedBlockedUpFrom, BoardArtSize, PrintedBlockedUpFrom, RemovedGemCells } from '@tabletop/rocky-ventures'
+    import {
+        AddedBlockedUpFrom,
+        BoardArtSize,
+        PrintedBlockedUpFrom,
+        RemovedBlockedRightFrom,
+        RemovedBlockedUpFrom,
+        RemovedGemCells
+    } from '@tabletop/rocky-ventures'
     import { GridCellSize, gridCellPosition } from '$lib/utils/trackLayout.js'
 
     let { artUrl, idPrefix }: { artUrl: string; idPrefix: string } = $props()
@@ -7,7 +14,56 @@
     const WallThickness = 6
     const WallClipHeight = 14
     const PatchInset = 2
+    // How far a printed wall (with its shadow) reaches either side of its grid line, in art units.
+    const WallReachBefore = 7
+    const WallReachAfter = 6.5
 </script>
+
+<!-- Removed walls: cover each with the same grid line copied from a neighbouring cell. -->
+{#each RemovedBlockedUpFrom as cell, index (`${cell.weapon},${cell.tool}`)}
+    {@const center = gridCellPosition(cell.weapon, cell.tool)}
+    {@const lineY = center.y - GridCellSize.height / 2}
+    {@const sourceTool = cell.tool < 8 ? cell.tool + 1 : cell.tool - 1}
+    <clipPath id="{idPrefix}-grid-unwall-up-{index}">
+        <rect
+            x={center.x - GridCellSize.width / 2 - 1}
+            y={lineY - WallReachBefore}
+            width={GridCellSize.width + 3}
+            height={WallReachBefore + WallReachAfter}
+        />
+    </clipPath>
+    <image
+        href={artUrl}
+        x={(cell.tool - sourceTool) * GridCellSize.width}
+        y="0"
+        width={BoardArtSize.width}
+        height={BoardArtSize.height}
+        clip-path="url(#{idPrefix}-grid-unwall-up-{index})"
+        pointer-events="none"
+    />
+{/each}
+
+{#each RemovedBlockedRightFrom as cell, index (`${cell.weapon},${cell.tool}`)}
+    {@const center = gridCellPosition(cell.weapon, cell.tool)}
+    {@const lineX = center.x + GridCellSize.width / 2}
+    <clipPath id="{idPrefix}-grid-unwall-right-{index}">
+        <rect
+            x={lineX - WallReachBefore}
+            y={center.y - GridCellSize.height / 2 - 2}
+            width={WallReachBefore + WallReachAfter}
+            height={GridCellSize.height + 4}
+        />
+    </clipPath>
+    <image
+        href={artUrl}
+        x={GridCellSize.width}
+        y="0"
+        width={BoardArtSize.width}
+        height={BoardArtSize.height}
+        clip-path="url(#{idPrefix}-grid-unwall-right-{index})"
+        pointer-events="none"
+    />
+{/each}
 
 {#each RemovedGemCells as cell, index (`${cell.weapon},${cell.tool}`)}
     {@const center = gridCellPosition(cell.weapon, cell.tool)}
