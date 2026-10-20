@@ -140,6 +140,7 @@
     {#if !signedIn}
         <footer class="legal-footer">
             <span>© TableTapas Games</span>
+            <a href="https://www.tabletapasgames.com/about" target="_blank" rel="noreferrer">About us</a>
             <a href="/privacy">Privacy Policy</a>
             <a href="/terms">Terms of Service</a>
         </footer>

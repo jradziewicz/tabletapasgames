@@ -9,7 +9,7 @@ export const SITE_ORIGIN = 'https://play.tabletapasgames.com'
 
 // Pages anyone can read without signing in. Everything else needs an account (or is a one-off
 // link like a password reset) and is not worth indexing.
-export const INDEXABLE_PATHS = ['/', '/about', '/privacy', '/terms'] as const
+export const INDEXABLE_PATHS = ['/', '/privacy', '/terms'] as const
 
 export function normalizePath(pathname: string): string {
     let path = pathname.replace(/\/index\.html$/, '/')
