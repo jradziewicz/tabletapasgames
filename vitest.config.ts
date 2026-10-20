@@ -3,6 +3,6 @@ import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
     test: {
-        projects: ['apps/*', 'games/*', 'libs/*']
+        projects: ['apps/*', 'games/*', 'libs/*', 'apps/frontend/vitest.runes.config.ts']
     }
 })
