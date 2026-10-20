@@ -1,15 +1,11 @@
 import {
     GameStatus,
     GameStatusCategory,
+    gameUserIds,
+    isListedOpenGame,
     getGameStatusesForCategory,
     type Game
 } from '@tabletop/common'
-
-export function gameUserIds(game: Pick<Game, 'players'>): string[] {
-    return [
-        ...new Set(game.players.flatMap((player) => (player.userId == null ? [] : [player.userId])))
-    ]
-}
 
 export class GameCacheKeys {
     static game(gameId: string): string {
@@ -91,7 +87,7 @@ export class GameCacheKeys {
             if (!getGameStatusesForCategory(category).includes(game.status)) continue
             for (const userId of gameUserIds(game)) keys.add(this.userList(userId, category))
         }
-        if (game.isPublic && game.status === GameStatus.WaitingForPlayers) {
+        if (isListedOpenGame(game)) {
             keys.add(this.publicList(game.typeId))
         }
         return keys

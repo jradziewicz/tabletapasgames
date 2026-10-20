@@ -29,7 +29,10 @@ import {
     GameStorage,
     GameCategory,
     PlayerStatus,
-    isYourTurnNotification
+    isYourTurnNotification,
+    gameUserIds,
+    isListedOpenGame,
+    isListedPublicGame
 } from '@tabletop/common'
 import * as Value from 'typebox/value'
 import { SvelteMap } from 'svelte/reactivity'
@@ -248,7 +251,7 @@ export class GameService implements GameServiceInterface {
             newGame = await this.api.createGame(game, options)
             this.gamesById.set(newGame.id, newGame)
 
-            if (newGame.isPublic && newGame.status === GameStatus.WaitingForPlayers) {
+            if (isListedOpenGame(newGame)) {
                 const titleGames = this.openGamesByTitleId.get(newGame.typeId) || []
                 titleGames.push(newGame)
                 this.openGamesByTitleId.set(newGame.typeId, titleGames)
@@ -356,14 +359,16 @@ export class GameService implements GameServiceInterface {
 
     private upsertCachedGame(game: Game) {
         const myUserId = this.authorizationService.getSessionUser()?.id
-        const mine = game.players.find(
+        const seatedPlayers = game.players.filter(
             (player) =>
-                player.userId === myUserId &&
-                (player.status === PlayerStatus.Joined || player.status === PlayerStatus.Reserved)
+                player.status === PlayerStatus.Joined || player.status === PlayerStatus.Reserved
         )
+        const isMember =
+            myUserId !== undefined &&
+            gameUserIds({ ...game, players: seatedPlayers }).includes(myUserId)
 
         if (!game.isPublic) {
-            if (!mine) {
+            if (!isMember) {
                 this.removeFromPrivateCache(game.id)
             } else if (game.storage === GameStorage.Local) {
                 this.localGamesById.set(game.id, game)
@@ -371,7 +376,10 @@ export class GameService implements GameServiceInterface {
                 this.gamesById.set(game.id, game)
             }
         } else {
-            if (!game.players.some((p) => p.status === PlayerStatus.Open)) {
+            if (
+                !isListedPublicGame(game) ||
+                !game.players.some((p) => p.status === PlayerStatus.Open)
+            ) {
                 this.removeFromPublicCache(game.id)
             } else {
                 const titleGames = (this.openGamesByTitleId.get(game.typeId) || []).filter(
@@ -382,7 +390,7 @@ export class GameService implements GameServiceInterface {
                 this.openGamesByTitleId.set(game.typeId, titleGames)
             }
 
-            if (!mine && game.ownerId !== myUserId) {
+            if (!isMember) {
                 this.removeFromPrivateCache(game.id)
             } else {
                 this.gamesById.set(game.id, game)
