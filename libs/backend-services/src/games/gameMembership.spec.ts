@@ -14,6 +14,8 @@ import { UserService } from '../users/userService.js'
 import { TokenService } from '../tokens/tokenService.js'
 import { LocalTaskService } from '../tasks/localTasksService.js'
 import { DefaultNotificationService } from '../notifications/defaultNotificationService.js'
+import { SyntheticDefinition, SyntheticRuntime } from './tests/syntheticGame.js'
+import { DEFERRED_TURN_REMINDER_INDEX, TURN_REMINDER_DELAYS } from './turnReminders.js'
 
 const users: User[] = ['a', 'b', 'c'].map((id) => ({
     id,
@@ -91,7 +93,16 @@ function fixture({ isPublic = true, lastSlot = false } = {}) {
         cache,
         {}
     )
-    return { service, store, cache, addKeys, notifications, read: () => stored, initial }
+    return {
+        service,
+        store,
+        cache,
+        transaction,
+        addKeys,
+        notifications,
+        read: () => stored,
+        initial
+    }
 }
 
 describe('lobby membership transactions', () => {
@@ -176,5 +187,51 @@ describe('lobby membership transactions', () => {
         expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected'])
         expect(read().players.map((player) => player.userId)).toEqual(['a', 'b'])
         expect(read().status).toBe(GameStatus.WaitingToStart)
+    })
+
+    it('starts a deferred turn reminder chain for the first active player when the game starts', async () => {
+        const { service, store, cache, transaction, read } = fixture({ isPublic: false })
+        vi.spyOn(transaction, 'set').mockReturnValue(transaction)
+        await Promise.all(users.slice(1).map((user) => service.joinGame({ user, gameId: 'lobby' })))
+        expect(read().status).toBe(GameStatus.WaitingToStart)
+        vi.spyOn(store, 'findGameById').mockImplementation(async () => structuredClone(read()))
+        vi.spyOn(UserService.prototype, 'getUser').mockImplementation(async (userId) =>
+            users.find((user) => user.id === userId)
+        )
+        vi.spyOn(cache, 'set').mockResolvedValue()
+        const createPushTask = vi
+            .spyOn(LocalTaskService.prototype, 'createPushTask')
+            .mockResolvedValue()
+        // The synthetic game starts with no active player; give it one so a chain starts.
+        const initializer = SyntheticRuntime.initializer
+        const initializeGameState = initializer.initializeGameState.bind(initializer)
+        vi.spyOn(initializer, 'initializeGameState').mockImplementation((...args) => {
+            const state = initializeGameState(...args)
+            state.activePlayerIds = ['p1']
+            return state
+        })
+
+        const started = await service.startGame({
+            definition: SyntheticDefinition,
+            gameId: 'lobby',
+            user: users[0]
+        })
+
+        const [firstPlayerId] = started.activePlayerIds ?? []
+        const firstUserId = started.players.find((player) => player.id === firstPlayerId)?.userId
+        expect(firstUserId).toBeDefined()
+        const delay = TURN_REMINDER_DELAYS[DEFERRED_TURN_REMINDER_INDEX]
+        expect(createPushTask).toHaveBeenLastCalledWith({
+            queue: 'turn-notification',
+            path: '/notification/sendTurnNotification',
+            inSeconds: delay,
+            payload: {
+                userId: firstUserId,
+                gameId: 'lobby',
+                notificationId: expect.any(String),
+                reminderIndex: DEFERRED_TURN_REMINDER_INDEX,
+                delay
+            }
+        })
     })
 })
