@@ -17,6 +17,7 @@ import {
     type User
 } from '@tabletop/common'
 import { GameService } from './gameService.svelte.js'
+import type { LibraryService } from './libraryService.svelte'
 
 vi.mock('$env/static/public', () => ({ PUBLIC_VAPID_KEY: '' }))
 vi.mock('$app/navigation', () => ({ goto: vi.fn(), invalidateAll: vi.fn() }))
@@ -54,7 +55,7 @@ function fixture() {
     const api = new TabletopApi()
     const getMyGames = vi.spyOn(api, 'getMyGames')
     const service = new GameService(
-        { getTitle: () => undefined, whenReady: async () => {} },
+        { getTitle: () => undefined, whenReady: async () => {} } as unknown as LibraryService,
         { getSessionUser: () => user },
         { addListener: (value: NotificationListener) => (listener = value) },
         api

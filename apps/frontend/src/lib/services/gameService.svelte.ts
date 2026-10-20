@@ -116,7 +116,7 @@ export class GameService implements GameServiceInterface {
     openGamesByTitleId: Map<string, Game[]> = new SvelteMap()
 
     constructor(
-        private readonly libraryService: Pick<LibraryService, 'getTitle' | 'whenReady'>,
+        private readonly libraryService: LibraryService,
         private readonly authorizationService: Pick<AuthorizationService, 'getSessionUser'>,
         notificationService: Pick<NotificationService, 'addListener'>,
         private readonly api: TabletopApi
