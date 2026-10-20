@@ -1,6 +1,8 @@
 import fastifyAuth from '@fastify/auth'
 import {
     BUG_REPORT_DESCRIPTION_MAX_LENGTH,
+    BUG_REPORT_SCREENSHOT_MAX_BASE64_LENGTH,
+    BUG_REPORT_SCREENSHOT_MAX_COUNT,
     Role,
     type BugReportRequest,
     type User,
@@ -23,6 +25,12 @@ const report: BugReportRequest = {
     view: { actionCount: 12, inHistory: true, exploring: false },
     versions: { site: '1.40.0', logic: '2.2.0', ui: '3.3.0' },
     client: { userAgent: 'test', viewport: '800x600 @1x', installedApp: false }
+}
+
+const largestScreenshot = {
+    jpeg: '/9j/'.padEnd(BUG_REPORT_SCREENSHOT_MAX_BASE64_LENGTH, 'A'),
+    width: 1920,
+    height: 1080
 }
 
 async function createServer({ authorized = true }: { authorized?: boolean } = {}) {
@@ -84,6 +92,76 @@ describe('POST /reportBug', () => {
             method: 'POST',
             url: '/reportBug',
             payload: { ...report, description: '' }
+        })
+
+        expect(response.statusCode).toBe(400)
+        expect(reportBug).not.toHaveBeenCalled()
+    })
+
+    it('takes the most screenshots a report may carry at their largest', async () => {
+        const { server, reportBug } = await createServer()
+        servers.add(server)
+        const screenshots = Array.from(
+            { length: BUG_REPORT_SCREENSHOT_MAX_COUNT },
+            () => largestScreenshot
+        )
+
+        const response = await server.inject({
+            method: 'POST',
+            url: '/reportBug',
+            payload: { ...report, screenshots }
+        })
+
+        expect(response.statusCode).toBe(200)
+        expect(reportBug).toHaveBeenCalledWith({ user, report: { ...report, screenshots } })
+    })
+
+    it('rejects more screenshots than a report may carry', async () => {
+        const { server, reportBug } = await createServer()
+        servers.add(server)
+
+        const response = await server.inject({
+            method: 'POST',
+            url: '/reportBug',
+            payload: {
+                ...report,
+                screenshots: Array.from({ length: BUG_REPORT_SCREENSHOT_MAX_COUNT + 1 }, () => ({
+                    jpeg: '/9j/AA==',
+                    width: 1,
+                    height: 1
+                }))
+            }
+        })
+
+        expect(response.statusCode).toBe(400)
+        expect(reportBug).not.toHaveBeenCalled()
+    })
+
+    it('rejects a screenshot that is not a JPEG', async () => {
+        const { server, reportBug } = await createServer()
+        servers.add(server)
+
+        const response = await server.inject({
+            method: 'POST',
+            url: '/reportBug',
+            payload: { ...report, screenshots: [{ jpeg: 'iVBORw0KGgo=', width: 1, height: 1 }] }
+        })
+
+        expect(response.statusCode).toBe(400)
+        expect(reportBug).not.toHaveBeenCalled()
+    })
+
+    it('rejects a screenshot over the size limit', async () => {
+        const { server, reportBug } = await createServer()
+        servers.add(server)
+
+        const response = await server.inject({
+            method: 'POST',
+            url: '/reportBug',
+            payload: {
+                ...report,
+                screenshots: [{ ...largestScreenshot, jpeg: `${largestScreenshot.jpeg}AAAA` }]
+            }
         })
 
         expect(response.statusCode).toBe(400)

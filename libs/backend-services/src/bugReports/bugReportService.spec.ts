@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
+    BUG_REPORT_SCREENSHOT_MAX_BYTES,
     BugReportStatus,
     GameStatus,
     PlayerStatus,
@@ -14,7 +15,11 @@ import {
 import { BugReportService } from './bugReportService.js'
 import { GameService } from '../games/gameService.js'
 import { GameNotFoundError, UserIsNotAllowedPlayerError } from '../games/errors.js'
-import type { BugReportStore } from '../persistence/stores/bugReportStore.js'
+import type {
+    BugReportStore,
+    StoredBugReportScreenshot
+} from '../persistence/stores/bugReportStore.js'
+import { InvalidBugReportScreenshotError } from './errors.js'
 
 const reporter: User = {
     id: 'u-1',
@@ -72,12 +77,28 @@ const report: BugReportRequest = {
     client: { userAgent: 'test', viewport: '800x600 @1x', installedApp: false }
 }
 
+// A tiny JPEG: start-of-image marker, an APP0 marker, end-of-image.
+const jpegBytes = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x02, 0xff, 0xd9])
+
+function screenshotOf(bytes: Buffer, width = 640, height = 480) {
+    return { jpeg: bytes.toString('base64'), width, height }
+}
+
 class MemoryBugReportStore implements BugReportStore {
     readonly reports = new Map<string, BugReport>()
+    readonly screenshots = new Map<string, readonly StoredBugReportScreenshot[]>()
 
-    async createBugReport(report: BugReport): Promise<BugReport> {
+    async createBugReport(
+        report: BugReport,
+        screenshots: readonly StoredBugReportScreenshot[] = []
+    ): Promise<BugReport> {
         this.reports.set(report.id, report)
+        this.screenshots.set(report.id, screenshots)
         return report
+    }
+
+    async findBugReportScreenshot({ reportId, index }: { reportId: string; index: number }) {
+        return this.screenshots.get(reportId)?.[index]
     }
 
     async findBugReports({ status, limit }: { status?: BugReportStatus; limit: number }) {
@@ -149,6 +170,83 @@ describe('BugReportService', () => {
             }
         })
         expect(stored.createdAt).toBeInstanceOf(Date)
+    })
+
+    it('stores pasted screenshots beside the report and counts them on it', async () => {
+        const wide = Buffer.concat([jpegBytes, Buffer.from([1, 2, 3])])
+        const stored = await service.reportBug({
+            user: reporter,
+            report: {
+                ...report,
+                screenshots: [screenshotOf(jpegBytes), screenshotOf(wide, 1920, 1080)]
+            }
+        })
+
+        expect(stored.screenshotCount).toBe(2)
+        expect(store.screenshots.get(stored.id)).toEqual([
+            { jpeg: jpegBytes, width: 640, height: 480, contentType: 'image/jpeg' },
+            { jpeg: wide, width: 1920, height: 1080, contentType: 'image/jpeg' }
+        ])
+        expect(await service.getScreenshot({ reportId: stored.id, index: 1 })).toEqual({
+            jpeg: wide,
+            width: 1920,
+            height: 1080,
+            contentType: 'image/jpeg'
+        })
+        expect(await service.getScreenshot({ reportId: stored.id, index: 2 })).toBeUndefined()
+    })
+
+    it('stores a report without screenshots with a count of zero', async () => {
+        const stored = await service.reportBug({ user: reporter, report })
+
+        expect(stored.screenshotCount).toBe(0)
+        expect(store.screenshots.get(stored.id)).toEqual([])
+    })
+
+    it('rejects more than three screenshots', async () => {
+        const screenshots = Array.from({ length: 4 }, () => screenshotOf(jpegBytes))
+
+        await expect(
+            service.reportBug({ user: reporter, report: { ...report, screenshots } })
+        ).rejects.toBeInstanceOf(InvalidBugReportScreenshotError)
+        expect(store.reports.size).toBe(0)
+    })
+
+    it('rejects a screenshot over the size limit', async () => {
+        const oversized = Buffer.alloc(BUG_REPORT_SCREENSHOT_MAX_BYTES + 1)
+        jpegBytes.copy(oversized)
+
+        await expect(
+            service.reportBug({
+                user: reporter,
+                report: { ...report, screenshots: [screenshotOf(oversized)] }
+            })
+        ).rejects.toBeInstanceOf(InvalidBugReportScreenshotError)
+        expect(store.reports.size).toBe(0)
+    })
+
+    it('rejects a screenshot that is not a JPEG', async () => {
+        const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a])
+
+        await expect(
+            service.reportBug({
+                user: reporter,
+                report: { ...report, screenshots: [screenshotOf(png)] }
+            })
+        ).rejects.toBeInstanceOf(InvalidBugReportScreenshotError)
+        expect(store.reports.size).toBe(0)
+    })
+
+    it('finds no screenshot at an index outside the limit', async () => {
+        const stored = await service.reportBug({
+            user: reporter,
+            report: { ...report, screenshots: [screenshotOf(jpegBytes)] }
+        })
+        const find = vi.spyOn(store, 'findBugReportScreenshot')
+
+        expect(await service.getScreenshot({ reportId: stored.id, index: 3 })).toBeUndefined()
+        expect(await service.getScreenshot({ reportId: stored.id, index: -1 })).toBeUndefined()
+        expect(find).not.toHaveBeenCalled()
     })
 
     it('rejects a reporter who is not a player in the game', async () => {

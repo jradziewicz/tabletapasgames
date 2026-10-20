@@ -302,6 +302,10 @@ export class DummyRemoteApiService implements RemoteApiService {
         return this.fail('setBugReportStatus')
     }
 
+    async getBugReportScreenshot(_reportId: string, _index: number): Promise<Blob> {
+        return this.fail('getBugReportScreenshot')
+    }
+
     async setGameState(_state: GameState): Promise<void> {
         return this.fail('setGameState')
     }

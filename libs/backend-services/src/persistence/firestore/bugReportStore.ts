@@ -6,7 +6,7 @@ import {
     QueryDocumentSnapshot,
     Timestamp
 } from '@google-cloud/firestore'
-import { BugReportStore } from '../stores/bugReportStore.js'
+import { BugReportStore, StoredBugReportScreenshot } from '../stores/bugReportStore.js'
 import { AlreadyExistsError, NotFoundError, UnknownStorageError } from '../stores/errors.js'
 import { isFirestoreError } from './errors.js'
 
@@ -17,14 +17,59 @@ export class FirestoreBugReportStore implements BugReportStore {
         this.bugReports = firestore.collection('bugReports').withConverter(bugReportConverter)
     }
 
-    async createBugReport(report: BugReport): Promise<BugReport> {
+    // bugReports/{reportId}/screenshots/{n}: one document per image, the JPEG as a Bytes field.
+    // Only the backend (Admin SDK) reads them; the admin screenshot route serves them.
+    async createBugReport(
+        report: BugReport,
+        screenshots: readonly StoredBugReportScreenshot[] = []
+    ): Promise<BugReport> {
         try {
-            await this.bugReports.doc(report.id).create(report)
+            const doc = this.bugReports.doc(report.id)
+            const batch = doc.firestore.batch()
+            batch.create(doc, report)
+            screenshots.forEach((screenshot, index) => {
+                batch.create(this.screenshots(report.id).doc(String(index)), {
+                    jpeg: screenshot.jpeg,
+                    width: screenshot.width,
+                    height: screenshot.height,
+                    contentType: screenshot.contentType
+                })
+            })
+            await batch.commit()
             return report
         } catch (error) {
             this.handleError(error, report.id)
             throw Error('unreachable')
         }
+    }
+
+    async findBugReportScreenshot({
+        reportId,
+        index
+    }: {
+        reportId: string
+        index: number
+    }): Promise<StoredBugReportScreenshot | undefined> {
+        try {
+            const snapshot = await this.screenshots(reportId).doc(String(index)).get()
+            const data = snapshot.data()
+            if (!data) {
+                return undefined
+            }
+            return {
+                jpeg: Buffer.from(data.jpeg as Uint8Array),
+                width: data.width as number,
+                height: data.height as number,
+                contentType: 'image/jpeg'
+            }
+        } catch (error) {
+            this.handleError(error, reportId)
+            throw Error('unreachable')
+        }
+    }
+
+    private screenshots(reportId: string) {
+        return this.bugReports.doc(reportId).collection('screenshots')
     }
 
     // Filtering on status while ordering by createdAt uses the bugReports composite index.

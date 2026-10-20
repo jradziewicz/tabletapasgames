@@ -6,6 +6,7 @@
         type BugReport
     } from '@tabletop/common'
     import { getAppContext } from '$lib/stores/appContext.svelte'
+    import AdminBugReportScreenshots from './AdminBugReportScreenshots.svelte'
 
     const { api } = getAppContext()
 
@@ -156,6 +157,12 @@
                     >
                         {report.description}
                     </p>
+                    {#if report.screenshotCount}
+                        <AdminBugReportScreenshots
+                            reportId={report.id}
+                            count={report.screenshotCount}
+                        />
+                    {/if}
                     <details class="mt-3 text-xs text-gray-600 dark:text-gray-400">
                         <summary class="cursor-pointer select-none">Details</summary>
                         <dl class="mt-2 grid grid-cols-[max-content_1fr] gap-x-3 gap-y-1">

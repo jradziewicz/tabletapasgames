@@ -3,6 +3,7 @@ import { BugReportStatus, Role, type User, UserStatus } from '@tabletop/common'
 import Fastify from 'fastify'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import listRoute from './list.js'
+import screenshotRoute from './screenshot.js'
 import statusRoute from './status.js'
 
 const admin: User = {
@@ -20,6 +21,13 @@ const storedReport = {
     createdAt: new Date('2026-10-01T00:00:00.000Z')
 }
 
+const storedScreenshot = {
+    jpeg: Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0xff, 0xd9]),
+    width: 640,
+    height: 480,
+    contentType: 'image/jpeg' as const
+}
+
 async function createServer({ isAdmin = true }: { isAdmin?: boolean } = {}) {
     const server = Fastify()
     await server.register(fastifyAuth)
@@ -34,10 +42,14 @@ async function createServer({ isAdmin = true }: { isAdmin?: boolean } = {}) {
         ...storedReport,
         status
     }))
-    Reflect.set(server, 'bugReportService', { listBugReports, setStatus })
+    const getScreenshot = vi.fn(async ({ reportId, index }: { reportId: string; index: number }) =>
+        reportId === 'report-1' && index === 0 ? storedScreenshot : undefined
+    )
+    Reflect.set(server, 'bugReportService', { listBugReports, setStatus, getScreenshot })
     await server.register(listRoute)
     await server.register(statusRoute)
-    return { server, listBugReports, setStatus }
+    await server.register(screenshotRoute)
+    return { server, listBugReports, setStatus, getScreenshot }
 }
 
 describe('admin bug report routes', () => {
@@ -139,6 +151,62 @@ describe('admin bug report routes', () => {
 
             expect(response.statusCode).toBe(403)
             expect(setStatus).not.toHaveBeenCalled()
+        })
+    })
+
+    describe('GET /:reportId/screenshots/:index', () => {
+        it('serves the screenshot as a privately cached JPEG', async () => {
+            const { server, getScreenshot } = await createServer()
+            servers.add(server)
+
+            const response = await server.inject({
+                method: 'GET',
+                url: '/report-1/screenshots/0'
+            })
+
+            expect(response.statusCode).toBe(200)
+            expect(getScreenshot).toHaveBeenCalledWith({ reportId: 'report-1', index: 0 })
+            expect(response.headers['content-type']).toBe('image/jpeg')
+            expect(response.headers['cache-control']).toMatch(/^private\b/)
+            expect(response.rawPayload.equals(storedScreenshot.jpeg)).toBe(true)
+        })
+
+        it('answers 404 for a screenshot that does not exist', async () => {
+            const { server } = await createServer()
+            servers.add(server)
+
+            const response = await server.inject({
+                method: 'GET',
+                url: '/report-1/screenshots/1'
+            })
+
+            expect(response.statusCode).toBe(404)
+        })
+
+        it('rejects an index past the screenshot limit', async () => {
+            const { server, getScreenshot } = await createServer()
+            servers.add(server)
+
+            const response = await server.inject({
+                method: 'GET',
+                url: '/report-1/screenshots/3'
+            })
+
+            expect(response.statusCode).toBe(400)
+            expect(getScreenshot).not.toHaveBeenCalled()
+        })
+
+        it('is admin only', async () => {
+            const { server, getScreenshot } = await createServer({ isAdmin: false })
+            servers.add(server)
+
+            const response = await server.inject({
+                method: 'GET',
+                url: '/report-1/screenshots/0'
+            })
+
+            expect(response.statusCode).toBe(403)
+            expect(getScreenshot).not.toHaveBeenCalled()
         })
     })
 })

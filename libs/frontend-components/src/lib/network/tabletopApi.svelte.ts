@@ -933,6 +933,17 @@ export class TabletopApi {
         return report
     }
 
+    /** One screenshot of a bug report as a JPEG; admin only. */
+    async getBugReportScreenshot(reportId: string, index: number): Promise<Blob> {
+        return await this.wretch
+            .get(
+                `/admin/bugReports/${encodeURIComponent(reportId)}/screenshots/${encodeURIComponent(index)}`
+            )
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .blob()
+    }
+
     async setGameState(state: GameState): Promise<void> {
         await this.wretch
             .post({ state }, '/admin/setGameState')
