@@ -1,10 +1,12 @@
 import { CompanyId } from '@tabletop/rocky-ventures'
 
+// Wizard Cannonball's blue is kept dark and Winged Wyrm's pink light, so the two differ in
+// lightness and not only in hue (a colour-blind player could not tell them apart otherwise).
 const StandardColors: Record<CompanyId, string> = {
-    [CompanyId.WizardCannonball]: '#3f6fd6',
+    [CompanyId.WizardCannonball]: '#2a4fb5',
     [CompanyId.DwarvenPacific]: '#e8892b',
     [CompanyId.GoblinCentral]: '#4a4a4a',
-    [CompanyId.WingedWyrm]: '#d55cc9'
+    [CompanyId.WingedWyrm]: '#f5aee9'
 }
 
 const StandardTextColors: Record<CompanyId, string> = {
