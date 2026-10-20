@@ -90,3 +90,13 @@ export function isRedGemCell(cell: GridCell): boolean {
 export function isBlueGemCell(cell: GridCell): boolean {
     return blueGemKeys.has(cellKey(cell))
 }
+
+// A disc on a red / blue circle, or anywhere directly above one in the same tool column, has that
+// unlock (2026-10-20: with walls removed a player could otherwise pass a circle by entirely).
+export function hasRedUnlockAt(cell: GridCell): boolean {
+    return RedGemCells.some((gem) => gem.tool === cell.tool && cell.weapon >= gem.weapon)
+}
+
+export function hasBlueUnlockAt(cell: GridCell): boolean {
+    return BlueGemCells.some((gem) => gem.tool === cell.tool && cell.weapon >= gem.weapon)
+}

@@ -13,8 +13,8 @@
         DragonHuntRegion,
         OreCapacityByToolLevel,
         HuntDrawRuleByWeaponLevel,
-        isRedGemCell,
-        isBlueGemCell,
+        hasRedUnlockAt,
+        hasBlueUnlockAt,
         MaxGems,
         RegionIds,
         RegionNames,
@@ -502,8 +502,8 @@
                     {@const isWeapon = plan.choice === 'weapon'}
                     {@const fromLevel = isWeapon ? (player?.weaponLevel ?? 0) : (player?.toolLevel ?? 0)}
                     {@const accent = isWeapon ? '#e0574a' : '#4fa3e0'}
-                    {@const unlocksRed = isRedGemCell(plan.destination) && !player?.redMinesUnlocked}
-                    {@const unlocksBlue = isBlueGemCell(plan.destination) && !player?.blueMinesUnlocked}
+                    {@const unlocksRed = hasRedUnlockAt(plan.destination) && !player?.redMinesUnlocked}
+                    {@const unlocksBlue = hasBlueUnlockAt(plan.destination) && !player?.blueMinesUnlocked}
                     {@const hunt = HuntDrawRuleByWeaponLevel[plan.destination.weapon]}
                     {@const ore = OreCapacityByToolLevel[plan.destination.tool]}
                     <button

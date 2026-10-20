@@ -3,8 +3,8 @@ import {
     MaxWeaponLevel,
     canMoveRight,
     canMoveUp,
-    isBlueGemCell,
-    isRedGemCell,
+    hasBlueUnlockAt,
+    hasRedUnlockAt,
     type GridCell
 } from '../data/toolWeaponGrid.js'
 import { gainGems } from './gems.js'
@@ -52,11 +52,11 @@ export function moveOnGrid(
     }
     player.weaponLevel = result.cell.weapon
     player.toolLevel = result.cell.tool
-    if (isRedGemCell(result.cell) && !player.redMinesUnlocked) {
+    if (hasRedUnlockAt(result.cell) && !player.redMinesUnlocked) {
         player.redMinesUnlocked = true
         recordGems(state, playerId, gainGems(state, playerId, 1), 'grid')
     }
-    if (isBlueGemCell(result.cell) && !player.blueMinesUnlocked) {
+    if (hasBlueUnlockAt(result.cell) && !player.blueMinesUnlocked) {
         player.blueMinesUnlocked = true
         recordGems(state, playerId, gainGems(state, playerId, 1), 'grid')
     }
