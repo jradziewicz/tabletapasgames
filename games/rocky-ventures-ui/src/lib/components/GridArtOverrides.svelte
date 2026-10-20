@@ -14,22 +14,26 @@
     const WallThickness = 6
     const WallClipHeight = 14
     const PatchInset = 2
-    // How far a printed wall (with its shadow) reaches either side of its grid line, in art units.
-    const WallReachBefore = 7
-    const WallReachAfter = 6.5
+    // How far a printed wall (with its outline and shadow) reaches either side of its grid line,
+    // in art units, measured on the board art. Above/left of the line, then below/right.
+    const UpWallReach = { before: 9, after: 7, left: 4, right: 4 }
+    const RightWallReach = { before: 11, after: 6, top: 4, bottom: 4 }
+    // Column whose stretch of the same grid line (no wall or gem ring beside it) is copied over a
+    // removed "up" wall, by cell; otherwise the next column along.
+    const UpWallPatchSourceTool: Record<string, number> = { '2,7': 2 }
 </script>
 
 <!-- Removed walls: cover each with the same grid line copied from a neighbouring cell. -->
 {#each RemovedBlockedUpFrom as cell, index (`${cell.weapon},${cell.tool}`)}
     {@const center = gridCellPosition(cell.weapon, cell.tool)}
     {@const lineY = center.y - GridCellSize.height / 2}
-    {@const sourceTool = cell.tool < 8 ? cell.tool + 1 : cell.tool - 1}
+    {@const sourceTool = UpWallPatchSourceTool[`${cell.weapon},${cell.tool}`] ?? (cell.tool < 8 ? cell.tool + 1 : cell.tool - 1)}
     <clipPath id="{idPrefix}-grid-unwall-up-{index}">
         <rect
-            x={center.x - GridCellSize.width / 2 - 1}
-            y={lineY - WallReachBefore}
-            width={GridCellSize.width + 3}
-            height={WallReachBefore + WallReachAfter}
+            x={center.x - GridCellSize.width / 2 - UpWallReach.left}
+            y={lineY - UpWallReach.before}
+            width={GridCellSize.width + UpWallReach.left + UpWallReach.right}
+            height={UpWallReach.before + UpWallReach.after}
         />
     </clipPath>
     <image
@@ -48,10 +52,10 @@
     {@const lineX = center.x + GridCellSize.width / 2}
     <clipPath id="{idPrefix}-grid-unwall-right-{index}">
         <rect
-            x={lineX - WallReachBefore}
-            y={center.y - GridCellSize.height / 2 - 2}
-            width={WallReachBefore + WallReachAfter}
-            height={GridCellSize.height + 4}
+            x={lineX - RightWallReach.before}
+            y={center.y - GridCellSize.height / 2 - RightWallReach.top}
+            width={RightWallReach.before + RightWallReach.after}
+            height={GridCellSize.height + RightWallReach.top + RightWallReach.bottom}
         />
     </clipPath>
     <image
