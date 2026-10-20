@@ -1,13 +1,13 @@
 import {
     assertExists,
     calculateActionChecksum,
+    createPatch,
     ExplorationHistory,
     type GameAction,
     type GameState,
     type HydratedGameState,
     type Visibility
 } from '@tabletop/common'
-import jsonpatch from 'fast-json-patch'
 import { GameActionResults } from './gameActionResults.svelte.js'
 import type { GameContext } from './gameContext.svelte.js'
 
@@ -65,8 +65,8 @@ export class GameUndo<T extends GameState, U extends HydratedGameState<T> & T> {
             })
             updatedState.actionCount = action.index + 1
             updatedState.actionChecksum = calculateActionChecksum(state.actionChecksum, [action])
-            action.undoPatch = jsonpatch.compare(updatedState, state)
-            action.forwardPatch = jsonpatch.compare(state, updatedState)
+            action.undoPatch = createPatch(updatedState, state)
+            action.forwardPatch = createPatch(state, updatedState)
             context.applyActionResults(new GameActionResults([action], updatedState))
             return
         }
