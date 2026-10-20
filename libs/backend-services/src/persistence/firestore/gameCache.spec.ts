@@ -145,6 +145,9 @@ describe.skipIf(!process.env.CACHE_TEST_REDIS_HOST || !process.env.FIRESTORE_EMU
                 reads.mockClear()
                 expect(await store.findGameHistory(owner)).toEqual(first)
                 expect(reads).not.toHaveBeenCalled()
+                const pageTtl = await client.ttl(GameCacheKeys.historyPage(owner.id, 'null'))
+                expect(pageTtl).toBeGreaterThan(23 * 60 * 60)
+                expect(pageTtl).toBeLessThanOrEqual(24 * 60 * 60)
                 const before = { time: 1700000000000 - 24 * 1000, id: records[24].id }
                 const older = await store.findGameHistory(owner, before)
                 expect(older.games.map((item) => item.id)).toEqual(
@@ -175,6 +178,66 @@ describe.skipIf(!process.env.CACHE_TEST_REDIS_HOST || !process.env.FIRESTORE_EMU
                 const cleanup = db.batch()
                 for (const record of records) cleanup.delete(store.games.doc(record.id))
                 await cleanup.commit()
+            }
+        })
+
+        it("caches game stats until one of the user's finished games changes", async () => {
+            const won: Game = {
+                ...game,
+                id: `${prefix}-won`,
+                status: GameStatus.Finished,
+                result: GameResult.Win,
+                winningPlayerIds: ['p1'],
+                startedAt: new Date(1700000000000),
+                finishedAt: new Date(1700086400000)
+            }
+            try {
+                await store.games.doc(won.id).set(won)
+                const reads = vi.spyOn(Query.prototype, 'get')
+                expect((await store.findGameStats(owner)).total).toMatchObject({
+                    games: 1,
+                    wins: 1,
+                    losses: 0
+                })
+                expect(reads).toHaveBeenCalledTimes(1)
+                reads.mockClear()
+                expect((await store.findGameStats(owner)).total?.games).toBe(1)
+                expect(reads).not.toHaveBeenCalled()
+                const statsTtl = await client.ttl(GameCacheKeys.stats(owner.id))
+                expect(statsTtl).toBeGreaterThan(6 * 24 * 60 * 60)
+                expect(statsTtl).toBeLessThanOrEqual(7 * 24 * 60 * 60)
+
+                await store.createGame(game)
+                await store.updateGame({
+                    game,
+                    fields: {
+                        status: GameStatus.Finished,
+                        result: GameResult.Win,
+                        winningPlayerIds: ['p2'],
+                        startedAt: new Date(1700100000000),
+                        finishedAt: new Date(1700200000000)
+                    }
+                })
+                reads.mockClear()
+                expect((await store.findGameStats(owner)).total).toMatchObject({
+                    games: 2,
+                    wins: 1,
+                    losses: 1
+                })
+                expect(reads).toHaveBeenCalledTimes(1)
+
+                await store.deleteGame(won)
+                expect((await store.findGameStats(owner)).total).toMatchObject({
+                    games: 1,
+                    wins: 0,
+                    losses: 1
+                })
+                expect(await store.findGameStats(newcomer)).toEqual({
+                    titles: [],
+                    countedGames: []
+                })
+            } finally {
+                await db.recursiveDelete(db.doc(`games/${won.id}`))
             }
         })
 
@@ -262,32 +325,39 @@ describe.skipIf(!process.env.CACHE_TEST_REDIS_HOST || !process.env.FIRESTORE_EMU
         })
 
         it('retains protection from every retry when authoritative membership changes', async () => {
+            const replacement: User = { ...owner, id: `${prefix}-replacement` }
+            Object.assign(game, joinFields())
             await store.createGame(game)
-            const ownerKey = await primeUser(owner, GameStatusCategory.Active)
             const joiningKey = await primeUser(newcomer, GameStatusCategory.Active)
+            const replacementKey = await primeUser(replacement, GameStatusCategory.Active)
             const run = db.runTransaction.bind(db)
             let attempts = 0
             vi.spyOn(db, 'runTransaction').mockImplementation((update, options) =>
                 run(async (transaction) => {
                     attempts++
                     if (attempts === 2) {
+                        const players = structuredClone(game.players)
+                        Object.assign(players[1], { userId: replacement.id })
                         await db.doc(`games/${game.id}`).update({
-                            players: joinFields().players,
-                            userIds: [owner.id, newcomer.id]
+                            players,
+                            userIds: [owner.id, replacement.id]
                         })
                     }
                     const result = await update(transaction)
                     if (attempts === 1)
                         throw Object.assign(new Error('synthetic conflict'), { code: 10 })
-                    expect(await client.get(ownerKey)).toMatch(/^L:W:/)
-                    expect(await client.get(joiningKey)).toBe(await client.get(ownerKey))
+                    expect(await client.get(joiningKey)).toMatch(/^L:W:/)
+                    expect(await client.get(replacementKey)).toBe(await client.get(joiningKey))
                     return result
                 }, options)
             )
             await store.updateGame({ game, fields: { players: [] } })
             expect(attempts).toBe(2)
-            expect(await store.findGamesForUser(owner, GameStatusCategory.Active)).toEqual([])
             expect(await store.findGamesForUser(newcomer, GameStatusCategory.Active)).toEqual([])
+            expect(await store.findGamesForUser(replacement, GameStatusCategory.Active)).toEqual([])
+            expect(
+                (await store.findGamesForUser(owner, GameStatusCategory.Active)).map((g) => g.id)
+            ).toEqual([game.id])
         }, 20_000)
 
         it.each([
@@ -365,6 +435,73 @@ describe.skipIf(!process.env.CACHE_TEST_REDIS_HOST || !process.env.FIRESTORE_EMU
                 ])
             }
         )
+
+        it('keeps a game when its deletion is refused inside the transaction', async () => {
+            await store.createGame(game)
+            const key = await primeUser(owner, GameStatusCategory.Active)
+            await expect(
+                store.deleteGame(game, (existingGame) => {
+                    expect(existingGame.id).toBe(game.id)
+                    throw new Error('Deletion refused')
+                })
+            ).rejects.toThrow()
+            expect((await db.doc(`games/${game.id}`).get()).exists).toBe(true)
+            expect(await store.findGamesForUser(owner, GameStatusCategory.Active)).toHaveLength(1)
+            await store.deleteGame(game, () => {})
+            expect((await db.doc(`games/${game.id}`).get()).exists).toBe(false)
+            expect((await live.cache.cacheGet(key)).cached).toBe(false)
+        })
+
+        it('remembers that a game was Finished after an Undo reopens it', async () => {
+            game.status = GameStatus.Started
+            await store.writeFullGameData(game, state, [])
+            const action: GameAction = {
+                id: 'final',
+                gameId: game.id,
+                source: ActionSource.User,
+                type: 'synthetic',
+                index: 0
+            }
+            const finished = await store.addActionsToGame({
+                game,
+                actions: [action],
+                state: {
+                    ...state,
+                    actionCount: 1,
+                    result: GameResult.Win,
+                    winningPlayerIds: ['p1']
+                },
+                validator: async () => UpdateValidationResult.Proceed
+            })
+            expect(finished.updatedGame).toMatchObject({
+                status: GameStatus.Finished,
+                everFinished: true
+            })
+            const reopened = await store.undoActionsFromGame({
+                gameId: game.id,
+                actions: [action],
+                redoneActions: [],
+                state,
+                validator: async () => UpdateValidationResult.Proceed
+            })
+            expect(reopened.updatedGame).toMatchObject({
+                status: GameStatus.Started,
+                everFinished: true
+            })
+            expect(reopened.updatedGame.result).toBeUndefined()
+            expect((await store.findGameById(game.id))?.everFinished).toBe(true)
+        })
+
+        it('leaves an unlisted public game out of discovery', async () => {
+            const key = await primePublic()
+            game.isPublic = true
+            game.unlisted = true
+            await store.createGame(game)
+            expect((await live.cache.cacheGet(key)).cached).toBe(true)
+            expect(await store.findOpenGamesForTitle(game.typeId)).toEqual([])
+            await client.del(key)
+            expect(await store.findOpenGamesForTitle(game.typeId)).toEqual([])
+        })
 
         it('ordinary actions and undo keep ID lists cached while refreshing Game metadata', async () => {
             game.status = GameStatus.Started

@@ -2,6 +2,7 @@ export * from './game/engine/gameAction.js'
 export * from './game/engine/canonicalActionReplay.js'
 export * from './game/engine/gameEngine.js'
 export * from './game/engine/gameFork.js'
+export * from './game/engine/statePatch.js'
 export * from './game/engine/machineStateHandler.js'
 export * from './game/engine/machineContext.js'
 
@@ -25,6 +26,7 @@ export * from './game/definition/gameInitializer.js'
 export * from './game/model/startingPositionAssignment.js'
 export * from './game/definition/gameExploration.js'
 export * from './game/definition/gameStateLogger.js'
+export * from './game/definition/gameScoring.js'
 
 export * from './game/model/gameState.js'
 export * from './game/model/gameResult.js'
@@ -99,7 +101,11 @@ export * from './util/gameSeeds.js'
 
 export * from './site/tournamentGameReference.js'
 export * from './site/gameHistory.js'
+export * from './site/bugReport.js'
 
 export * from './preferences/preferences.js'
 
 export * from './game/definition/gameMetadata.js'
+
+export * from './site/gameStats.js'
+export * from './site/siteStats.js'

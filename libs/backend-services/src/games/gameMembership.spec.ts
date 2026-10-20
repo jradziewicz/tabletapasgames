@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
+    FieldValue,
     Firestore,
     QueryDocumentSnapshot,
     Transaction,
@@ -14,6 +15,8 @@ import { UserService } from '../users/userService.js'
 import { TokenService } from '../tokens/tokenService.js'
 import { LocalTaskService } from '../tasks/localTasksService.js'
 import { DefaultNotificationService } from '../notifications/defaultNotificationService.js'
+import { PublicSyntheticDefinition, SyntheticRuntime } from './tests/syntheticGame.js'
+import { DEFERRED_TURN_REMINDER_INDEX, TURN_REMINDER_DELAYS } from './turnReminders.js'
 
 const users: User[] = ['a', 'b', 'c'].map((id) => ({
     id,
@@ -24,11 +27,11 @@ const users: User[] = ['a', 'b', 'c'].map((id) => ({
 }))
 afterEach(() => vi.restoreAllMocks())
 
-function fixture({ isPublic = true, lastSlot = false } = {}) {
+function fixture({ isPublic = true, lastSlot = false, ownerId = 'a' } = {}) {
     const stored: Game = {
         id: 'lobby',
         typeId: 'synthetic',
-        ownerId: 'a',
+        ownerId,
         name: 'Lobby',
         isPublic,
         deleted: false,
@@ -61,9 +64,16 @@ function fixture({ isPublic = true, lastSlot = false } = {}) {
         transaction
     vi.spyOn(documentReader, 'get').mockResolvedValue(snapshot)
     vi.spyOn(transaction, 'update').mockImplementation((_reference, fields) => {
-        Object.assign(stored, fields)
+        for (const [key, value] of Object.entries(fields)) {
+            if (value instanceof FieldValue && value.isEqual(FieldValue.delete())) {
+                Reflect.deleteProperty(stored, key)
+            } else {
+                Reflect.set(stored, key, value)
+            }
+        }
         return transaction
     })
+    vi.spyOn(transaction, 'set').mockReturnValue(transaction)
     let pending = Promise.resolve()
     vi.spyOn(firestore, 'runTransaction').mockImplementation((update) => {
         const result = pending.then(() => update(transaction))
@@ -82,16 +92,28 @@ function fixture({ isPublic = true, lastSlot = false } = {}) {
         DefaultNotificationService.prototype
     )
     vi.spyOn(notifications, 'sendNotification').mockResolvedValue()
+    const tasks: LocalTaskService = Object.create(LocalTaskService.prototype)
+    vi.spyOn(tasks, 'createPushTask').mockResolvedValue()
     const service = new GameService(
         store,
         UserService.prototype,
         TokenService.prototype,
-        LocalTaskService.prototype,
+        tasks,
         notifications,
         cache,
-        {}
+        { synthetic: PublicSyntheticDefinition }
     )
-    return { service, store, cache, addKeys, notifications, read: () => stored, initial }
+    return {
+        service,
+        store,
+        cache,
+        transaction,
+        addKeys,
+        notifications,
+        tasks,
+        read: () => stored,
+        initial
+    }
 }
 
 describe('lobby membership transactions', () => {
@@ -106,7 +128,9 @@ describe('lobby membership transactions', () => {
             expect(read().players.every((player) => player.status === PlayerStatus.Joined)).toBe(
                 true
             )
-            expect(read().status).toBe(GameStatus.WaitingToStart)
+            // A filled public game waits for its countdown; a filled invite-only game whose
+            // owner plays starts at once (TableTapas behaviour, see docs/game-auto-start.md).
+            expect(read().status).toBe(isPublic ? GameStatus.WaitingToStart : GameStatus.Started)
         }
     )
 
@@ -126,7 +150,13 @@ describe('lobby membership transactions', () => {
     it.each([true, false])(
         'preserves another join when declining (public: %s)',
         async (isPublic) => {
-            const { service, read, initial } = fixture({ isPublic })
+            // The join fills the lobby. An invite-only game its owner plays in would start at
+            // once (TableTapas), leaving nothing to decline, so the invite-only case uses an
+            // owner who holds no seat: its lobby stays open through the countdown.
+            const { service, read, initial } = fixture({
+                isPublic,
+                ...(isPublic ? {} : { ownerId: 'developer' })
+            })
             for (const game of [read(), initial]) {
                 Object.assign(game.players[1], {
                     userId: 'b',
@@ -176,5 +206,179 @@ describe('lobby membership transactions', () => {
         expect(results.map((result) => result.status)).toEqual(['fulfilled', 'rejected'])
         expect(read().players.map((player) => player.userId)).toEqual(['a', 'b'])
         expect(read().status).toBe(GameStatus.WaitingToStart)
+    })
+
+    it('starts a deferred turn reminder chain for the first active player when the game starts', async () => {
+        // An invite-only game whose owner plays starts the moment its last seat fills.
+        const { service, store, cache, transaction, tasks, read } = fixture({ isPublic: false })
+        vi.spyOn(transaction, 'set').mockReturnValue(transaction)
+        vi.spyOn(store, 'findGameById').mockImplementation(async () => structuredClone(read()))
+        vi.spyOn(UserService.prototype, 'getUser').mockImplementation(async (userId) =>
+            users.find((user) => user.id === userId)
+        )
+        vi.spyOn(cache, 'set').mockResolvedValue()
+        // The synthetic game starts with no active player; give it one so a chain starts.
+        const initializer = SyntheticRuntime.initializer
+        const initializeGameState = initializer.initializeGameState.bind(initializer)
+        vi.spyOn(initializer, 'initializeGameState').mockImplementation((...args) => {
+            const state = initializeGameState(...args)
+            state.activePlayerIds = ['p1']
+            return state
+        })
+
+        for (const user of users.slice(1)) {
+            await service.joinGame({ user, gameId: 'lobby' })
+        }
+
+        const started = read()
+        expect(started.status).toBe(GameStatus.Started)
+        const [firstPlayerId] = started.activePlayerIds ?? []
+        const firstUserId = started.players.find((player) => player.id === firstPlayerId)?.userId
+        expect(firstUserId).toBeDefined()
+        const delay = TURN_REMINDER_DELAYS[DEFERRED_TURN_REMINDER_INDEX]
+        expect(tasks.createPushTask).toHaveBeenCalledWith({
+            queue: 'turn-notification',
+            path: '/notification/sendTurnNotification',
+            inSeconds: delay,
+            payload: {
+                userId: firstUserId,
+                gameId: 'lobby',
+                notificationId: expect.any(String),
+                reminderIndex: DEFERRED_TURN_REMINDER_INDEX,
+                delay,
+                turnStartedAt: expect.any(Number)
+            }
+        })
+    })
+})
+
+describe('game auto-start', () => {
+    const now = Date.parse('2026-09-26T12:00:00Z')
+    const autoStartAt = now + 60_000
+
+    async function fillLobby(options?: { isPublic?: boolean; ownerId?: string }) {
+        vi.spyOn(Date, 'now').mockReturnValue(now)
+        const lobby = fixture(options)
+        for (const user of users.slice(1)) await lobby.service.joinGame({ user, gameId: 'lobby' })
+        vi.mocked(lobby.store.findGameById).mockImplementation(async () =>
+            structuredClone(lobby.read())
+        )
+        return lobby
+    }
+
+    it('schedules a start one minute after the final join fills a public game', async () => {
+        const { read, tasks } = await fillLobby()
+        expect(read().autoStartAt).toEqual(new Date(autoStartAt))
+        expect(tasks.createPushTask).toHaveBeenCalledExactlyOnceWith({
+            queue: 'game-auto-start',
+            path: '/games/autoStart',
+            payload: { gameId: 'lobby', autoStartAt },
+            inSeconds: 60
+        })
+    })
+
+    it('schedules a start for an invite-only game whose owner holds no seat', async () => {
+        const { read, tasks } = await fillLobby({ isPublic: false, ownerId: 'developer' })
+        expect(read().autoStartAt).toEqual(new Date(autoStartAt))
+        expect(tasks.createPushTask).toHaveBeenCalledExactlyOnceWith(
+            expect.objectContaining({ payload: { gameId: 'lobby', autoStartAt } })
+        )
+    })
+
+    it('starts an invite-only game the owner plays in at once, without a countdown', async () => {
+        const { read, tasks } = await fillLobby({ isPublic: false })
+        expect(read().status).toBe(GameStatus.Started)
+        expect(read().autoStartAt).toBeUndefined()
+        expect(tasks.createPushTask).not.toHaveBeenCalled()
+    })
+
+    it('cancels the countdown when a player leaves and restarts it when the game refills', async () => {
+        const { service, read, tasks } = await fillLobby()
+        await service.declineGame({ user: users[2], gameId: 'lobby' })
+        expect(read().autoStartAt).toBeUndefined()
+
+        vi.mocked(Date.now).mockReturnValue(now + 5_000)
+        await service.joinGame({ user: users[2], gameId: 'lobby' })
+        expect(read().autoStartAt).toEqual(new Date(autoStartAt + 5_000))
+        expect(tasks.createPushTask).toHaveBeenLastCalledWith(
+            expect.objectContaining({
+                payload: { gameId: 'lobby', autoStartAt: autoStartAt + 5_000 }
+            })
+        )
+    })
+
+    it('cancels the countdown when the owner makes the game invite-only', async () => {
+        const { service, read } = await fillLobby()
+        await service.updateGame({ gameId: 'lobby', user: users[0], fields: { isPublic: false } })
+        expect(read().autoStartAt).toBeUndefined()
+    })
+
+    it('reports a scheduling failure and reschedules when the join is retried', async () => {
+        vi.spyOn(Date, 'now').mockReturnValue(now)
+        const { service, read, tasks } = fixture()
+        await service.joinGame({ user: users[1], gameId: 'lobby' })
+        vi.mocked(tasks.createPushTask).mockRejectedValueOnce(new Error('Queue unavailable'))
+        await expect(service.joinGame({ user: users[2], gameId: 'lobby' })).rejects.toThrow(
+            'Queue unavailable'
+        )
+        expect(read().autoStartAt).toEqual(new Date(autoStartAt))
+
+        await service.joinGame({ user: users[2], gameId: 'lobby' })
+        expect(tasks.createPushTask).toHaveBeenLastCalledWith(
+            expect.objectContaining({ payload: { gameId: 'lobby', autoStartAt } })
+        )
+    })
+
+    it('starts the game when its countdown task arrives', async () => {
+        const { service, read } = await fillLobby()
+        await service.autoStartGame({ gameId: 'lobby', autoStartAt })
+        expect(read().status).toBe(GameStatus.Started)
+        expect(read().autoStartAt).toBeUndefined()
+    })
+
+    it('retries rather than start from a game read before the owner changed it', async () => {
+        const { service, read, store } = await fillLobby()
+        vi.mocked(store.findGameById).mockResolvedValue({
+            ...structuredClone(read()),
+            updatedAt: new Date(0)
+        })
+        await expect(service.autoStartGame({ gameId: 'lobby', autoStartAt })).rejects.toThrow(
+            'updated by another request'
+        )
+        expect(read().status).toBe(GameStatus.WaitingToStart)
+    })
+
+    it('keeps the game started when player notifications fail', async () => {
+        const { service, read, notifications } = await fillLobby()
+        vi.mocked(notifications.sendNotification).mockRejectedValue(new Error('Push unavailable'))
+        const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
+        await service.autoStartGame({ gameId: 'lobby', autoStartAt })
+        expect(read().status).toBe(GameStatus.Started)
+        expect(logged).toHaveBeenCalledWith(
+            'Failed to notify players that game lobby started',
+            expect.any(Error)
+        )
+    })
+
+    it('ignores a task from a countdown that was cancelled', async () => {
+        const { service, read } = await fillLobby()
+        await service.declineGame({ user: users[2], gameId: 'lobby' })
+        vi.mocked(Date.now).mockReturnValue(now + 5_000)
+        await service.joinGame({ user: users[2], gameId: 'lobby' })
+        await service.autoStartGame({ gameId: 'lobby', autoStartAt })
+        expect(read().status).toBe(GameStatus.WaitingToStart)
+    })
+
+    it('ignores the task when the owner already started the game', async () => {
+        const { service, read, store } = await fillLobby()
+        await service.startGame({
+            definition: PublicSyntheticDefinition,
+            gameId: 'lobby',
+            user: users[0]
+        })
+        const write = vi.spyOn(store, 'updateGame')
+        await service.autoStartGame({ gameId: 'lobby', autoStartAt })
+        expect(read().status).toBe(GameStatus.Started)
+        expect(write).not.toHaveBeenCalled()
     })
 })

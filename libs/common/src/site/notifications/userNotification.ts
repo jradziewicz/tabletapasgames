@@ -88,7 +88,7 @@ export const IsYourTurnNotification = Type.Evaluate(
                 // Which step of the turn-alert sequence this is:
                 //  'initial'  - ~1 min in, push/Discord only
                 //  'email'    - ~5 min in, email only
-                //  'reminder' - later nudges (4h / 12h), every channel
+                //  'reminder' - daily nudges from 24h in, every channel
                 alertStage: Type.Optional(
                     Type.Union([
                         Type.Literal('initial'),
@@ -100,6 +100,15 @@ export const IsYourTurnNotification = Type.Evaluate(
         })
     ])
 )
+
+export function isYourTurnNotification(
+    notification: Notification
+): notification is IsYourTurnNotification {
+    return (
+        notification.type === NotificationCategory.User &&
+        notification.action === UserNotificationAction.IsYourTurn
+    )
+}
 
 export type UserNotification =
     | PlayerJoinedNotification

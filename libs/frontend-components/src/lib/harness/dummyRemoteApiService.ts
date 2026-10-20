@@ -2,6 +2,10 @@ import type Ably from 'ably'
 import type {
     AdminAssignableRole,
     Bookmark,
+    BugReport,
+    BugReportRequest,
+    BugReportStatus,
+    UserGameStats,
     CanonicalActionReplay,
     Game,
     GameAction,
@@ -36,6 +40,10 @@ export class DummyRemoteApiService implements RemoteApiService {
 
     set versionChange(_value: VersionChange | undefined) {
         return
+    }
+
+    async getMyGameStats(): Promise<UserGameStats> {
+        return this.fail('getMyGameStats')
     }
 
     async listTournaments(): Promise<TournamentList> {
@@ -128,6 +136,13 @@ export class DummyRemoteApiService implements RemoteApiService {
 
     async updateUserPreferences(_userId: string, _preferences: UserPreferences): Promise<User> {
         return this.fail('updateUserPreferences')
+    }
+
+    async updateUserTimeZone(
+        _timeZone: string,
+        _options?: { onlyIfUnset?: boolean }
+    ): Promise<User> {
+        return this.fail('updateUserTimeZone')
     }
 
     async unlinkExternalAccount(_externalId: string): Promise<User> {
@@ -285,6 +300,22 @@ export class DummyRemoteApiService implements RemoteApiService {
 
     async getActiveGamesForTitle(_titleId: string): Promise<Game[]> {
         return this.fail('getActiveGamesForTitle')
+    }
+
+    async reportBug(_report: BugReportRequest): Promise<void> {
+        return this.fail('reportBug')
+    }
+
+    async getBugReports(_status?: BugReportStatus): Promise<BugReport[]> {
+        return this.fail('getBugReports')
+    }
+
+    async setBugReportStatus(_reportId: string, _status: BugReportStatus): Promise<BugReport> {
+        return this.fail('setBugReportStatus')
+    }
+
+    async getBugReportScreenshot(_reportId: string, _index: number): Promise<Blob> {
+        return this.fail('getBugReportScreenshot')
     }
 
     async setGameState(_state: GameState): Promise<void> {

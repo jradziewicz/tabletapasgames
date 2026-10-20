@@ -1,15 +1,11 @@
 import {
     GameStatus,
     GameStatusCategory,
+    gameUserIds,
+    isListedOpenGame,
     getGameStatusesForCategory,
     type Game
 } from '@tabletop/common'
-
-export function gameUserIds(game: Pick<Game, 'players'>): string[] {
-    return [
-        ...new Set(game.players.flatMap((player) => (player.userId == null ? [] : [player.userId])))
-    ]
-}
 
 export class GameCacheKeys {
     static game(gameId: string): string {
@@ -32,12 +28,16 @@ export class GameCacheKeys {
         return `games-public-${titleId}`
     }
 
-    static history(userId: string, older = false): string {
+    static finishedGamesGeneration(userId: string, older = false): string {
         return `game-history-${older ? 'older' : 'head'}-${userId}`
     }
 
     static historyPage(userId: string, cursor: string): string {
-        return `game-history-page-${userId}-${cursor}`
+        return `finished-games-history-${userId}-${cursor}`
+    }
+
+    static stats(userId: string): string {
+        return `finished-games-stats-${userId}`
     }
 
     static chatRevision(gameId: string): string {
@@ -68,9 +68,9 @@ export class GameCacheKeys {
             ...(after?.status === GameStatus.Finished ? gameUserIds(after) : [])
         ])
         const historyKeys = [...historyUsers].flatMap((userId) => [
-            this.history(userId),
+            this.finishedGamesGeneration(userId),
             ...(before?.status === GameStatus.Finished || before === undefined
-                ? [this.history(userId, true)]
+                ? [this.finishedGamesGeneration(userId, true)]
                 : [])
         ])
         return [
@@ -87,7 +87,7 @@ export class GameCacheKeys {
             if (!getGameStatusesForCategory(category).includes(game.status)) continue
             for (const userId of gameUserIds(game)) keys.add(this.userList(userId, category))
         }
-        if (game.isPublic && game.status === GameStatus.WaitingForPlayers) {
+        if (isListedOpenGame(game)) {
             keys.add(this.publicList(game.typeId))
         }
         return keys

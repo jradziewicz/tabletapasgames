@@ -28,12 +28,18 @@ import {
     GameForkError,
     GameStorage,
     GameCategory,
-    PlayerStatus
+    PlayerStatus,
+    isYourTurnNotification,
+    gameUserIds,
+    isListedOpenGame,
+    isListedPublicGame,
+    type User
 } from '@tabletop/common'
 import * as Value from 'typebox/value'
 import { SvelteMap } from 'svelte/reactivity'
-import { NotificationService } from './notificationService.svelte'
+import type { NotificationService } from './notificationService.svelte'
 import { compareGameInvitations } from '$lib/utils/gameInvitation'
+import { isUsersNonHotseatTurn } from '$lib/utils/dashboardGames'
 
 import type { LibraryService } from './libraryService.svelte'
 
@@ -48,6 +54,7 @@ export class GameService implements GameServiceInterface {
 
     loading = $state(false)
     private loadingPromise: Promise<void> | null = null
+    private currentGamesChanged = false
 
     currentGameSession: GameSession<GameState, HydratedGameState> | undefined = $state(undefined)
 
@@ -115,12 +122,20 @@ export class GameService implements GameServiceInterface {
 
     constructor(
         private readonly libraryService: LibraryService,
-        private readonly authorizationService: AuthorizationService,
-        private readonly notificationService: NotificationService,
+        private readonly authorizationService: Pick<AuthorizationService, 'getSessionUser'>,
+        notificationService: Pick<NotificationService, 'addListener'>,
         private readonly api: TabletopApi
     ) {
         notificationService.addListener(this.NotificationListener)
         this.localGameStore = new IndexedDbGameStore()
+    }
+
+    isSessionUsersTurn(gameId: string): boolean {
+        const game = this.gamesById.get(gameId)
+        return (
+            game !== undefined &&
+            isUsersNonHotseatTurn(game, this.authorizationService.getSessionUser()?.id)
+        )
     }
 
     async hasActiveGames() {
@@ -128,7 +143,9 @@ export class GameService implements GameServiceInterface {
     }
 
     async loadGames() {
-        if (!this.loadingPromise) {
+        if (this.loadingPromise) {
+            this.currentGamesChanged = true
+        } else {
             this.loading = true
             this.loadingPromise = this.loadCurrentGames().finally(() => {
                 this.loading = false
@@ -141,10 +158,17 @@ export class GameService implements GameServiceInterface {
     private async loadCurrentGames() {
         await this.libraryService.whenReady()
         const sessionUser = this.authorizationService.getSessionUser()
-        const [games, localGames] = await Promise.all([
-            this.api.getMyGames('current'),
-            sessionUser ? this.localGameStore.findGamesForUser(sessionUser) : []
-        ])
+        // A game notification or another load request during the fetch means the response may
+        // already be stale, so fetch again until nothing changed while it was in flight.
+        let fetched: { games: Game[]; localGames: Game[] } | undefined
+        do {
+            this.currentGamesChanged = false
+            fetched = await this.fetchCurrentGames(sessionUser)
+            if (!fetched) {
+                return
+            }
+        } while (this.currentGamesChanged)
+        const { games, localGames } = fetched
 
         const ids = new Set(games.map((game) => game.id))
         games.forEach((game) => {
@@ -159,6 +183,19 @@ export class GameService implements GameServiceInterface {
         localGames.forEach((game) => {
             this.localGamesById.set(game.id, game)
         })
+    }
+
+    private async fetchCurrentGames(
+        sessionUser: User | undefined
+    ): Promise<{ games: Game[]; localGames: Game[] } | undefined> {
+        const [games, localGames] = await Promise.all([
+            this.api.getMyGames('current'),
+            sessionUser ? this.localGameStore.findGamesForUser(sessionUser) : []
+        ])
+        if (this.authorizationService.getSessionUser()?.id !== sessionUser?.id) {
+            return undefined
+        }
+        return { games, localGames }
     }
 
     // Should debounce this
@@ -238,7 +275,7 @@ export class GameService implements GameServiceInterface {
             newGame = await this.api.createGame(game, options)
             this.gamesById.set(newGame.id, newGame)
 
-            if (newGame.isPublic && newGame.status === GameStatus.WaitingForPlayers) {
+            if (isListedOpenGame(newGame)) {
                 const titleGames = this.openGamesByTitleId.get(newGame.typeId) || []
                 titleGames.push(newGame)
                 this.openGamesByTitleId.set(newGame.typeId, titleGames)
@@ -346,14 +383,16 @@ export class GameService implements GameServiceInterface {
 
     private upsertCachedGame(game: Game) {
         const myUserId = this.authorizationService.getSessionUser()?.id
-        const mine = game.players.find(
+        const seatedPlayers = game.players.filter(
             (player) =>
-                player.userId === myUserId &&
-                (player.status === PlayerStatus.Joined || player.status === PlayerStatus.Reserved)
+                player.status === PlayerStatus.Joined || player.status === PlayerStatus.Reserved
         )
+        const isMember =
+            myUserId !== undefined &&
+            gameUserIds({ ...game, players: seatedPlayers }).includes(myUserId)
 
         if (!game.isPublic) {
-            if (!mine) {
+            if (!isMember) {
                 this.removeFromPrivateCache(game.id)
             } else if (game.storage === GameStorage.Local) {
                 this.localGamesById.set(game.id, game)
@@ -361,7 +400,10 @@ export class GameService implements GameServiceInterface {
                 this.gamesById.set(game.id, game)
             }
         } else {
-            if (!game.players.some((p) => p.status === PlayerStatus.Open)) {
+            if (
+                !isListedPublicGame(game) ||
+                !game.players.some((p) => p.status === PlayerStatus.Open)
+            ) {
                 this.removeFromPublicCache(game.id)
             } else {
                 const titleGames = (this.openGamesByTitleId.get(game.typeId) || []).filter(
@@ -372,7 +414,7 @@ export class GameService implements GameServiceInterface {
                 this.openGamesByTitleId.set(game.typeId, titleGames)
             }
 
-            if (!mine && game.ownerId !== myUserId) {
+            if (!isMember) {
                 this.removeFromPrivateCache(game.id)
             } else {
                 this.gamesById.set(game.id, game)
@@ -421,10 +463,17 @@ export class GameService implements GameServiceInterface {
     private NotificationListener = async (event: NotificationEvent) => {
         if (isDataEvent(event)) {
             const notification = event.notification
+            // Hidden tabs drop realtime, so the service worker forwards turn pushes to refresh
+            // the game records that drive the tab's turn indicator.
+            if (isYourTurnNotification(notification)) {
+                await this.loadGames()
+                return
+            }
             if (!this.isGameNotification(notification)) {
                 return
             }
             const game = Value.Convert(Game, notification.data.game) as Game
+            this.currentGamesChanged = true
             if (
                 notification.action === GameNotificationAction.Create ||
                 notification.action === GameNotificationAction.Update

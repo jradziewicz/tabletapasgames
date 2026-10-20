@@ -79,6 +79,7 @@ export const PlayerAction = Type.Evaluate(
     ])
 )
 
+// Evaluating the intersection drops the Action's own additionalProperties, so carry it over
 export const ToAPIAction = (schema: Type.TSchema) =>
     Type.Evaluate(
         Type.Intersect([
@@ -87,7 +88,10 @@ export const ToAPIAction = (schema: Type.TSchema) =>
                 createdAt: Type.Optional(Type.String({ format: 'date-time' })),
                 updatedAt: Type.Optional(Type.String({ format: 'date-time' }))
             })
-        ])
+        ]),
+        'additionalProperties' in schema
+            ? { additionalProperties: schema.additionalProperties }
+            : {}
     )
 
 export interface HydratedAction extends GameAction {

@@ -11,6 +11,8 @@ import {
     NotificationChannel
 } from '@tabletop/frontend-components'
 import { PUBLIC_VAPID_KEY } from '$env/static/public'
+import { isPushSubscriptionChangedMessage } from '$lib/network/pushSubscriptionChangedMessage'
+import { applicationServerKeyFromVapid } from '$lib/network/applicationServerKey'
 import {
     ChannelIdentifier,
     RealtimeEventType,
@@ -38,7 +40,7 @@ export class NotificationService {
         private readonly authorizationService: AuthorizationService,
         private readonly api: TabletopApi
     ) {
-        this.applicationServerKey = this.urlB64ToUint8Array(PUBLIC_VAPID_KEY)
+        this.applicationServerKey = applicationServerKeyFromVapid(PUBLIC_VAPID_KEY)
         this.realtimeConnection.setHandler(this.handleEvent)
 
         $effect.root(() => {
@@ -122,6 +124,11 @@ export class NotificationService {
                 console.log('Notification permission dismissed')
                 break
         }
+        if (permission === 'granted' && this.currentSessionUserId !== undefined) {
+            this.subscribePushNotifications().catch((e) => {
+                console.error('Failed to subscribe to push notifications', e)
+            })
+        }
         return permission === 'granted'
     }
 
@@ -150,6 +157,10 @@ export class NotificationService {
 
     onMounted() {
         this.mounted = true
+        // Service workers are unavailable in insecure contexts
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.addEventListener('message', this.handleServiceWorkerMessage)
+        }
     }
 
     hasWebNotificationPermission(): boolean {
@@ -204,6 +215,18 @@ export class NotificationService {
         }
     }
 
+    private async replacePushSubscription(oldEndpoint?: string) {
+        if (this.currentSessionUserId === undefined) {
+            return
+        }
+        if (oldEndpoint) {
+            await this.api.unsubscribeFromPushNotifications(oldEndpoint).catch((e) => {
+                console.error('Failed to unregister rotated push subscription', e)
+            })
+        }
+        await this.subscribePushNotifications()
+    }
+
     private async unsubscribePushNotifications() {
         try {
             const registration = await navigator.serviceWorker.ready
@@ -216,6 +239,18 @@ export class NotificationService {
         } catch (e) {
             console.error('Failed to unsubscribe from push notifications', e)
         }
+    }
+
+    private handleServiceWorkerMessage = async (event: MessageEvent) => {
+        if (isPushSubscriptionChangedMessage(event.data)) {
+            await this.replacePushSubscription(event.data.oldEndpoint)
+            return
+        }
+        await this.handleEvent({
+            type: RealtimeEventType.Data,
+            channel: NotificationChannel.User,
+            data: event.data
+        })
     }
 
     private handleEvent = async (event: RealtimeEvent) => {
@@ -261,16 +296,5 @@ export class NotificationService {
         } catch (e) {
             console.log('Error handling notification event', e)
         }
-    }
-
-    private urlB64ToUint8Array(base64String: string): Uint8Array<ArrayBuffer> {
-        const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
-        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
-        const rawData = atob(base64)
-        const outputArray = new Uint8Array(rawData.length)
-        for (let i = 0; i < rawData.length; ++i) {
-            outputArray[i] = rawData.charCodeAt(i)
-        }
-        return outputArray
     }
 }

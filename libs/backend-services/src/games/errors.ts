@@ -8,10 +8,13 @@ enum GameServiceError {
     GameNotWaitingToStart = 'GameNotWaitingToStartError',
     GameNotInProgress = 'GameNotInProgressError',
     GameAlreadyStarted = 'GameAlreadyStartedError',
+    FinishedGameDeletion = 'FinishedGameDeletionError',
     GameUpdateCollisionError = 'GameUpdateCollisionError',
     PlayersNotFound = 'PlayersNotFoundError',
     PlayersWithoutTitleAccess = 'PlayersWithoutTitleAccessError',
     PrivateGameNotFull = 'PrivateGameNotFullError',
+    OwnerNotPlaying = 'OwnerNotPlayingError',
+    UnlistedGameNotPublic = 'UnlistedGameNotPublicError',
     InvalidPlayerUser = 'InvalidPlayerUserError',
     InvalidPlayerId = 'InvalidPlayerIdError',
     UserIsNotAllowedPlayer = 'UserIsNotAllowedPlayerError',
@@ -67,6 +70,16 @@ export class GameNotWaitingToStartError extends BaseError {
         super({
             name: GameServiceError.GameNotWaitingToStart,
             message: `The game with id ${id} was not ready to start`,
+            metadata: { id }
+        })
+    }
+}
+
+export class FinishedGameDeletionError extends BaseError {
+    constructor({ id }: { id: string }) {
+        super({
+            name: GameServiceError.FinishedGameDeletion,
+            message: `The game with id ${id} has been finished and can only be deleted by an administrator`,
             metadata: { id }
         })
     }
@@ -137,6 +150,26 @@ export class PrivateGameNotFullError extends BaseError {
         super({
             name: GameServiceError.PrivateGameNotFull,
             message: `The private game with id ${id} does not have enough players defined`,
+            metadata: { id }
+        })
+    }
+}
+
+export class OwnerNotPlayingError extends BaseError {
+    constructor({ id }: { id: string }) {
+        super({
+            name: GameServiceError.OwnerNotPlaying,
+            message: `The owner of the game with id ${id} must be one of its players`,
+            metadata: { id }
+        })
+    }
+}
+
+export class UnlistedGameNotPublicError extends BaseError {
+    constructor({ id }: { id: string }) {
+        super({
+            name: GameServiceError.UnlistedGameNotPublic,
+            message: `The unlisted game with id ${id} must be public`,
             metadata: { id }
         })
     }

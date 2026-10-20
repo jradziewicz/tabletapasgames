@@ -7,11 +7,15 @@ import {
     normalizeMasterSeed,
     assert,
     ActionSource,
+    GameResult,
     calculateActionChecksum,
     createGameFork,
     GameForkError,
     findLast,
     findPlayerForUserId,
+    ownerMayDeleteGame,
+    gameUserIds,
+    isListedPublicGame,
     Game,
     GameAction,
     GameDefinition,
@@ -55,6 +59,7 @@ import {
     DuplicatePlayerError,
     GameAlreadyStartedError,
     GameNotFoundError,
+    FinishedGameDeletionError,
     GameNotInProgressError,
     GameNotWaitingForPlayersError,
     GameNotWaitingToStartError,
@@ -65,6 +70,8 @@ import {
     InvalidPlayerUserError,
     PlayersWithoutTitleAccessError,
     PlayersNotFoundError,
+    OwnerNotPlayingError,
+    UnlistedGameNotPublicError,
     PrivateGameNotFullError,
     UnauthorizedAccessError,
     UserAlreadyDeclinedError,
@@ -103,6 +110,23 @@ import {
     TournamentGameError
 } from './tournamentGames.js'
 import * as Value from 'typebox/value'
+import {
+    DEFERRED_TURN_REMINDER_INDEX,
+    enqueueTurnReminder,
+    isPastTurnReminderCutoff,
+    FIRST_TURN_REMINDER_INDEX,
+    nextTurnReminderIndex,
+    turnReminderDelaySeconds,
+    turnReminderIndex,
+    turnReminderStage,
+    type TurnReminderTask
+} from './turnReminders.js'
+import {
+    runFinalScoresBackfillPage,
+    startFinalScoresBackfill,
+    type FinalScoresBackfillTask
+} from './finalScoresBackfill.js'
+import { enqueueGameAutoStart, type GameAutoStartTask } from './gameAutoStart.js'
 
 export class GameService {
     constructor(
@@ -178,6 +202,9 @@ export class GameService {
 
         const newGame = definition.runtime.initializer.initializeGame(game, definition)
         delete newGame.protectedInformation
+        // Titles bundle their own initializer, which may predate unlisted games.
+        if (game.unlisted) newGame.unlisted = true
+        else delete newGame.unlisted
 
         // Check the specified players and populate them with user data
         const usersByPlayerId = await this.validateAndPopulatePlayers(newGame.players, owner)
@@ -186,6 +213,14 @@ export class GameService {
         this.checkForDuplicatePlayers(newGame.players)
 
         this.validatePlayerCount(newGame.id, newGame.players, definition)
+
+        this.assertOwnerSeatedUnlessDeveloper(newGame, owner)
+
+        if (newGame.unlisted) {
+            if (!this.hasDeveloperAccess(owner))
+                throw new UnauthorizedAccessError({ user: owner, gameId: newGame.id })
+            if (!newGame.isPublic) throw new UnlistedGameNotPublicError({ id: newGame.id })
+        }
 
         // Private games have to be full
         if (!newGame.isPublic && Object.keys(usersByPlayerId).length !== newGame.players.length) {
@@ -216,11 +251,7 @@ export class GameService {
         }
 
         // Send notifications
-        if (createdGame.isPublic) {
-            await this.notifyGlobal(GameNotificationAction.Create, { game: createdGame })
-        } else {
-            await this.notifyGamePlayers(GameNotificationAction.Create, { game: createdGame })
-        }
+        await this.notifyGameAudience(GameNotificationAction.Create, { game: createdGame })
 
         return createdGame
     }
@@ -296,6 +327,7 @@ export class GameService {
         )
         await this.notifyGamePlayers(GameNotificationAction.Create, { game: created })
         await this.notifyGameStarted(created)
+        await this.scheduleStartingTurnNotifications(created)
         return created
     }
 
@@ -306,22 +338,29 @@ export class GameService {
         }
         assertOrdinaryGame(game)
 
-        if (game.ownerId !== user.id && !user.roles.includes(Role.Admin)) {
+        const isAdmin = user.roles.includes(Role.Admin)
+        if (game.ownerId !== user.id && !isAdmin) {
             throw new UnauthorizedAccessError({ user, gameId })
         }
 
-        // A finished game is archived before it's erased, so deleting it from a player's list
-        // never loses the play for later analysis. If archiving fails, the delete doesn't happen.
-        if (game.status === GameStatus.Finished) {
+        // Only an Administrator may delete a game that has ever finished. Checked here so a
+        // refused owner never triggers an archive, and again on the stored game inside the
+        // delete transaction so a delete racing the finishing move is refused too.
+        const authorizeDeletion = (existingGame: Game) => {
+            if (!isAdmin && !ownerMayDeleteGame(existingGame)) {
+                throw new FinishedGameDeletionError({ id: gameId })
+            }
+        }
+        authorizeDeletion(game)
+
+        // A game that has ever finished is archived before it's erased, so deleting it never
+        // loses the play for later analysis. If archiving fails, the delete doesn't happen.
+        if (game.status === GameStatus.Finished || game.everFinished) {
             await this.gameStore.archiveGame(gameId)
         }
 
-        await this.gameStore.deleteGame(game)
-        if (game.isPublic) {
-            await this.notifyGlobal(GameNotificationAction.Delete, { game })
-        } else {
-            await this.notifyGamePlayers(GameNotificationAction.Delete, { game })
-        }
+        await this.gameStore.deleteGame(game, authorizeDeletion)
+        await this.notifyGameAudience(GameNotificationAction.Delete, { game })
     }
 
     async forkGame({
@@ -370,7 +409,7 @@ export class GameService {
     }
 
     canAccessHostView(user: User): boolean {
-        return user.roles.includes(Role.Admin) || user.roles.includes(Role.Developer)
+        return this.hasDeveloperAccess(user)
     }
 
     async getGameEtag(gameId: string): Promise<string> {
@@ -483,6 +522,21 @@ export class GameService {
         return this.gameStore.findGameHistory(user, before)
     }
 
+    async getGameStatsForUser(user: User) {
+        return this.gameStore.findGameStats(user)
+    }
+
+    async startFinalScoresBackfill(write: boolean): Promise<string> {
+        return startFinalScoresBackfill(this.taskService, write)
+    }
+
+    async backfillFinalScores(task: FinalScoresBackfillTask): Promise<void> {
+        await runFinalScoresBackfillPage(
+            { store: this.gameStore, tasks: this.taskService, titles: this.availableTitles },
+            task
+        )
+    }
+
     async setGameState(state: GameState): Promise<void> {
         const game = await this.getGame({ gameId: state.gameId })
         if (!game) {
@@ -575,11 +629,11 @@ export class GameService {
     async updateGame({
         gameId,
         fields,
-        owner
+        user
     }: {
         gameId: string
         fields: Partial<Game>
-        owner: User
+        user: User
     }): Promise<Game> {
         if (Object.hasOwn(fields, 'tournament'))
             throw new TournamentGameError('Tournament membership cannot be changed')
@@ -589,6 +643,11 @@ export class GameService {
             throw new GameNotFoundError({ id: gameId })
         }
         assertOrdinaryGame(game)
+
+        if (game.ownerId !== user.id && !user.roles.includes(Role.Admin)) {
+            throw new UnauthorizedAccessError({ user, gameId })
+        }
+        const owner = user.id === game.ownerId ? user : await this.userService.getUser(game.ownerId)
 
         if (fields.name !== undefined) {
             fields.name = fields.name.trim()
@@ -648,6 +707,10 @@ export class GameService {
                         if (!player.userId) {
                             continue
                         }
+                        if (player.userId === existingGame.ownerId) {
+                            player.status = PlayerStatus.Joined
+                            continue
+                        }
                         const existingStatus = existingGameStatusesByUserId[player.userId]
                         if (
                             !existingStatus ||
@@ -659,6 +722,15 @@ export class GameService {
                             player.status = existingStatus
                         }
                     }
+
+                    this.assertOwnerSeatedUnlessDeveloper(
+                        { ...existingGame, players: fieldsToUpdate.players },
+                        owner
+                    )
+                }
+
+                if (existingGame.unlisted && fieldsToUpdate.isPublic === false) {
+                    throw new UnlistedGameNotPublicError({ id: gameId })
                 }
 
                 if (fieldsToUpdate.isPublic === false && fieldsToUpdate.players === undefined) {
@@ -681,7 +753,7 @@ export class GameService {
             }
 
             for (const player of updatedGame.players) {
-                if (!player.userId) {
+                if (!player.userId || player.userId === updatedGame.ownerId) {
                     continue
                 }
 
@@ -691,22 +763,19 @@ export class GameService {
                     (preExistingStatus === PlayerStatus.Declined &&
                         player.status === PlayerStatus.Reserved)
                 ) {
-                    const user = usersByPlayerId[player.id]
-                    if (!user) {
+                    const invitee = usersByPlayerId[player.id]
+                    if (!invitee) {
                         // This really should never happen, so lets not bother with an error
                         continue
                     }
-                    await this.inviteUserToGame({ owner, game: updatedGame, user })
-                    await this.notifyWasInvited(user, owner, updatedGame)
+                    await this.inviteUserToGame({ owner: user, game: updatedGame, user: invitee })
+                    await this.notifyWasInvited(invitee, user, updatedGame)
                 }
             }
         }
 
-        if (updatedGame.isPublic) {
-            await this.notifyGlobal(GameNotificationAction.Update, { game: updatedGame })
-        } else {
-            await this.notifyGamePlayers(GameNotificationAction.Update, { game: updatedGame })
-        }
+        await this.notifyGameAudience(GameNotificationAction.Update, { game: updatedGame })
+        await this.ensureAutoStartScheduled(updatedGame)
 
         return updatedGame
     }
@@ -758,15 +827,15 @@ export class GameService {
         })
 
         if (updatedFields.length === 0) {
+            await this.ensureAutoStartScheduled(updatedGame)
             return updatedGame
         }
         const player = this.findValidPlayerForUser({ user, game: updatedGame })
-        if (game.isPublic) {
-            await this.notifyGlobal(GameNotificationAction.Update, { game: updatedGame })
-        } else {
-            await this.notifyGamePlayers(GameNotificationAction.Update, { game: updatedGame })
+        await this.notifyGameAudience(GameNotificationAction.Update, { game: updatedGame })
+        if (user.id !== updatedGame.ownerId) {
+            await this.notifyJoined(user, updatedGame, player)
         }
-        await this.notifyJoined(user, updatedGame, player)
+        await this.ensureAutoStartScheduled(updatedGame)
         return this.autoStartGameIfReady({ game: updatedGame, updatedFields })
     }
 
@@ -808,11 +877,7 @@ export class GameService {
             }
         })
 
-        if (game.isPublic) {
-            await this.notifyGlobal(GameNotificationAction.Update, { game: updatedGame })
-        } else {
-            await this.notifyGamePlayers(GameNotificationAction.Update, { game: updatedGame })
-        }
+        await this.notifyGameAudience(GameNotificationAction.Update, { game: updatedGame })
         await this.notifyDeclined(
             user,
             updatedGame,
@@ -869,80 +934,121 @@ export class GameService {
             throw new UnauthorizedAccessError({ user, gameId })
         }
 
-        return this.performGameStart({ definition, game })
+        const startedGame = await this.startReadyGame(definition, game, (existingGame) => {
+            if (existingGame.status !== GameStatus.WaitingToStart) {
+                throw new GameNotWaitingToStartError({ id: gameId })
+            }
+            return UpdateValidationResult.Proceed
+        })
+        assertExists(startedGame, `Game ${gameId} start was cancelled`)
+        await this.notifyStartedGame(startedGame)
+        return startedGame
+    }
+
+    async autoStartGame({ gameId, autoStartAt }: GameAutoStartTask): Promise<void> {
+        const game = await this.getGame({ gameId })
+        if (game?.autoStartAt?.getTime() !== autoStartAt) {
+            return
+        }
+
+        const startedGame = await this.startReadyGame(
+            this.getRequiredTitle(game),
+            game,
+            (existingGame) =>
+                existingGame.autoStartAt?.getTime() === autoStartAt
+                    ? UpdateValidationResult.Proceed
+                    : UpdateValidationResult.Cancel
+        )
+        if (!startedGame) {
+            return
+        }
+        try {
+            await this.notifyStartedGame(startedGame)
+        } catch (error) {
+            // A retried task would find the game started and could not resend these notifications.
+            console.error(`Failed to notify players that game ${gameId} started`, error)
+        }
+    }
+
+    private async ensureAutoStartScheduled(game: Game): Promise<void> {
+        if (game.autoStartAt) {
+            await enqueueGameAutoStart(this.taskService, game.id, game.autoStartAt)
+        }
     }
 
     /**
-     * Actually transitions a game from WaitingToStart to Started, building its initial
-     * state. Shared by the owner-triggered `startGame` action and the automatic start
-     * that fires once a game's last open seat is filled (see `autoStartGameIfReady`).
+     * Transitions a game from WaitingToStart to Started, building its initial state.
+     * Shared by the owner's `startGame`, the countdown task (`autoStartGame`) and the
+     * immediate start of a filled invite-only game (`autoStartGameIfReady`).
      */
-    private async performGameStart({
-        definition,
-        game
-    }: {
-        definition: GameDefinition
-        game: Game
-    }): Promise<Game> {
-        const gameId = game.id
-        let updatedGame: Game
+    private async startReadyGame(
+        definition: GameDefinition,
+        game: Game,
+        validateReady: (existingGame: Game) => UpdateValidationResult
+    ): Promise<Game | undefined> {
+        let readiness = UpdateValidationResult.Proceed
+        const validateCurrentReadyGame = (existingGame: Game) => {
+            readiness = validateReady(existingGame)
+            if (
+                readiness === UpdateValidationResult.Proceed &&
+                existingGame.updatedAt?.getTime() !== game.updatedAt?.getTime()
+            ) {
+                throw new GameUpdateCollisionError({ id: game.id })
+            }
+            return readiness
+        }
 
+        let startedGame: Game
         if (game.parentId) {
             // Forked games just need the status to be updated
-            ;[updatedGame] = await this.gameStore.updateGame({
+            ;[startedGame] = await this.gameStore.updateGame({
                 game,
                 fields: { startedAt: new Date(), status: GameStatus.Started },
-                validator: (existingGame) => {
-                    if (existingGame.status !== GameStatus.WaitingToStart) {
-                        throw new GameNotWaitingToStartError({ id: gameId })
-                    }
-                    return UpdateValidationResult.Proceed
-                }
+                validator: validateCurrentReadyGame
             })
         } else {
             const masterSeed =
                 definition.runtime.randomnessVersion === 1
-                    ? await this.gameStore.getMasterSeed(gameId)
+                    ? await this.gameStore.getMasterSeed(game.id)
                     : undefined
-            const { startedGame, initialState } = new GameEngine(definition.runtime).startGame(
-                game,
-                masterSeed
-            )
-            startedGame.state = initialState
-            ;[updatedGame] = await this.gameStore.updateGame({
+            const { startedGame: initializedGame, initialState } = new GameEngine(
+                definition.runtime
+            ).startGame(game, masterSeed)
+            ;[startedGame] = await this.gameStore.updateGame({
                 game,
                 fields: {
                     startedAt: new Date(),
                     status: GameStatus.Started,
-                    seed: startedGame.seed,
-                    ...(startedGame.protectedInformation ? { protectedInformation: true } : {}),
+                    seed: initializedGame.seed,
+                    ...(initializedGame.protectedInformation ? { protectedInformation: true } : {}),
                     state: initialState
                 },
                 validator: (existingGame, fieldsToUpdate) => {
-                    if (existingGame.status !== GameStatus.WaitingToStart) {
-                        throw new GameNotWaitingToStartError({ id: gameId })
+                    const result = validateCurrentReadyGame(existingGame)
+                    if (result === UpdateValidationResult.Proceed) {
+                        fieldsToUpdate.activePlayerIds = initialState?.activePlayerIds ?? []
                     }
-
-                    fieldsToUpdate.activePlayerIds = initialState?.activePlayerIds ?? []
-
-                    return UpdateValidationResult.Proceed
+                    return result
                 }
             })
         }
 
-        //TODO: Send game started email
-        await this.notifyGamePlayers(GameNotificationAction.Update, { game: updatedGame })
-        await this.notifyGameStarted(updatedGame)
+        return readiness === UpdateValidationResult.Proceed ? startedGame : undefined
+    }
 
-        return updatedGame
+    private async notifyStartedGame(game: Game): Promise<void> {
+        //TODO: Send game started email
+        await this.notifyGamePlayers(GameNotificationAction.Update, { game })
+        await this.notifyGameStarted(game)
+        await this.scheduleStartingTurnNotifications(game)
     }
 
     /**
-     * If `updatedFields` shows the game just transitioned into WaitingToStart (i.e. its
-     * last open seat was just filled), immediately starts it rather than waiting for the
-     * owner to click Start. Safe to call after any player-list update: it's a no-op unless
-     * that exact transition just happened, and if it loses a race with another start
-     * attempt it just returns the game as-is.
+     * If `updatedFields` shows an invite-only game whose owner plays just transitioned into
+     * WaitingToStart (its last seat was just filled), starts it right away rather than waiting
+     * for the owner to click Start. Games that qualify for the one-minute countdown
+     * (`autoStartAt`, see gameAutoStart.ts) are left to their queued task instead. If this
+     * loses a race with another start attempt it just returns the game as-is.
      */
     private async autoStartGameIfReady({
         game,
@@ -951,7 +1057,11 @@ export class GameService {
         game: Game
         updatedFields: string[]
     }): Promise<Game> {
-        if (!updatedFields.includes('status') || game.status !== GameStatus.WaitingToStart) {
+        if (
+            !updatedFields.includes('status') ||
+            game.status !== GameStatus.WaitingToStart ||
+            game.autoStartAt
+        ) {
             return game
         }
 
@@ -961,9 +1071,20 @@ export class GameService {
         }
 
         try {
-            return await this.performGameStart({ definition, game })
+            const startedGame = await this.startReadyGame(definition, game, (existingGame) => {
+                if (existingGame.status !== GameStatus.WaitingToStart) {
+                    throw new GameNotWaitingToStartError({ id: game.id })
+                }
+                return UpdateValidationResult.Proceed
+            })
+            if (!startedGame) return game
+            await this.notifyStartedGame(startedGame)
+            return startedGame
         } catch (error) {
-            if (error instanceof GameNotWaitingToStartError) {
+            if (
+                error instanceof GameNotWaitingToStartError ||
+                error instanceof GameUpdateCollisionError
+            ) {
                 // Someone else already started it (or it moved on) between our check and now.
                 return game
             }
@@ -1100,6 +1221,14 @@ export class GameService {
                     if (lastPlayerAction) {
                         gameUpdates.lastActionPlayerId = lastPlayerAction.playerId
                     }
+                    if (
+                        !existingState.result &&
+                        newState.result &&
+                        newState.result !== GameResult.Abandoned &&
+                        definition.runtime.scoring
+                    ) {
+                        gameUpdates.finalScores = definition.runtime.scoring.finalScores(newState)
+                    }
 
                     return UpdateValidationResult.Proceed
                 }
@@ -1141,19 +1270,23 @@ export class GameService {
         )
         await this.notifyGamePlayers(GameNotificationAction.Update, { game: representation.game })
 
-        for (const activePlayerId of updatedState.activePlayerIds) {
-            if (!priorState.activePlayerIds.includes(activePlayerId)) {
-                const activePlayer = this.findPlayerByPlayerId(representation.game, activePlayerId)
-                if (!activePlayer || !activePlayer.userId) {
-                    continue
-                }
-                const activeUser = await this.userService.getUser(activePlayer.userId)
-                if (!activeUser) {
-                    continue
-                }
-
-                await this.scheduleTurnNotification(activeUser.id, representation.game.id)
-            }
+        const newlyActivePlayerIds = updatedState.activePlayerIds.filter(
+            (playerId) => !priorState.activePlayerIds.includes(playerId)
+        )
+        await this.scheduleTurnNotifications(
+            representation.game,
+            newlyActivePlayerIds,
+            FIRST_TURN_REMINDER_INDEX
+        )
+        const actingPlayerKeepsTurn =
+            priorState.activePlayerIds.includes(player.id) &&
+            updatedState.activePlayerIds.includes(player.id)
+        if (actingPlayerKeepsTurn) {
+            await this.scheduleTurnNotifications(
+                representation.game,
+                [player.id],
+                DEFERRED_TURN_REMINDER_INDEX
+            )
         }
 
         if (!game.result && representation.game.result) {
@@ -1459,6 +1592,19 @@ export class GameService {
         }
     }
 
+    private assertOwnerSeatedUnlessDeveloper(
+        game: Pick<Game, 'id' | 'ownerId' | 'players'>,
+        owner: User | undefined
+    ): void {
+        if (findPlayerForUserId(game, game.ownerId)) return
+        if (owner && this.hasDeveloperAccess(owner)) return
+        throw new OwnerNotPlayingError({ id: game.id })
+    }
+
+    private hasDeveloperAccess(user: User): boolean {
+        return user.roles.includes(Role.Admin) || user.roles.includes(Role.Developer)
+    }
+
     private getRequiredTitle(game: Game): GameDefinition {
         const definition = this.getTitle(game.typeId)
         assertExists(definition, `Game definition ${game.typeId} is unavailable`)
@@ -1559,12 +1705,9 @@ export class GameService {
         data: GameNotificationData
     ): Promise<void> {
         const notification = createGameNotification(action, data)
-        const userTopics = data.game.players.flatMap((player) =>
-            player.userId === undefined ? [] : [`user-${player.userId}`]
-        )
         await this.notificationService.sendNotification({
             notification,
-            topics: [...userTopics],
+            topics: gameUserIds(data.game).map((userId) => `user-${userId}`),
             channels: [NotificationDistributionMethod.Topical]
         })
     }
@@ -1586,6 +1729,14 @@ export class GameService {
         }
     }
 
+    private async notifyGameAudience(
+        action: GameNotificationAction,
+        data: GameNotificationData
+    ): Promise<void> {
+        if (isListedPublicGame(data.game)) await this.notifyGlobal(action, data)
+        else await this.notifyGamePlayers(action, data)
+    }
+
     private async notifyGlobal(
         action: GameNotificationAction,
         data: GameNotificationData
@@ -1598,40 +1749,67 @@ export class GameService {
         })
     }
 
-    @Timed('game.scheduleTurnNotification')
-    async scheduleTurnNotification(
-        userId: string,
-        gameId: string,
-        inSeconds?: number
-    ): Promise<void> {
-        if (inSeconds === undefined) {
-            inSeconds = 60
-        }
-        const notificationId = nanoid()
-        const cacheKey = this.makeTurnNotificationCacheKey(userId, gameId)
-        await this.cacheService.set(cacheKey, notificationId, inSeconds + 60)
-        this.taskService
-            .sendTurnNotification({
-                userId: userId,
-                gameId: gameId,
-                notificationId,
-                inSeconds
-            })
-            .catch((e) => {
-                console.error('Failed to send turn notification', e)
-            })
+    private async scheduleStartingTurnNotifications(game: Game): Promise<void> {
+        await this.scheduleTurnNotifications(
+            game,
+            game.activePlayerIds ?? [],
+            DEFERRED_TURN_REMINDER_INDEX
+        )
     }
 
-    async notifyIsYourTurn(
-        userId: string,
-        gameId: string,
-        notificationId: string,
-        delay?: number
+    private async scheduleTurnNotifications(
+        game: Game,
+        playerIds: string[],
+        reminderIndex: number
     ): Promise<void> {
-        if (delay === undefined) {
-            delay = 60
+        for (const playerId of playerIds) {
+            const player = this.findPlayerByPlayerId(game, playerId)
+            if (!player?.userId) {
+                continue
+            }
+            const user = await this.userService.getUser(player.userId)
+            if (!user) {
+                continue
+            }
+            await this.scheduleTurnNotification(user, game.id, reminderIndex, Date.now())
         }
+    }
 
+    @Timed('game.scheduleTurnNotification')
+    private async scheduleTurnNotification(
+        user: User,
+        gameId: string,
+        reminderIndex: number,
+        // Tasks queued before the 7-day cutoff existed carry no start; they keep the count limit.
+        turnStartedAt: number | undefined
+    ): Promise<void> {
+        const notificationId = nanoid()
+        const cacheKey = this.makeTurnNotificationCacheKey(user.id, gameId)
+        const now = new Date()
+        const inSeconds = turnReminderDelaySeconds(reminderIndex, now, user)
+        if (turnStartedAt !== undefined && isPastTurnReminderCutoff(turnStartedAt, now, inSeconds)) {
+            return
+        }
+        // The chain guard must outlive the (possibly Reminder Hours-delayed) task.
+        await this.cacheService.set(cacheKey, notificationId, inSeconds + 60)
+        enqueueTurnReminder(
+            this.taskService,
+            {
+                userId: user.id,
+                gameId,
+                notificationId,
+                reminderIndex,
+                ...(turnStartedAt !== undefined ? { turnStartedAt } : {})
+            },
+            inSeconds
+        ).catch((e) => {
+            console.error('Failed to send turn notification', e)
+        })
+    }
+
+    async notifyIsYourTurn(task: TurnReminderTask): Promise<void> {
+        const { userId, gameId, notificationId } = task
+        const reminderIndex = turnReminderIndex(task)
         const cacheKey = this.makeTurnNotificationCacheKey(userId, gameId)
         const { value } = await this.cacheService.get(cacheKey)
         if (value !== notificationId) {
@@ -1668,47 +1846,24 @@ export class GameService {
                         typeId: game.typeId,
                         name: game.name
                     },
-                    alertStage: this.turnAlertStage(delay)
+                    alertStage: turnReminderStage(reminderIndex)
                 }
             }
             await this.notifyUser(notification)
-            const newDelay = this.calculateNextTurnNotificationDelay(delay)
-            if (newDelay > 0) {
-                await this.scheduleTurnNotification(userId, gameId, newDelay)
+            const nextReminderIndex = EnvService.isLocal()
+                ? undefined
+                : nextTurnReminderIndex(reminderIndex)
+            if (nextReminderIndex !== undefined) {
+                await this.scheduleTurnNotification(
+                    user,
+                    gameId,
+                    nextReminderIndex,
+                    task.turnStartedAt
+                )
             }
         } catch (e) {
             console.log('error in notifyIsYourTurn', e)
         }
-    }
-
-    private calculateNextTurnNotificationDelay(lastDelay: number): number {
-        let newDelay = -1
-        if (EnvService.isLocal()) {
-            return newDelay
-        }
-
-        // Sequence measured from when the turn started:
-        //   1 min (push/Discord) -> 5 min (email) -> 24 hours -> every 24 hours after
-        // that until the player moves (notifyIsYourTurn stops once it's no longer
-        // their turn, or the game has ended).
-        if (lastDelay <= 60) {
-            newDelay = 4 * 60 // 4 more minutes, i.e. 5 minutes into the turn
-        } else if (lastDelay <= 4 * 60) {
-            newDelay = 24 * 60 * 60 - 5 * 60 // lands 24 hours into the turn
-        } else {
-            newDelay = 24 * 60 * 60 // then daily
-        }
-        return newDelay
-    }
-
-    private turnAlertStage(delay: number): 'initial' | 'email' | 'reminder' {
-        if (delay <= 60) {
-            return 'initial'
-        }
-        if (delay <= 4 * 60) {
-            return 'email'
-        }
-        return 'reminder'
     }
 
     private async notifyWasInvited(user: User, owner: User, game: Game): Promise<void> {

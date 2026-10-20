@@ -1,10 +1,19 @@
 <script lang="ts">
     import { Card, Hr, Button, Modal, Spinner, type ButtonProps } from 'flowbite-svelte'
-    import { Game, GameStatus, PlayerStatus, GameResult } from '@tabletop/common'
+    import {
+        Game,
+        GameStatus,
+        PlayerStatus,
+        GameResult,
+        GameOutcome,
+        gameOutcome,
+        ownerMayDeleteGame
+    } from '@tabletop/common'
     import { gameCardOptions } from '$lib/utils/gameOptions'
     import { playerSortValue, playerStatusDisplay } from '$lib/utils/player'
     import { hasPendingGameInvitation } from '$lib/utils/gameInvitation'
     import { canShareJoinLink as isShareableForJoining, joinLinkUrl } from '$lib/utils/joinLink'
+    import { startCountdownText } from '$lib/utils/startCountdown'
     import { goto } from '$app/navigation'
     import { fade, slide } from 'svelte/transition'
     import DeleteModal from './DeleteModal.svelte'
@@ -53,9 +62,6 @@
 
     let canJoin = $derived.by(() => {
         if (game.tournament) return false
-        if (isOwnedByMe) {
-            return false
-        }
 
         if (hasPendingGameInvitation(game, sessionUser?.id)) {
             return true
@@ -95,7 +101,10 @@
     let canPlay = $derived(isMine && game.status === GameStatus.Started)
     let canWatch = $derived(!isMine && game.status === GameStatus.Started)
     let canRevisit = $derived(game.status === GameStatus.Finished)
-    let canDelete = $derived(!game.tournament && (isOwnedByMe || authorizationService.isAdmin))
+    let canDelete = $derived(
+        !game.tournament &&
+            (authorizationService.isAdmin || (isOwnedByMe && ownerMayDeleteGame(game)))
+    )
 
     let confirmDelete = $state(false)
 
@@ -106,6 +115,24 @@
             isMine &&
             myPlayer?.status === PlayerStatus.Joined
     )
+
+    let now = $state(Date.now())
+    let autoStartAt = $derived(
+        game.status === GameStatus.WaitingToStart && game.autoStartAt
+            ? new Date(game.autoStartAt).getTime()
+            : undefined
+    )
+    let autoStartText = $derived(
+        autoStartAt === undefined ? undefined : startCountdownText(autoStartAt, now)
+    )
+
+    $effect(() => {
+        if (autoStartAt === undefined) return
+        const tick = () => (now = Date.now())
+        tick()
+        const clock = setInterval(tick, 1000)
+        return () => clearInterval(clock)
+    })
 
     let isMyTurn = $derived(
         game.status === GameStatus.Started &&
@@ -238,9 +265,9 @@
     }
 
     function gameResultPlayerText() {
-        if (game.winningPlayerIds.includes(myPlayer?.id ?? '')) {
-            return `You${game.winningPlayerIds.length > 1 ? ' and others' : ''}`
-        }
+        const myOutcome = myPlayer ? gameOutcome(game, myPlayer.id) : GameOutcome.Lost
+        if (myOutcome === GameOutcome.Won) return 'You'
+        if (myOutcome === GameOutcome.Tied) return 'You and others'
         if (game.winningPlayerIds.length === 0) {
             return '-'
         } else if (game.winningPlayerIds.length === 1) {
@@ -340,11 +367,16 @@
                                     )}
                                 {/if}
                             </div>
-                            {#if waitingToStart}
+                            {#if waitingToStart && !autoStartText}
                                 <div class="text-xs text-right text-gray-400">
                                     Waiting<br />to start
                                 </div>
                             {/if}
+                        {/if}
+                        {#if autoStartText}
+                            <div class="text-xs text-right text-nowrap text-gray-400">
+                                {autoStartText}
+                            </div>
                         {/if}
                     </div>
                     <div class="flex flex-row justify-between items-start text-white">

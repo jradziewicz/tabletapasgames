@@ -7,8 +7,10 @@ import {
     EmailService,
     FirestoreTokenStore,
     FirestoreUserStore,
+    FirestoreSiteStatsStore,
     LocalTaskService,
     TaskService,
+    SiteStatsService,
     TokenService,
     UserService,
     SecretsService,
@@ -37,7 +39,9 @@ import {
     TournamentService,
     FirestoreTournamentStore,
     PreferenceService,
-    FirestorePreferenceStore
+    FirestorePreferenceStore,
+    BugReportService,
+    FirestoreBugReportStore
 } from '@tabletop/backend-services'
 import type { GameDefinition } from '@tabletop/common'
 
@@ -63,6 +67,8 @@ declare module 'fastify' {
         catalogService: CatalogService
         tournamentService: TournamentService
         preferenceService: PreferenceService
+        bugReportService: BugReportService
+        siteStatsService: SiteStatsService
     }
 }
 
@@ -78,7 +84,9 @@ export default fp(async (fastify: FastifyInstance) => {
     const secretsService = new EnvSecretsService()
     const emailService = await ResendEmailService.createEmailService(secretsService)
     const redisService = await RedisService.createRedisService(secretsService)
+    fastify.addHook('onClose', async () => redisService.destroy())
     const redisCacheService = new RedisCacheService(redisService)
+    fastify.addHook('onClose', async () => redisCacheService.destroy())
 
     const libraryService = new LibraryService(redisCacheService, {
         manifestPath: SITE_MANIFEST_PATH,
@@ -97,30 +105,45 @@ export default fp(async (fastify: FastifyInstance) => {
         ? new LocalTaskService(TASKS_HOST)
         : new CloudTasksTaskService(TASKS_HOST)
     const tokenService = new TokenService(new FirestoreTokenStore(fastify.firestore))
-    const userService = new UserService(
-        new FirestoreUserStore(redisCacheService, fastify.firestore, service === 'local'),
-        tokenService,
-        taskService
+    const userStore = new FirestoreUserStore(
+        redisCacheService,
+        fastify.firestore,
+        service === 'local'
     )
+    const userService = new UserService(userStore, tokenService, taskService)
 
     let pubSubService: PubSubService = new NullPubSubService()
     if (!useAbly) {
-        pubSubService = await RedisPubSubService.createPubSubService(redisService)
+        const redisPubSubService = await RedisPubSubService.createPubSubService(redisService)
+        fastify.addHook('onClose', async () => redisPubSubService.destroy())
+        pubSubService = redisPubSubService
     }
 
+    const notificationStore = new FirestoreNotificationStore(redisCacheService, fastify.firestore)
     const notificationService = await DefaultNotificationService.createNotificationService(
-        new FirestoreNotificationStore(redisCacheService, fastify.firestore),
+        notificationStore,
         pubSubService
     )
 
+    const gameStore = new FirestoreGameStore(redisCacheService, fastify.firestore)
     const gameService = new GameService(
-        new FirestoreGameStore(redisCacheService, fastify.firestore),
+        gameStore,
         userService,
         tokenService,
         taskService,
         notificationService,
         redisCacheService,
         availableTitles
+    )
+
+    fastify.decorate(
+        'siteStatsService',
+        new SiteStatsService(
+            { games: gameStore, users: userStore, subscriptions: notificationStore },
+            new FirestoreSiteStatsStore(fastify.firestore),
+            taskService,
+            redisCacheService
+        )
     )
 
     // The site bot (DMs to linked accounts) only exists when a bot token is configured.
@@ -194,5 +217,9 @@ export default fp(async (fastify: FastifyInstance) => {
     fastify.decorate(
         'preferenceService',
         new PreferenceService(new FirestorePreferenceStore(fastify.firestore), redisCacheService)
+    )
+    fastify.decorate(
+        'bugReportService',
+        new BugReportService(gameService, new FirestoreBugReportStore(fastify.firestore))
     )
 })

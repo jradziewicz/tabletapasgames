@@ -1,15 +1,19 @@
 {
     "name": "TableTapas Games",
     "short_name": "TTG",
+    "description": "Play board games with friends online.",
+    "id": "/",
+    "start_url": "/?standalone=true",
+    "scope": "/",
+    "display": "standalone",
     "icons": [
         {
             "src": "/android-chrome-192x192.png",
             "sizes": "192x192",
-            "type": "image/png"
+            "type": "image/png",
+            "purpose": "any"
         }
     ],
-    "theme_color": "#333333",
-    "background_color": "#333333",
-    "display": "standalone",
-    "start_url": "/?standalone=true"
+    "theme_color": "#101828",
+    "background_color": "#101828"
 }

@@ -6,7 +6,8 @@ import {
     User,
     GameStatusCategory,
     GameHistoryPage,
-    GameHistoryCursor
+    GameHistoryCursor,
+    UserGameStats
 } from '@tabletop/common'
 import { UpdateValidationResult, UpdateValidator } from './validator.js'
 
@@ -64,8 +65,20 @@ export interface GameStore {
     hasCachedActiveGames(user: User): Promise<boolean>
     findGamesForUser(user: User, category: GameStatusCategory): Promise<Game[]>
     findGameHistory(user: User, before?: GameHistoryCursor): Promise<GameHistoryPage>
+    findGameStats(user: User): Promise<UserGameStats>
     findOpenGamesForTitle(titleId: string): Promise<Game[]>
     findActiveGamesForTitle(titleId: string): Promise<Game[]>
+    findFinishedGames(afterGameId: string | undefined, limit: number): Promise<Game[]>
+    readStateFromStorage(gameId: string): Promise<GameState | undefined>
+    recordFinalScores({
+        gameId,
+        finishedAt,
+        finalScores
+    }: {
+        gameId: string
+        finishedAt: Date
+        finalScores: Record<string, number>
+    }): Promise<boolean>
     findGameById(gameId: string, includeState: boolean): Promise<Game | undefined>
     findUndoActionWindow({
         game,
@@ -133,7 +146,7 @@ export interface GameStore {
         validator?: UpdateValidator<Game>
     }): Promise<[Game, string[], Game]>
 
-    deleteGame(game: Game): Promise<void>
+    deleteGame(game: Game, authorize?: (existingGame: Game) => void): Promise<void>
 
     // Writes a permanent copy of a finished game (game record, final state, every action) to
     // the gameArchives collection, for later analysis. Safe to call repeatedly - it overwrites.

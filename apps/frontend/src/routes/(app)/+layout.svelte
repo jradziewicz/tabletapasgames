@@ -22,11 +22,19 @@
     import { afterNavigate, goto, onNavigate } from '$app/navigation'
     import LoginPanel, { loginViewTitles, type LoginView } from '$lib/components/LoginPanel.svelte'
     import AuthModal from '$lib/components/AuthModal.svelte'
+    import BugReportModal from '$lib/components/BugReportModal.svelte'
+    import PreferencesPanel from '$lib/components/PreferencesPanel.svelte'
     import { setLoginModal } from '$lib/stores/loginModal'
     import { onMount } from 'svelte'
     import { PUBLIC_API_HOST } from '$env/static/public'
     import { fromStore } from 'svelte/store'
-    import { UserStatus, Color, GameVisibility, getTitleVisibility } from '@tabletop/common'
+    import {
+        UserStatus,
+        Color,
+        GameVisibility,
+        getTitleVisibility,
+        findPlayerForUserId
+    } from '@tabletop/common'
     import { PUBLIC_DISCORD_CLIENT_ID } from '$env/static/public'
     import {
         VersionChange,
@@ -36,7 +44,11 @@
     } from '@tabletop/frontend-components'
     import { toast } from 'svelte-sonner'
     import { onceMounted } from '$lib/components/RunOnceMounted.svelte'
-    import { BellSolid } from 'flowbite-svelte-icons'
+    import { BellSolid, DownloadOutline, RefreshOutline } from 'flowbite-svelte-icons'
+    import {
+        pwaInstallPrompt,
+        registerPwaInstallPrompt
+    } from '$lib/stores/pwaInstallPrompt.svelte.js'
     import { nextTurnGame, otherTurnGames } from '$lib/utils/dashboardGames'
 
     let {
@@ -74,10 +86,29 @@
               )
             : undefined
     )
+    // Only players can report a bug, and only from the game they are viewing.
+    let bugReportSession = $derived(
+        sessionUser &&
+            gameService.currentGameSession &&
+            findPlayerForUserId(gameService.currentGameSession.primaryGame, sessionUser.id)
+            ? gameService.currentGameSession
+            : undefined
+    )
+    let showBugReport = $state(false)
+    let showPreferences = $state(false)
     let showCreateGameModel = $state(false)
     let showCancelPrompt = $state(false)
     let showLoginModal = $state(false)
     let loginView = $state<LoginView>('signin')
+    // An installed PWA has no browser reload button, so the gentle (minor/patch) update nudge
+    // also gets a header refresh control there. Browser tabs keep just the toast.
+    let isInstalledPwa = $state(false)
+    let showPwaRefresh = $derived(
+        isInstalledPwa &&
+            (api.versionChange === VersionChange.MinorUpgrade ||
+                api.versionChange === VersionChange.PatchUpgrade)
+    )
+    let canInstallPwa = $derived(pwaInstallPrompt.available)
 
     const openLoginModal = setLoginModal(() => {
         loginView = 'signin'
@@ -86,6 +117,8 @@
 
     afterNavigate(() => {
         showLoginModal = false
+        showBugReport = false
+        showPreferences = false
     })
 
     function selectTransitionCover(titleId: string | undefined) {
@@ -192,9 +225,9 @@
         await goto('/profile')
     }
 
-    async function gotoPreferences() {
+    function openPreferences() {
         showCancelPrompt = false
-        await goto('/preferences')
+        showPreferences = true
     }
 
     async function gotoNotifications() {
@@ -208,6 +241,10 @@
 
     async function gotoAdmin() {
         await goto('/admin')
+    }
+
+    async function installPwa() {
+        await pwaInstallPrompt.prompt()
     }
 
     function setAdminCapabilities(event: Event) {
@@ -280,6 +317,8 @@
     })
 
     onMount(() => {
+        registerPwaInstallPrompt()
+        isInstalledPwa = window.matchMedia('(display-mode: standalone)').matches
         notificationService.onMounted()
         visibilityService.setDocument(document)
         if (/mobile/i.test(navigator.userAgent ?? '') && !location.hash) {
@@ -417,14 +456,55 @@
                     </div>
                 </div>
                 <div class="flex items-center">
+                    {#if bugReportSession}
+                        <button
+                            type="button"
+                            class="me-3 inline-flex h-[30px] w-[30px] cursor-pointer items-center justify-center rounded-md text-gray-600 hover:bg-gray-100 hover:text-gray-900 dark:text-gray-300 dark:hover:bg-gray-700 dark:hover:text-white"
+                            title="Report a bug"
+                            onclick={() => (showBugReport = true)}
+                        >
+                            <span class="sr-only">Report a bug</span>
+                            <svg
+                                aria-hidden="true"
+                                viewBox="0 0 24 24"
+                                preserveAspectRatio="xMidYMid meet"
+                                class="h-5 w-5 block"
+                                fill="currentColor"
+                            >
+                                <path
+                                    d="M12 4a4 4 0 0 1 3.995 3.8l.005 .2a1 1 0 0 1 .428 .096l3.033 -1.938a1 1 0 1 1 1.078 1.684l-3.015 1.931a7.17 7.17 0 0 1 .476 2.227h3a1 1 0 0 1 0 2h-3v1a6.01 6.01 0 0 1 -.195 1.525l2.708 1.616a1 1 0 1 1 -1.026 1.718l-2.514 -1.501a6.002 6.002 0 0 1 -3.973 2.56v-5.918a1 1 0 0 0 -2 0v5.917a6.002 6.002 0 0 1 -3.973 -2.56l-2.514 1.503a1 1 0 1 1 -1.026 -1.718l2.708 -1.616a6.01 6.01 0 0 1 -.195 -1.526v-1h-3a1 1 0 0 1 0 -2h3.001v-.055a7 7 0 0 1 .474 -2.173l-3.014 -1.93a1 1 0 1 1 1.078 -1.684l3.032 1.939l.024 -.012l.068 -.027l.019 -.005l.016 -.006l.032 -.008l.04 -.013l.034 -.007l.034 -.004l.045 -.008l.015 -.001l.015 -.002l.087 -.004a4 4 0 0 1 4 -4zm0 2a2 2 0 0 0 -2 2h4a2 2 0 0 0 -2 -2z"
+                                ></path>
+                            </svg>
+                        </button>
+                    {/if}
                     {#if sessionUser}
                         {#if sessionUser.status === UserStatus.Active}
                             <Button
                                 size="xs"
                                 color="blue"
-                                class="me-4 h-[30px] bg-[#7165ad] hover:bg-[#5b4f95] dark:bg-[#7165ad] dark:hover:bg-[#5b4f95] focus-within:ring-[#7165ad] dark:focus-within:ring-[#5b4f95]"
+                                class="{showPwaRefresh || canInstallPwa
+                                    ? 'me-1'
+                                    : 'me-4'} h-[30px] bg-[#7165ad] hover:bg-[#5b4f95] dark:bg-[#7165ad] dark:hover:bg-[#5b4f95] focus-within:ring-[#7165ad] dark:focus-within:ring-[#5b4f95]"
                                 onclick={gotoDashboard}>My Games</Button
                             >
+                        {/if}
+                        {#if showPwaRefresh}
+                            <button
+                                class="pwa-refresh me-1 cursor-pointer text-[#7165ad] hover:text-[#5b4f95] dark:text-[#a59bd6] dark:hover:text-white"
+                                aria-label="Refresh to update"
+                                onclick={() => location.reload()}
+                            >
+                                <RefreshOutline class="h-6 w-6" aria-hidden="true" />
+                            </button>
+                        {/if}
+                        {#if canInstallPwa}
+                            <button
+                                class="pwa-install me-2 cursor-pointer text-[#7165ad] hover:text-[#5b4f95] dark:text-[#a59bd6] dark:hover:text-white"
+                                aria-label="Install TableTapas Games"
+                                onclick={installPwa}
+                            >
+                                <DownloadOutline class="h-6 w-6" aria-hidden="true" />
+                            </button>
                         {/if}
 
                         <Avatar id="user-drop" class="cursor-pointer" />
@@ -454,7 +534,7 @@
                                 <DropdownItem class="w-full text-left" onclick={gotoProfile}
                                     >Profile</DropdownItem
                                 >
-                                <DropdownItem class="w-full text-left" onclick={gotoPreferences}
+                                <DropdownItem class="w-full text-left" onclick={openPreferences}
                                     >Preferences</DropdownItem
                                 >
                                 <DropdownItem class="w-full text-left" onclick={gotoNotifications}
@@ -515,6 +595,15 @@
                             </DropdownGroup>
                         </Dropdown>
                     {:else}
+                        {#if canInstallPwa}
+                            <button
+                                class="pwa-install me-2 cursor-pointer text-[#7165ad] hover:text-[#5b4f95] dark:text-[#a59bd6] dark:hover:text-white"
+                                aria-label="Install TableTapas Games"
+                                onclick={installPwa}
+                            >
+                                <DownloadOutline class="h-6 w-6" aria-hidden="true" />
+                            </button>
+                        {/if}
                         <Button onclick={openLoginModal} size="sm" color="blue">Sign in</Button>
                     {/if}
                 </div>
@@ -534,6 +623,14 @@
     >
         <LoginPanel bind:view={loginView} />
     </AuthModal>
+{/if}
+{#if bugReportSession}
+    <BugReportModal bind:open={showBugReport} session={bugReportSession} />
+{/if}
+{#if sessionUser}
+    <Modal bind:open={showPreferences} title="Preferences" size="sm" outsideclose autoclose={false}>
+        <PreferencesPanel />
+    </Modal>
 {/if}
 <Modal
     bind:open={showCreateGameModel}
@@ -571,7 +668,7 @@
                 size="xs"
                 color="blue">Got it</Button
             >
-            <Button onclick={() => gotoPreferences()} size="xs" outline color="light"
+            <Button onclick={openPreferences} size="xs" outline color="light"
                 >Go to Preferences</Button
             >
         </div>
@@ -611,3 +708,19 @@
     >
 {/if}
 {@render children()}
+
+<style>
+    .pwa-refresh,
+    .pwa-install {
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 4px;
+    }
+    .pwa-refresh:focus-visible,
+    .pwa-install:focus-visible {
+        outline: 2px solid currentColor;
+        outline-offset: 2px;
+    }
+</style>

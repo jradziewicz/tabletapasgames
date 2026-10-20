@@ -17,6 +17,7 @@
         defaultGameConfig,
         normalizeGameConfig,
         type GameCreationOptions,
+        assert,
         assertExists,
         BooleanConfigOption,
         ConfigOption,
@@ -88,15 +89,7 @@
               id: nanoid(),
               typeId: '',
               name: '',
-              players: [
-                  {
-                      id: nanoid(),
-                      userId: sessionUser?.id,
-                      isHuman: true,
-                      name: sessionUser?.username,
-                      status: PlayerStatus.Joined
-                  }
-              ],
+              players: [ownerPlayer()],
               isPublic: false,
               hotseat: false,
               ownerId: sessionUser?.id,
@@ -117,6 +110,33 @@
     let players: Player[] = $state(editedGame.players)
     let isPublic: boolean = $state(editedGame.isPublic)
     let isHotseat: boolean = $state(hotseatOnly || editedGame.hotseat)
+    let isUnlisted: boolean = $state(false)
+    let includeOwner: boolean = $state(true)
+    let publicGame = $derived(isPublic || isUnlisted)
+    // Admins and developers may recruit for a title of any visibility through an unlisted game,
+    // which only its /join link reaches, and may leave themselves out of the games they create.
+    let showUnlistedToggle = $derived(
+        authorizationService.canUseDeveloperTools && mode === EditMode.Create && !isHotseat
+    )
+    let showPublicToggle = $derived(
+        getTitleVisibility(gameTitle.info.metadata) === GameVisibility.Public &&
+            mode === EditMode.Create &&
+            !isHotseat &&
+            !isUnlisted
+    )
+    let reclaimableOwnerSeat = $derived.by(() => {
+        const ownNameSeat = players.findIndex((player) => player.name === sessionUser?.username)
+        return ownNameSeat !== -1
+            ? ownNameSeat
+            : players.findIndex((player) => player.status === PlayerStatus.Open)
+    })
+    let canIncludeOwner = $derived(includeOwner || reclaimableOwnerSeat !== -1)
+    let showIncludeOwnerToggle = $derived(
+        authorizationService.canUseDeveloperTools &&
+            mode === EditMode.Create &&
+            !hotseatOnly &&
+            !isHotseat
+    )
     let minPlayers: number = $derived(gameTitle?.info.metadata.minPlayers ?? 1)
     let maxPlayers: number = $derived(gameTitle?.info.metadata.maxPlayers ?? 1)
 
@@ -144,6 +164,32 @@
         gameTitle.info.configurator.updateConfig(config, { id: option.id, value })
     }
 
+    function ownerPlayer(): Player {
+        assertExists(sessionUser?.username, 'Creating a game requires a user with a username')
+        return {
+            id: nanoid(),
+            userId: sessionUser.id,
+            isHuman: true,
+            name: sessionUser.username,
+            status: PlayerStatus.Joined
+        }
+    }
+
+    function openPlayer(): Player {
+        return { id: nanoid(), isHuman: true, name: '', status: PlayerStatus.Open }
+    }
+
+    function setOwnerIncluded(included: boolean) {
+        if (included) {
+            assert(reclaimableOwnerSeat !== -1, 'Including the owner requires a free seat')
+            players.splice(reclaimableOwnerSeat, 1)
+            players.unshift(ownerPlayer())
+        } else {
+            const ownerIndex = players.findIndex(isOwner)
+            players[ownerIndex] = openPlayer()
+        }
+    }
+
     function updatePlayers(numPlayers: number) {
         const difference: number = numPlayers - players.length
         if (difference === 0) {
@@ -153,7 +199,7 @@
             players.splice(numPlayers, -difference)
         } else {
             for (let i = 0; i < difference; i++) {
-                players.push({ id: nanoid(), isHuman: true, name: '', status: PlayerStatus.Open })
+                players.push(openPlayer())
             }
         }
     }
@@ -200,9 +246,10 @@
             id: editedGame.id,
             name: (formData.get('name') as string).trim(),
             players: playersToUpload,
-            isPublic,
-            hotseat: !isPublic && isHotseat,
-            storage: !isPublic && isHotseat ? GameStorage.Local : GameStorage.Remote,
+            isPublic: publicGame,
+            ...(isUnlisted ? { unlisted: true } : {}),
+            hotseat: !publicGame && isHotseat,
+            storage: !publicGame && isHotseat ? GameStorage.Local : GameStorage.Remote,
             ownerId: editedGame.ownerId,
             config: mergedConfig
         }
@@ -414,7 +461,7 @@
                       : 'default'}
                 readonly={isOwner(player)}
                 disabled={isOwner(player)}
-                required={isHotseat || !isPublic}
+                required={isHotseat || !publicGame}
             >
                 <div class="flex flex-row justify-center align-center">
                     {#if isOwner(player)}
@@ -478,8 +525,28 @@
             {/if}
         {/each}
     </div>
-    {#if getTitleVisibility(gameTitle.info.metadata) === GameVisibility.Public && mode === EditMode.Create}
-        <Toggle bind:checked={isPublic}>Public</Toggle>
+    {#if showPublicToggle || showUnlistedToggle || showIncludeOwnerToggle}
+        <div class="flex flex-row items-center gap-6">
+            {#if showIncludeOwnerToggle}
+                <Toggle
+                    bind:checked={includeOwner}
+                    disabled={!canIncludeOwner}
+                    onchange={() => setOwnerIncluded(includeOwner)}>Include me</Toggle
+                >
+            {/if}
+            {#if showPublicToggle}
+                <Toggle bind:checked={isPublic}>Public</Toggle>
+            {/if}
+            {#if showUnlistedToggle}
+                <Toggle bind:checked={isUnlisted}>Unlisted</Toggle>
+            {/if}
+        </div>
+        {#if showIncludeOwnerToggle && !canIncludeOwner}
+            <Helper>Clear a seat to include yourself</Helper>
+        {/if}
+        {#if isUnlisted}
+            <Helper>Only people with the game's join link can find and join it.</Helper>
+        {/if}
     {/if}
     {#if gameTitle.info.configurator && gameTitle.info.configurator.options.length > 0}
         <div

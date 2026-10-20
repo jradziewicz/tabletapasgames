@@ -11,6 +11,10 @@ import {
     type AdminAssignableRole,
     assertExists,
     Bookmark,
+    BugReport,
+    BugReportList,
+    BugReportStatus,
+    type BugReportRequest,
     CanonicalActionReplay,
     ProcessedActionReplay,
     Game,
@@ -21,6 +25,10 @@ import {
     GameSyncStatus,
     GameValidator,
     GameHistoryPage,
+    UserGameStats,
+    SiteStatsNow,
+    SiteStatsReport,
+    type UtcDayRange,
     User,
     UserPreferences,
     Visibility,
@@ -241,6 +249,19 @@ export class TabletopApi {
         return response.payload.user
     }
 
+    async updateUserTimeZone(
+        timeZone: string,
+        { onlyIfUnset = false }: { onlyIfUnset?: boolean } = {}
+    ): Promise<User> {
+        const response = await this.wretch
+            .post({ timeZone, onlyIfUnset }, '/user/updateTimeZone')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<UserResponse>()
+
+        return response.payload.user
+    }
+
     getTitlePreferences?: (titleId: string, userId: string) => Promise<PreferenceResponse> =
         async (titleId, userId) => {
             const response = await this.wretch.get(this.preferenceUrl(titleId, userId)).res()
@@ -366,6 +387,16 @@ export class TabletopApi {
         Value.Assert(Type.Object({ payload: Type.Unknown() }), response)
         Value.Convert(GameHistoryPage, response.payload)
         Value.Assert(GameHistoryPage, response.payload)
+        return response.payload
+    }
+
+    async getMyGameStats(): Promise<UserGameStats> {
+        const response = await this.wretch
+            .get('/games/stats')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<unknown>()
+        Value.Assert(Type.Object({ payload: UserGameStats }), response)
         return response.payload
     }
 
@@ -893,6 +924,83 @@ export class TabletopApi {
             .json<GamesResponse>()
 
         return response.payload.games.map((game) => this.validateGame(game))
+    }
+
+    async reportBug(report: BugReportRequest): Promise<void> {
+        await this.wretch
+            .post(report, '/game/reportBug')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<void>()
+    }
+
+    async getBugReports(status?: BugReportStatus): Promise<BugReport[]> {
+        const query = status ? `?status=${encodeURIComponent(status)}` : ''
+        const response = await this.wretch
+            .options({ cache: 'no-store' })
+            .get(`/admin/bugReports/list${query}`)
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<unknown>()
+        Value.Assert(Type.Object({ payload: Type.Unknown() }), response)
+        const list = Value.Convert(BugReportList, response.payload)
+        Value.Assert(BugReportList, list)
+        return list.reports
+    }
+
+    async setBugReportStatus(reportId: string, status: BugReportStatus): Promise<BugReport> {
+        const response = await this.wretch
+            .post({ status }, `/admin/bugReports/${encodeURIComponent(reportId)}/status`)
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<unknown>()
+        Value.Assert(Type.Object({ payload: Type.Object({ report: Type.Unknown() }) }), response)
+        const report = Value.Convert(BugReport, response.payload.report)
+        Value.Assert(BugReport, report)
+        return report
+    }
+
+    /** One screenshot of a bug report as a JPEG; admin only. */
+    async getBugReportScreenshot(reportId: string, index: number): Promise<Blob> {
+        return await this.wretch
+            .get(
+                `/admin/bugReports/${encodeURIComponent(reportId)}/screenshots/${encodeURIComponent(index)}`
+            )
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .blob()
+    }
+
+    async getSiteStatsReport(range: UtcDayRange): Promise<SiteStatsReport> {
+        const response = await this.wretch
+            .get(
+                `/admin/stats/report?from=${encodeURIComponent(range.from)}&to=${encodeURIComponent(range.to)}`
+            )
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<unknown>()
+        Value.Assert(Type.Object({ payload: SiteStatsReport }), response)
+        return response.payload
+    }
+
+    async getSiteStatsNow(): Promise<SiteStatsNow> {
+        const response = await this.wretch
+            .get('/admin/stats/now')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<unknown>()
+        Value.Assert(Type.Object({ payload: SiteStatsNow }), response)
+        return response.payload
+    }
+
+    async startSiteStatsRollup(): Promise<string> {
+        const response = await this.wretch
+            .post({}, '/admin/stats/rollup')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<unknown>()
+        Value.Assert(Type.Object({ payload: Type.Object({ runId: Type.String() }) }), response)
+        return response.payload.runId
     }
 
     async setGameState(state: GameState): Promise<void> {
