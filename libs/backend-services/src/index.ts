@@ -54,6 +54,7 @@ export * from './persistence/stores/tournamentStore.js'
 
 export { TournamentTask } from './competitions/tournamentTasks.js'
 export { TurnReminderTask } from './games/turnReminders.js'
+export { FinalScoresBackfillTask } from './games/finalScoresBackfill.js'
 
 export * from './games/catalogService.js'
 
