@@ -32,11 +32,12 @@ import {
     isYourTurnNotification,
     gameUserIds,
     isListedOpenGame,
-    isListedPublicGame
+    isListedPublicGame,
+    type User
 } from '@tabletop/common'
 import * as Value from 'typebox/value'
 import { SvelteMap } from 'svelte/reactivity'
-import { NotificationService } from './notificationService.svelte'
+import type { NotificationService } from './notificationService.svelte'
 import { compareGameInvitations } from '$lib/utils/gameInvitation'
 import { isUsersNonHotseatTurn } from '$lib/utils/dashboardGames'
 
@@ -53,6 +54,7 @@ export class GameService implements GameServiceInterface {
 
     loading = $state(false)
     private loadingPromise: Promise<void> | null = null
+    private currentGamesChanged = false
 
     currentGameSession: GameSession<GameState, HydratedGameState> | undefined = $state(undefined)
 
@@ -120,8 +122,8 @@ export class GameService implements GameServiceInterface {
 
     constructor(
         private readonly libraryService: LibraryService,
-        private readonly authorizationService: AuthorizationService,
-        private readonly notificationService: NotificationService,
+        private readonly authorizationService: Pick<AuthorizationService, 'getSessionUser'>,
+        notificationService: Pick<NotificationService, 'addListener'>,
         private readonly api: TabletopApi
     ) {
         notificationService.addListener(this.NotificationListener)
@@ -141,7 +143,9 @@ export class GameService implements GameServiceInterface {
     }
 
     async loadGames() {
-        if (!this.loadingPromise) {
+        if (this.loadingPromise) {
+            this.currentGamesChanged = true
+        } else {
             this.loading = true
             this.loadingPromise = this.loadCurrentGames().finally(() => {
                 this.loading = false
@@ -154,10 +158,17 @@ export class GameService implements GameServiceInterface {
     private async loadCurrentGames() {
         await this.libraryService.whenReady()
         const sessionUser = this.authorizationService.getSessionUser()
-        const [games, localGames] = await Promise.all([
-            this.api.getMyGames('current'),
-            sessionUser ? this.localGameStore.findGamesForUser(sessionUser) : []
-        ])
+        // A game notification or another load request during the fetch means the response may
+        // already be stale, so fetch again until nothing changed while it was in flight.
+        let fetched: { games: Game[]; localGames: Game[] } | undefined
+        do {
+            this.currentGamesChanged = false
+            fetched = await this.fetchCurrentGames(sessionUser)
+            if (!fetched) {
+                return
+            }
+        } while (this.currentGamesChanged)
+        const { games, localGames } = fetched
 
         const ids = new Set(games.map((game) => game.id))
         games.forEach((game) => {
@@ -172,6 +183,19 @@ export class GameService implements GameServiceInterface {
         localGames.forEach((game) => {
             this.localGamesById.set(game.id, game)
         })
+    }
+
+    private async fetchCurrentGames(
+        sessionUser: User | undefined
+    ): Promise<{ games: Game[]; localGames: Game[] } | undefined> {
+        const [games, localGames] = await Promise.all([
+            this.api.getMyGames('current'),
+            sessionUser ? this.localGameStore.findGamesForUser(sessionUser) : []
+        ])
+        if (this.authorizationService.getSessionUser()?.id !== sessionUser?.id) {
+            return undefined
+        }
+        return { games, localGames }
     }
 
     // Should debounce this
@@ -449,6 +473,7 @@ export class GameService implements GameServiceInterface {
                 return
             }
             const game = Value.Convert(Game, notification.data.game) as Game
+            this.currentGamesChanged = true
             if (
                 notification.action === GameNotificationAction.Create ||
                 notification.action === GameNotificationAction.Update
