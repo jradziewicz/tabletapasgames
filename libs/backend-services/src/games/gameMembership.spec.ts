@@ -231,7 +231,7 @@ describe('lobby membership transactions', () => {
         })
 
         const started = await service.startGame({
-            definition: SyntheticDefinition,
+            definition: PublicSyntheticDefinition,
             gameId: 'lobby',
             user: users[0]
         })
