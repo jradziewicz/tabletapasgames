@@ -241,6 +241,19 @@ export class TabletopApi {
         return response.payload.user
     }
 
+    async updateUserTimeZone(
+        timeZone: string,
+        { onlyIfUnset = false }: { onlyIfUnset?: boolean } = {}
+    ): Promise<User> {
+        const response = await this.wretch
+            .post({ timeZone, onlyIfUnset }, '/user/updateTimeZone')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<UserResponse>()
+
+        return response.payload.user
+    }
+
     getTitlePreferences?: (titleId: string, userId: string) => Promise<PreferenceResponse> =
         async (titleId, userId) => {
             const response = await this.wretch.get(this.preferenceUrl(titleId, userId)).res()

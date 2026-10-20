@@ -6,6 +6,7 @@
     import DiscordSignIn, {
         isEnabled as isDiscordSigninEnabled
     } from '$lib/components/DiscordSignIn.svelte'
+    import ReminderHoursEditor from '$lib/components/ReminderHoursEditor.svelte'
 
     let { api, authorizationService } = getAppContext()
 
@@ -466,6 +467,10 @@
             >
                 Email me about my turn and reminders
             </Toggle>
+
+            <Hr class="my-4" />
+            <h3 class="text-xl font-medium text-gray-900 dark:text-white">Reminder Hours</h3>
+            <ReminderHoursEditor />
         </div>
     </Card>
 </div>

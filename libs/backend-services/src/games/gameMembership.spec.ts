@@ -230,7 +230,8 @@ describe('lobby membership transactions', () => {
                 gameId: 'lobby',
                 notificationId: expect.any(String),
                 reminderIndex: DEFERRED_TURN_REMINDER_INDEX,
-                delay
+                delay,
+                turnStartedAt: expect.any(Number)
             }
         })
     })

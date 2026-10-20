@@ -25,6 +25,38 @@ export enum ExternalAuthService {
     Discord = 'discord'
 }
 
+export const REMINDER_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+export type ReminderDay = (typeof REMINDER_DAYS)[number]
+
+const ReminderDayHours = Type.Array(Type.Integer({ minimum: 0, maximum: 23 }), {
+    uniqueItems: true
+})
+
+// Local hours (0-23, in User.timeZone) when the later turn reminders may arrive, per day.
+// A day with no hours (or all 24) means any time that day.
+export type ReminderHours = Type.Static<typeof ReminderHours>
+export const ReminderHours = Type.Object({
+    mon: ReminderDayHours,
+    tue: ReminderDayHours,
+    wed: ReminderDayHours,
+    thu: ReminderDayHours,
+    fri: ReminderDayHours,
+    sat: ReminderDayHours,
+    sun: ReminderDayHours
+})
+
+export function weekReminderHours(weekday: number[], weekend: number[] = weekday): ReminderHours {
+    return {
+        mon: weekday,
+        tue: weekday,
+        wed: weekday,
+        thu: weekday,
+        fri: weekday,
+        sat: weekend,
+        sun: weekend
+    }
+}
+
 export type UserPreferences = Type.Static<typeof UserPreferences>
 export const UserPreferences = Type.Object({
     preventWebNotificationPrompt: Type.Boolean(),
@@ -40,7 +72,10 @@ export const UserPreferences = Type.Object({
     // shown (not waiting on the user to dismiss it), so it never shows more than once per
     // user - see the "showOnceAnnouncement" effect in the site layout.
     seenDiscordWebhookAnnouncement: Type.Optional(Type.Boolean()),
-    seenDiscordBotAnnouncement: Type.Optional(Type.Boolean())
+    seenDiscordBotAnnouncement: Type.Optional(Type.Boolean()),
+    // When the 24-hour-and-later turn reminders may arrive (see turnReminders.ts). Undefined
+    // means no preference: reminders go out at any hour, so existing users are unaffected.
+    reminderHours: Type.Optional(ReminderHours)
 })
 
 export type User = Type.Static<typeof User>
@@ -54,6 +89,9 @@ export const User = Type.Object({
     email: Type.Optional(Type.String()),
     emailVerified: Type.Optional(Type.Boolean()),
     sms: Type.Optional(Type.String()),
+    // IANA time zone name, used only by server-side work with no browser (turn reminders
+    // honouring reminderHours). Screens keep using the browser's zone.
+    timeZone: Type.Optional(Type.String()),
     roles: Type.Array(Type.Enum(Role)),
     externalIds: Type.Array(Type.String()),
     preferences: Type.Optional(UserPreferences),
