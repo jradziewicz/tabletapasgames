@@ -56,3 +56,8 @@ export { TournamentTask } from './competitions/tournamentTasks.js'
 export { TurnReminderTask } from './games/turnReminders.js'
 
 export * from './games/catalogService.js'
+
+export * from './bugReports/bugReportService.js'
+export * from './bugReports/errors.js'
+export * from './persistence/stores/bugReportStore.js'
+export * from './persistence/firestore/bugReportStore.js'

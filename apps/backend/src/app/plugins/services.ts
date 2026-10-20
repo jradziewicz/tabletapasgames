@@ -37,7 +37,9 @@ import {
     TournamentService,
     FirestoreTournamentStore,
     PreferenceService,
-    FirestorePreferenceStore
+    FirestorePreferenceStore,
+    BugReportService,
+    FirestoreBugReportStore
 } from '@tabletop/backend-services'
 import type { GameDefinition } from '@tabletop/common'
 
@@ -63,6 +65,7 @@ declare module 'fastify' {
         catalogService: CatalogService
         tournamentService: TournamentService
         preferenceService: PreferenceService
+        bugReportService: BugReportService
     }
 }
 
@@ -198,5 +201,9 @@ export default fp(async (fastify: FastifyInstance) => {
     fastify.decorate(
         'preferenceService',
         new PreferenceService(new FirestorePreferenceStore(fastify.firestore), redisCacheService)
+    )
+    fastify.decorate(
+        'bugReportService',
+        new BugReportService(gameService, new FirestoreBugReportStore(fastify.firestore))
     )
 })
