@@ -1,4 +1,5 @@
 import { Prng, pickRandom } from '@tabletop/common'
+import { gainGems } from './gems.js'
 import { CardActionKind } from '../data/cards.js'
 import { RegionIds } from '../data/regions.js'
 import {
@@ -239,7 +240,7 @@ function applyBonus(state: HydratedRockyVenturesGameState, playerId: string, kin
             return
         case WeaponTokenKind.BonusGem:
             if (player.weaponLevel >= BonusGemMinimumWeaponLevel) {
-                recordGems(state, playerId, player.addGems(1), 'hunt')
+                recordGems(state, playerId, gainGems(state, playerId, 1), 'hunt')
             }
             return
         case WeaponTokenKind.BonusInvest:

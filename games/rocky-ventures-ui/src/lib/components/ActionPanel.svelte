@@ -50,6 +50,7 @@
     import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.svelte.js'
     import { playerCardImageUrl } from '$lib/utils/playerCardImages.js'
     import Pawn from '$lib/components/Pawn.svelte'
+    import { gemGainBlockedReason, huntBonusWarnings } from '$lib/utils/gemWarnings.js'
     import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
     import { DragonTileImageUrl, weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
 
@@ -541,10 +542,17 @@
                         {/if}
                         {#if unlocksRed || unlocksBlue || plan.victoryPoints > 0}
                             <span class="flex flex-wrap items-center gap-1">
-                                {#if (unlocksRed || unlocksBlue) && (player?.gems ?? 0) < MaxGems}
-                                    <span class="flex items-center gap-0.5 rounded-full border border-[#3ddc84] px-1.5 text-[10px] font-semibold text-[#3ddc84]">
-                                        +<img src={gemIcon} alt="gem" class="h-3.5 w-auto" draggable="false" />
-                                    </span>
+                                {#if unlocksRed || unlocksBlue}
+                                    {@const gemBlocked = player ? gemGainBlockedReason(gameState, player.playerId) : undefined}
+                                    {#if gemBlocked}
+                                        <span class="rounded-full border border-[#e0b02a] px-1.5 text-[10px] font-semibold text-[#ffd166]" title="No gem: {gemBlocked}">
+                                            ⚠ no gem
+                                        </span>
+                                    {:else}
+                                        <span class="flex items-center gap-0.5 rounded-full border border-[#3ddc84] px-1.5 text-[10px] font-semibold text-[#3ddc84]">
+                                            +<img src={gemIcon} alt="gem" class="h-3.5 w-auto" draggable="false" />
+                                        </span>
+                                    {/if}
                                 {/if}
                                 {#if unlocksRed}
                                     <span class="rounded-full border border-[#d3342f] px-1.5 text-[10px] font-semibold text-[#ff8a80]">Level 4 mines</span>
@@ -830,6 +838,15 @@
                 Apply
             </button>
         </div>
+        {@const huntPlayerId = gameState.activePlayerIds[0]}
+        {@const bonusWarnings = huntPlayerId
+            ? huntBonusWarnings(gameState, huntPlayerId, gameSession.huntSelected.map((index) => pending.drawn[index]!))
+            : []}
+        {#each bonusWarnings as warning (warning)}
+            <div class="mt-2 rounded-md border border-[#e0b02a] bg-[#e0b02a]/15 px-2 py-1 text-xs text-[#ffd166]">
+                ⚠ {warning}. The token still goes on the dragon tracker.
+            </div>
+        {/each}
         {#if pending.drawn.includes(WeaponTokenKind.Hit) && targets.length > 0}
             <div class="mt-3 flex flex-wrap items-end gap-3">
                 {#each targets as target (target.id)}

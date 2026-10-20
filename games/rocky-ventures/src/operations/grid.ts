@@ -7,6 +7,7 @@ import {
     isRedGemCell,
     type GridCell
 } from '../data/toolWeaponGrid.js'
+import { gainGems } from './gems.js'
 import { recordGems, recordVictoryPoints } from './stats.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 
@@ -53,11 +54,11 @@ export function moveOnGrid(
     player.toolLevel = result.cell.tool
     if (isRedGemCell(result.cell) && !player.redMinesUnlocked) {
         player.redMinesUnlocked = true
-        recordGems(state, playerId, player.addGems(1), 'grid')
+        recordGems(state, playerId, gainGems(state, playerId, 1), 'grid')
     }
     if (isBlueGemCell(result.cell) && !player.blueMinesUnlocked) {
         player.blueMinesUnlocked = true
-        recordGems(state, playerId, player.addGems(1), 'grid')
+        recordGems(state, playerId, gainGems(state, playerId, 1), 'grid')
     }
 }
 

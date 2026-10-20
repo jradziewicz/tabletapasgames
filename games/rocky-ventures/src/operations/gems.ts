@@ -3,6 +3,21 @@ import { MachineState } from '../definition/states.js'
 import { recordGems } from './stats.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 
+// The game has 15 gems in all. Gems players hold come out of this supply; gems spent on gem
+// actions leave the game (they also count toward the gems end trigger). A player gains a gem
+// only while one is left, and never above 3.
+export const GemSupplySize = 15
+
+export function gemSupplyLeft(state: HydratedRockyVenturesGameState): number {
+    const held = state.players.reduce((total, player) => total + player.gems, 0)
+    return Math.max(0, GemSupplySize - state.gemsSpent - held)
+}
+
+// Gives up to `amount` gems from the supply and returns how many were actually gained.
+export function gainGems(state: HydratedRockyVenturesGameState, playerId: string, amount: number): number {
+    return state.getPlayerState(playerId).addGems(Math.min(amount, gemSupplyLeft(state)))
+}
+
 export type GemActionKind = 'repeat' | 'market' | 'swap' | 'movePawn'
 
 export const GemActionKinds: GemActionKind[] = ['repeat', 'market', 'swap', 'movePawn']
