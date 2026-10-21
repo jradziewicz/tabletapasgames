@@ -14,7 +14,7 @@ const STEP_LABELS: Record<MachineState, string> = {
     [MachineState.PayDividends]: 'Pay Dividends',
     [MachineState.OrderShips]: 'Order Ships',
     [MachineState.ReleaseDividends]: 'Release Dividends',
-    [MachineState.BoardroomBattle]: 'BRB',
+    [MachineState.BoardroomBattle]: 'Boardroom Battle',
     [MachineState.InvestorAction]: 'Investor Action',
     [MachineState.AlienTechAction]: 'Alien Tech Action',
     [MachineState.ScrapLowestShip]: 'Scrap Lowest Ship',
@@ -112,6 +112,10 @@ export function describeGamePhase(
         }
     }
 
+    if (machineState === MachineState.BoardroomBattle) {
+        return { roundLabel: `BRB (Era ${era})`, stepLabel }
+    }
+
     if (INVESTOR_ROUND_STATES.has(machineState)) {
         return { roundLabel: `IR (Era ${era})`, stepLabel }
     }
@@ -132,14 +136,10 @@ export function describeGamePhase(
 }
 
 /** Renders a GamePhaseDescription as a single breadcrumb string for Header.svelte. */
+// The turn banner shows just the short round: "CR (Era 5)", "IR (Era 5)", "BRB (Era 5)" - the
+// Corporation and step are already obvious from the action panel right below it.
 export function formatGamePhase(phase: GamePhaseDescription): string {
-    if (phase.activeCorporationName) {
-        return `${phase.roundLabel} - ${phase.activeCorporationName} - ${phase.stepLabel}`
-    }
-    if (phase.stepLabel === phase.roundLabel) {
-        return phase.roundLabel
-    }
-    return `${phase.roundLabel} - ${phase.stepLabel}`
+    return phase.roundLabel
 }
 
 /**
