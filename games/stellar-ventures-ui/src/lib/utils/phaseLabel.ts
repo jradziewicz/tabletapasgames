@@ -70,7 +70,7 @@ export interface GamePhaseDescription {
 }
 
 /**
- * Builds a friendly "where are we in the game" breadcrumb - e.g. "Corporation Round (Era 1) -
+ * Builds a friendly "where are we in the game" breadcrumb - e.g. "CR (Era 1) -
  * Active Corporation (Pink Inc.) - Current Step (Issue Share)" - for Header.svelte to show
  * alongside its existing whose-turn-is-it display. This is a display-only grouping of
  * MachineState values into rounds; it isn't meant to be an authoritative model of round
@@ -104,7 +104,7 @@ export function describeGamePhase(
         return {
             roundLabel: resumesInitialAuction
                 ? 'Initial Auction'
-                : `Corporation Round (Era ${era})`,
+                : `CR (Era ${era})`,
             activeCorporationName: corporationId
                 ? CorporationDisplayNames[corporationId]
                 : undefined,
@@ -113,7 +113,7 @@ export function describeGamePhase(
     }
 
     if (INVESTOR_ROUND_STATES.has(machineState)) {
-        return { roundLabel: `Investor Round (Era ${era})`, stepLabel }
+        return { roundLabel: `IR (Era ${era})`, stepLabel }
     }
 
     if (ADMINISTRATION_ROUND_STATES.has(machineState)) {
@@ -122,7 +122,7 @@ export function describeGamePhase(
 
     const corporationId = gameState.activeCorporationId
     return {
-        roundLabel: `Corporation Round (Era ${era})`,
+        roundLabel: `CR (Era ${era})`,
         activeCorporationName:
             corporationId && CORPORATION_ROUND_STATES.has(machineState)
                 ? CorporationDisplayNames[corporationId]
