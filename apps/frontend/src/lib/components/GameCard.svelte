@@ -51,9 +51,20 @@
 
     let sessionUser = authorizationService.getSessionUser()
     let isOwnedByMe = $derived(sessionUser?.id === game.ownerId)
+    // Once a game is over, who hosted or joined no longer matters, so the card shows each
+    // player's final score instead, best first. Only when every seat has one.
+    let finalScores = $derived.by(() => {
+        const scores = game.finalScores
+        if (game.status !== GameStatus.Finished || !scores) return undefined
+        return game.players.every((player) => Number.isFinite(scores[player.id]))
+            ? scores
+            : undefined
+    })
     let sortedPlayers = $derived(
-        game.players.toSorted(
-            (a, b) => playerSortValue(a, game.ownerId) - playerSortValue(b, game.ownerId)
+        game.players.toSorted((a, b) =>
+            finalScores
+                ? finalScores[b.id] - finalScores[a.id]
+                : playerSortValue(a, game.ownerId) - playerSortValue(b, game.ownerId)
         )
     )
 
@@ -496,6 +507,9 @@
                     <div class="flex flex-col text-sm">
                         <div class="flex flex-row justify-between">
                             <div class="text-xs font-semibold">PLAYERS</div>
+                            {#if finalScores}
+                                <div class="text-xs font-semibold">FINAL SCORE</div>
+                            {/if}
                         </div>
                         <Hr class="mt-1 mb-1" />
                         {#each sortedPlayers as player (player.id)}
@@ -510,9 +524,13 @@
                                     {player.name ?? ''}
                                 </div>
                                 <div>
-                                    {game.hotseat
-                                        ? 'local'
-                                        : playerStatusDisplay(player, game.ownerId)}
+                                    {#if finalScores}
+                                        {finalScores[player.id].toLocaleString()}
+                                    {:else if game.status !== GameStatus.Finished}
+                                        {game.hotseat
+                                            ? 'local'
+                                            : playerStatusDisplay(player, game.ownerId)}
+                                    {/if}
                                 </div>
                             </div>
                         {/each}

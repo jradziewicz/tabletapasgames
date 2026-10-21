@@ -10,6 +10,7 @@ import {
 } from '@tabletop/common'
 import { describe, expect, it } from 'vitest'
 import { StellarVenturesGameInitializer } from '../definition/initializer.js'
+import { StellarVenturesScoring } from '../definition/scoring.js'
 import {
     CorporationId,
     CorporatePowerId,
@@ -355,5 +356,21 @@ describe('determineWinners', () => {
 
         expect(result).toBe(GameResult.Win)
         expect(winningPlayerIds).toEqual(['p1'])
+    })
+})
+
+describe('final scores', () => {
+    it("records each player's Credit total from the stored state", () => {
+        const state = createTestGameState(3)
+        state.getPlayerState('p1').addLiquidFunds(50)
+        state.getPlayerState('p2').addFrozenFunds(20)
+
+        const scores = new StellarVenturesScoring().finalScores(structuredClone(state.dehydrate()))
+
+        expect(scores).toEqual({
+            p1: totalCredits(state, 'p1'),
+            p2: totalCredits(state, 'p2'),
+            p3: totalCredits(state, 'p3')
+        })
     })
 })
