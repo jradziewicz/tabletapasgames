@@ -121,7 +121,7 @@ export function describeGamePhase(
     }
 
     if (ADMINISTRATION_ROUND_STATES.has(machineState)) {
-        return { roundLabel: `Administration Round (Era ${era})`, stepLabel }
+        return { roundLabel: `AR (Era ${era})`, stepLabel }
     }
 
     const corporationId = gameState.activeCorporationId
