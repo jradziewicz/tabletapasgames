@@ -15,6 +15,14 @@ import type { PreferenceStore } from './preferenceStore.js'
 
 const revisionValidator = Compile(Type.Pick(PreferenceRecord, ['revision']))
 
+// Cloudflare weakens a strong ETag ("abc" -> W/"abc") whenever it compresses the response, so
+// the browser sends back W/"abc" in If-Match / If-None-Match. Compare on the opaque tag alone,
+// or every preference save fails with 412 and nothing (e.g. seen overlays) syncs across devices.
+function sameEtag(a: string | undefined, b: string | undefined) {
+    const strip = (tag: string) => tag.trim().replace(/^W\//, '')
+    return a !== undefined && b !== undefined && strip(a) === strip(b)
+}
+
 type PreferenceCache = Pick<
     RedisCacheService,
     'cacheGetMulti' | 'cachingGetMulti' | 'readConsistently' | 'lockWhileWriting'
@@ -108,7 +116,7 @@ export class PreferenceService {
                     tags.map((tag) => tag.revision),
                     definition
                 )
-                return etag === ifNoneMatch ? { etag, data: undefined } : undefined
+                return sameEtag(etag, ifNoneMatch) ? { etag, data: undefined } : undefined
             },
             fallback: async () => undefined
         })
@@ -141,7 +149,7 @@ export class PreferenceService {
                 return await this.store.update(userId, scopes, (stored) => {
                     const records = this.records(definition, stored)
                     const current = this.response(userId, scopes, records, definition)
-                    if (current.etag !== ifMatch)
+                    if (!sameEtag(current.etag, ifMatch))
                         throw new PreferenceError('Preferences changed; reload and retry', 412)
                     records[index] = changePreferences(schema, records[index], change)
                     return { records, changedIndex: index }
