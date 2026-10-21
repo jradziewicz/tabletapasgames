@@ -57,6 +57,27 @@
         )
     )
 
+    // Final scores replace the host/joined status once a game is over. Games whose
+    // scores only mark the winner (1/0) have nothing worth showing.
+    let finalScores = $derived.by(() => {
+        const scores = game.finalScores
+        if (game.status !== GameStatus.Finished || !scores) return undefined
+        if (!game.players.every((player) => Number.isFinite(scores[player.id]))) return undefined
+        const onlyMarkWinners = game.players.every(
+            (player) => scores[player.id] === (isWinner(player.id) ? 1 : 0)
+        )
+        return onlyMarkWinners ? undefined : scores
+    })
+    let listedPlayers = $derived(
+        finalScores
+            ? sortedPlayers.toSorted(
+                  (a, b) =>
+                      Number(isWinner(b.id) ?? false) - Number(isWinner(a.id) ?? false) ||
+                      finalScores[b.id] - finalScores[a.id]
+              )
+            : sortedPlayers
+    )
+
     let myPlayer = $derived(sortedPlayers.find((player) => player.userId === sessionUser?.id))
     let isMine = $derived(myPlayer !== undefined)
 
@@ -496,9 +517,12 @@
                     <div class="flex flex-col text-sm">
                         <div class="flex flex-row justify-between">
                             <div class="text-xs font-semibold">PLAYERS</div>
+                            {#if finalScores}
+                                <div class="text-xs font-semibold">FINAL SCORE</div>
+                            {/if}
                         </div>
                         <Hr class="mt-1 mb-1" />
-                        {#each sortedPlayers as player (player.id)}
+                        {#each listedPlayers as player (player.id)}
                             <div class="flex flex-row justify-between">
                                 <div
                                     class={isActive(player.id)
@@ -510,9 +534,15 @@
                                     {player.name ?? ''}
                                 </div>
                                 <div>
-                                    {game.hotseat
-                                        ? 'local'
-                                        : playerStatusDisplay(player, game.ownerId)}
+                                    {#if finalScores}
+                                        {finalScores[player.id]}
+                                    {:else if game.status === GameStatus.Finished}
+                                        {isWinner(player.id) ? 'winner' : ''}
+                                    {:else}
+                                        {game.hotseat
+                                            ? 'local'
+                                            : playerStatusDisplay(player, game.ownerId)}
+                                    {/if}
                                 </div>
                             </div>
                         {/each}
