@@ -17,6 +17,7 @@
         CorporatePowerDescriptions
     } from '$lib/utils/corporatePowerDisplay.js'
     import CreditsText from './CreditsText.svelte'
+    import { powerCardImageForSide, POWER_CARD_ASPECT } from '$lib/utils/corporatePowerImages.js'
 
     // Same shape as the other Board Together games' History (e.g. Kaivai): newest first on a
     // timeline, each entry a short sentence with how long ago it was, and "The game was started"
@@ -404,15 +405,30 @@
 
     // A Corporate Power's full text, shown on hover over the line for any step that drafted or
     // used one ("LeakedResearch" action -> "leakedResearch" Power).
-    function powerHoverText(entry: Entry): string | undefined {
+    function entryPowerId(entry: Entry): string | undefined {
         const action = entry.actions[0] as unknown as Record<string, unknown>
         const powerId =
             action['type'] === ActionType.DraftPower && typeof action['powerId'] === 'string'
                 ? action['powerId']
                 : String(action['type']).charAt(0).toLowerCase() + String(action['type']).slice(1)
-        const description = CorporatePowerDescriptions[powerId]
-        return description
-            ? `${CorporatePowerDisplayNames[powerId] ?? ''}: ${description}`
+        return CorporatePowerDescriptions[powerId] ? powerId : undefined
+    }
+
+    function powerHoverText(entry: Entry): string | undefined {
+        const powerId = entryPowerId(entry)
+        return powerId
+            ? `${CorporatePowerDisplayNames[powerId] ?? ''}: ${CorporatePowerDescriptions[powerId]}`
+            : undefined
+    }
+
+    // A small copy of the Power's card beside the line. PowerCardZoom (mounted once in
+    // GameTable) pops any power card image out to full size on hover, so this is what actually
+    // shows the Power's rules - a plain title tooltip was easy to miss.
+    function powerCardImage(entry: Entry): string | undefined {
+        const powerId = entryPowerId(entry)
+        // The back is the written-rules face; fall back to the front for single-sided cards.
+        return powerId
+            ? (powerCardImageForSide(powerId, 'back') ?? powerCardImageForSide(powerId, 'front'))
             : undefined
     }
 
@@ -485,6 +501,7 @@
                 !!corp && !!entry.before?.corporationIsActor && !PlayerActsActions.has(action.type)}
             {@const details = summary(entry, corporationId)}
             {@const powerHover = powerHoverText(entry)}
+            {@const powerCard = powerCardImage(entry)}
             {@const recipients = dividendRecipients(entry, corporationId)}
             <li class="mb-3 ms-4">
                 <div
@@ -515,6 +532,15 @@
                         <span class="text-[#aeb5d6]">{formatType(action.type)}</span>
                     {/if}
                 </div>
+                {#if powerCard}
+                    <!-- Hover to read the full card (PowerCardZoom). -->
+                    <img
+                        src={powerCard}
+                        alt={powerHover ?? 'Corporate Power'}
+                        class="mt-1 h-14 w-auto cursor-zoom-in rounded-sm shadow"
+                        style="aspect-ratio: {POWER_CARD_ASPECT};"
+                    />
+                {/if}
                 {#if details.length > 0}
                     <div class="mt-0.5 text-xs text-[#aeb5d6]">
                         <CreditsText text={details.join(' · ')} />
