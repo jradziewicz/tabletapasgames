@@ -14,7 +14,7 @@ const STEP_LABELS: Record<MachineState, string> = {
     [MachineState.PayDividends]: 'Pay Dividends',
     [MachineState.OrderShips]: 'Order Ships',
     [MachineState.ReleaseDividends]: 'Release Dividends',
-    [MachineState.BoardroomBattle]: 'Boardroom Battle',
+    [MachineState.BoardroomBattle]: 'BRB',
     [MachineState.InvestorAction]: 'Investor Action',
     [MachineState.AlienTechAction]: 'Alien Tech Action',
     [MachineState.ScrapLowestShip]: 'Scrap Lowest Ship',
