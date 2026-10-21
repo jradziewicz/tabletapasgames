@@ -23,12 +23,12 @@
                 {phaseText}
             </div>
         {:else if gameSession.isMyTurn}
-            <div in:fade={{ duration: 200 }} out:fade={{ duration: 120 }} class="inline-flex gap-x-1">
+            <div in:fade={{ duration: 200 }} out:fade={{ duration: 120 }} class="inline-flex items-center gap-x-1 whitespace-nowrap">
                 <span>YOUR TURN</span>
                 <span class="text-[#7f88ad]">- {phaseText}</span>
             </div>
         {:else}
-            <div in:fade={{ duration: 200 }} out:fade={{ duration: 120 }} class="inline-flex gap-x-1">
+            <div in:fade={{ duration: 200 }} out:fade={{ duration: 120 }} class="inline-flex items-center gap-x-1 whitespace-nowrap">
                 {#each gameSession.activePlayers as player, index (player.id)}
                     {#if index > 0}<span>,</span>{/if}
                     <PlayerName playerId={player.id} capitalization="uppercase" />
