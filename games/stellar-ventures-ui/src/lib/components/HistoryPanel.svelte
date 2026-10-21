@@ -517,8 +517,7 @@
                     {/if}
                 </div>
                 <div
-                    class="text-sm leading-snug {powerHover ? 'cursor-help underline decoration-dotted decoration-[#7f88ad] underline-offset-2' : ''}"
-                    title={powerHover}
+                    class="text-sm leading-snug"
                 >
                     {#if corporationIsActor && corporationId}
                         <span class="font-semibold" style="color: {CorporationColors[corporationId]};"
