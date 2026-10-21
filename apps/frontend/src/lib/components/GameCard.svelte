@@ -51,21 +51,31 @@
 
     let sessionUser = authorizationService.getSessionUser()
     let isOwnedByMe = $derived(sessionUser?.id === game.ownerId)
-    // Once a game is over, who hosted or joined no longer matters, so the card shows each
-    // player's final score instead, best first. Only when every seat has one.
+    let sortedPlayers = $derived(
+        game.players.toSorted(
+            (a, b) => playerSortValue(a, game.ownerId) - playerSortValue(b, game.ownerId)
+        )
+    )
+
+    // Final scores replace the host/joined status once a game is over. Games whose
+    // scores only mark the winner (1/0) have nothing worth showing.
     let finalScores = $derived.by(() => {
         const scores = game.finalScores
         if (game.status !== GameStatus.Finished || !scores) return undefined
-        return game.players.every((player) => Number.isFinite(scores[player.id]))
-            ? scores
-            : undefined
-    })
-    let sortedPlayers = $derived(
-        game.players.toSorted((a, b) =>
-            finalScores
-                ? finalScores[b.id] - finalScores[a.id]
-                : playerSortValue(a, game.ownerId) - playerSortValue(b, game.ownerId)
+        if (!game.players.every((player) => Number.isFinite(scores[player.id]))) return undefined
+        const onlyMarkWinners = game.players.every(
+            (player) => scores[player.id] === (isWinner(player.id) ? 1 : 0)
         )
+        return onlyMarkWinners ? undefined : scores
+    })
+    let listedPlayers = $derived(
+        finalScores
+            ? sortedPlayers.toSorted(
+                  (a, b) =>
+                      Number(isWinner(b.id) ?? false) - Number(isWinner(a.id) ?? false) ||
+                      finalScores[b.id] - finalScores[a.id]
+              )
+            : sortedPlayers
     )
 
     let myPlayer = $derived(sortedPlayers.find((player) => player.userId === sessionUser?.id))
@@ -512,7 +522,7 @@
                             {/if}
                         </div>
                         <Hr class="mt-1 mb-1" />
-                        {#each sortedPlayers as player (player.id)}
+                        {#each listedPlayers as player (player.id)}
                             <div class="flex flex-row justify-between">
                                 <div
                                     class={isActive(player.id)
@@ -525,8 +535,10 @@
                                 </div>
                                 <div>
                                     {#if finalScores}
-                                        {finalScores[player.id].toLocaleString()}
-                                    {:else if game.status !== GameStatus.Finished}
+                                        {finalScores[player.id]}
+                                    {:else if game.status === GameStatus.Finished}
+                                        {isWinner(player.id) ? 'winner' : ''}
+                                    {:else}
                                         {game.hotseat
                                             ? 'local'
                                             : playerStatusDisplay(player, game.ownerId)}

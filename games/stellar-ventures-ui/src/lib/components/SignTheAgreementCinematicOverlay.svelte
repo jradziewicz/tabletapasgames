@@ -121,6 +121,35 @@
         )
         const signerId = signingAction?.playerId ?? corporation.getPresidentPlayerId()
         const planetCount = corporation.agreement.planetCountAtSigning
+        const bonusDividendPerShare = agreementTrackEntryForPlanetCount(planetCount).bonusDividendPerShare
+        // Who the Bonus Dividend paid, and how much: every player-held Share at the moment of
+        // signing gets bonusDividendPerShare. Shares issued later (after the Alien Share that
+        // signing itself issued) didn't exist then, so they're left out for anyone catching up.
+        const alienShareSequence = corporation.shares.find(
+            (share) => share.owner?.type === 'alien'
+        )?.issuedSequence
+        const sharesByPlayer = new Map<string, number>()
+        for (const share of corporation.shares) {
+            if (share.owner?.type !== 'player') {
+                continue
+            }
+            if (
+                alienShareSequence !== undefined &&
+                share.issuedSequence !== undefined &&
+                share.issuedSequence > alienShareSequence
+            ) {
+                continue
+            }
+            sharesByPlayer.set(share.owner.playerId, (sharesByPlayer.get(share.owner.playerId) ?? 0) + 1)
+        }
+        const payouts = [...sharesByPlayer.entries()]
+            .map(([playerId, shares]) => ({
+                playerId,
+                name: gameSession.getPlayerName(playerId),
+                shares,
+                amount: shares * bonusDividendPerShare
+            }))
+            .sort((a, b) => b.amount - a.amount || a.name.localeCompare(b.name))
         return {
             corporationId: corporation.id,
             name: CorporationDisplayNames[corporation.id],
@@ -131,7 +160,8 @@
             tileIcon: chevrons !== undefined ? AlienAgreementTileRevealedIcons[chevrons] : undefined,
             miningCapacityGain: chevrons !== undefined ? chevrons * 3 : undefined,
             planetCount,
-            bonusDividendPerShare: agreementTrackEntryForPlanetCount(planetCount).bonusDividendPerShare
+            bonusDividendPerShare,
+            payouts
         }
     })
 
@@ -255,6 +285,27 @@
                         <div class="stat-label">Share Issued to the Aliens</div>
                     </div>
                 </div>
+
+                {#if reveal.payouts.length > 0}
+                    <div class="payouts w-full max-w-md">
+                        <div class="stat-label mb-1.5">Bonus Dividend Paid</div>
+                        <ul class="flex flex-col gap-1">
+                            {#each reveal.payouts as payout, index (payout.playerId)}
+                                <li class="payout flex items-center justify-between gap-3" style="--j: {index};">
+                                    <span class="truncate font-semibold text-white">{payout.name}</span>
+                                    <span class="flex shrink-0 items-center gap-2">
+                                        <span class="text-xs text-[#8a90b0]">
+                                            {payout.shares} {payout.shares === 1 ? 'Share' : 'Shares'} × {reveal.bonusDividendPerShare}
+                                        </span>
+                                        <span class="flex items-center gap-1 text-lg font-black text-[#ffd76a]">
+                                            <CreditsIcon />{payout.amount}
+                                        </span>
+                                    </span>
+                                </li>
+                            {/each}
+                        </ul>
+                    </div>
+                {/if}
 
                 <button
                     type="button"
@@ -474,10 +525,20 @@
         text-transform: uppercase;
         color: #8a90b0;
     }
+    .payouts {
+        animation: rise 0.5s ease-out 4.2s both;
+    }
+    .payout {
+        border: 1px solid rgba(255, 255, 255, 0.14);
+        background: rgba(10, 13, 30, 0.7);
+        border-radius: 0.6rem;
+        padding: 0.35rem 0.75rem;
+        animation: pop 0.4s cubic-bezier(0.2, 1.3, 0.4, 1) calc(4.3s + var(--j) * 0.12s) both;
+    }
     .continue {
         background: var(--corp);
         box-shadow: 0 0 24px color-mix(in srgb, var(--corp) 60%, transparent);
-        animation: rise 0.5s ease-out 4.4s both;
+        animation: rise 0.5s ease-out 4.9s both;
     }
 
     @keyframes fade-in {
