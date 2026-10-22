@@ -316,8 +316,8 @@
                                     <button
                                         type="button"
                                         onclick={() => toggleTakeoverPreview(playerState.playerId)}
-                                        class="shrink-0 cursor-pointer rounded-full p-0.5 transition {takeoverPreview
-                                            ? 'bg-[#7dffb2]/20 ring-1 ring-[#7dffb2]'
+                                        class="shrink-0 cursor-pointer p-0.5 transition {takeoverPreview
+                                            ? ''
                                             : 'opacity-60 hover:opacity-100'}"
                                         title={takeoverPreview
                                             ? 'Showing value if the Hostile Takeover were assessed now - click to show current value'
