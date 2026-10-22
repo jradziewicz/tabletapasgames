@@ -7,6 +7,10 @@
         MAX_CARGO,
         dividendRowForMiningCapacity,
         corporateShareValuePerShare,
+        shareValuePerShare,
+        hostileTakeoverApplies,
+        AccountingGimmickTakeoverBonus,
+        CorporatePowerId,
         totalCredits,
         CorporationId,
         CorporationStatus,
@@ -31,6 +35,8 @@
     import { ShipLevelIcons } from '$lib/utils/shipDisplay.js'
     import CreditsText from './CreditsText.svelte'
     import alienTechCube from '$lib/images/investor/alienTechCube.png'
+    import alienHead from '$lib/images/markers/alien.png'
+    import alienShareBack from '$lib/images/shares/alienShareBack.png'
 
     const gameSession = getGameSession()
 
@@ -129,24 +135,59 @@
     // since the takeover is only decided at the final Liquidation. Alien-held Shares aren't this
     // player's to count. Distinct from totalCredits, which only exists after Share Liquidation
     // has actually run.
-    function liquidationValueForPlayer(playerId: string) {
+    // withTakeover: the alien-head preview on a player card - the same estimate, but with the
+    // Hostile Takeover assessed as if Liquidation happened now (operations/liquidation.ts's
+    // shareValuePerShare, which pays ₮1 a Share for a signed Corporation at or below the Aliens).
+    function liquidationValueForPlayer(playerId: string, withTakeover = false) {
         const player = gameSession.gameState.players.find((p) => p.playerId === playerId)
         if (!player) {
             return 0
         }
+        const alienMiningCapacity = gameSession.gameState.alienCorporation.miningCapacity
         let shareValue = 0
         for (const corporation of activeCorporations) {
             const miningCapacity = effectiveMiningCapacityForCorporation(
                 gameSession.gameState,
                 corporation.id
             )
-            const perShare = corporateShareValuePerShare(miningCapacity, corporation)
+            const perShare = withTakeover
+                ? shareValuePerShare(miningCapacity, corporation, alienMiningCapacity)
+                : corporateShareValuePerShare(miningCapacity, corporation)
             if (perShare <= 0) {
                 continue
             }
             shareValue += perShare * corporation.shareCountForPlayer(playerId)
         }
         return player.liquidFunds + player.frozenFunds + shareValue
+    }
+
+    // Whether a Corporation would suffer Hostile Takeover if Liquidation happened right now
+    // (Accounting Gimmick's +5 counts for this check only, as at the real Liquidation).
+    function wouldBeTakenOver(corporationId: CorporationId): boolean {
+        const corporation = activeCorporations.find((c) => c.id === corporationId)
+        if (!corporation) return false
+        const miningCapacity = effectiveMiningCapacityForCorporation(gameSession.gameState, corporationId)
+        const takeoverMiningCapacity = corporation.hasActivePower(CorporatePowerId.AccountingGimmick)
+            ? miningCapacity + AccountingGimmickTakeoverBonus
+            : miningCapacity
+        return hostileTakeoverApplies(
+            takeoverMiningCapacity,
+            corporation,
+            gameSession.gameState.alienCorporation.miningCapacity
+        )
+    }
+
+    function hasSigned(corporationId: CorporationId): boolean {
+        return !!activeCorporations.find((c) => c.id === corporationId)?.agreement
+    }
+
+    // Players whose card is showing the alien-head Hostile Takeover preview (per viewer, not
+    // shared or saved).
+    let takeoverPreviewPlayerIds: string[] = $state([])
+    function toggleTakeoverPreview(playerId: string) {
+        takeoverPreviewPlayerIds = takeoverPreviewPlayerIds.includes(playerId)
+            ? takeoverPreviewPlayerIds.filter((id) => id !== playerId)
+            : [...takeoverPreviewPlayerIds, playerId]
     }
 
     // Readable text on a Corporation-colored header: dark on light backgrounds, white on dark.
@@ -163,7 +204,8 @@
         <div class="space-y-2">
             {#each players as playerState (playerState.playerId)}
                 {@const shareHoldings = shareHoldingsForPlayer(playerState.playerId)}
-                {@const liquidationValue = liquidationValueForPlayer(playerState.playerId)}
+                {@const takeoverPreview = takeoverPreviewPlayerIds.includes(playerState.playerId)}
+                {@const liquidationValue = liquidationValueForPlayer(playerState.playerId, takeoverPreview)}
                 {@const voteColor = gameSession.colors.getPlayerColor(playerState.playerId)}
                 <div
                     class="overflow-hidden rounded-lg border {isTurn(playerState.playerId)
@@ -263,7 +305,28 @@
                                 >
                                     Liquidation Value
                                 </div>
-                                <div class="font-mono text-sm font-semibold"><CreditsIcon />{liquidationValue}</div>
+                                <div class="flex items-center gap-1.5">
+                                    <span
+                                        class="font-mono text-sm font-semibold {takeoverPreview ? 'text-[#7dffb2]' : ''}"
+                                        ><CreditsIcon />{liquidationValue}</span
+                                    >
+                                    <!-- Alien head: toggles this card's value to what it would be
+                                         if the Hostile Takeover were assessed now, and flips any
+                                         Shares that would be taken over to their Alien side below. -->
+                                    <button
+                                        type="button"
+                                        onclick={() => toggleTakeoverPreview(playerState.playerId)}
+                                        class="shrink-0 cursor-pointer rounded-full p-0.5 transition {takeoverPreview
+                                            ? 'bg-[#7dffb2]/20 ring-1 ring-[#7dffb2]'
+                                            : 'opacity-60 hover:opacity-100'}"
+                                        title={takeoverPreview
+                                            ? 'Showing value if the Hostile Takeover were assessed now - click to show current value'
+                                            : 'Show value if the Hostile Takeover were assessed now'}
+                                        aria-pressed={takeoverPreview}
+                                    >
+                                        <img src={alienHead} alt="Hostile Takeover preview" class="h-4 w-4 object-contain" />
+                                    </button>
+                                </div>
                             </div>
                         {/if}
                     </div>
@@ -311,6 +374,8 @@
                         <div class="space-y-1.5 px-3 pb-2 pt-1">
                             {#each shareHoldings as holding (holding.corporationId)}
                                 {@const aspect = CorporationLogoAspect[holding.corporationId] ?? 1}
+                                {@const takenOver = takeoverPreview && wouldBeTakenOver(holding.corporationId)}
+                                {@const signed = hasSigned(holding.corporationId)}
                                 <div class="flex items-center justify-between">
                                     <div class="flex items-center gap-2">
                                         <img
@@ -340,12 +405,17 @@
                                         class="flex shrink-0 items-center gap-0.5"
                                         title="{holding.count} of {holding.totalShares} Shares"
                                     >
+                                        <!-- Signed The Agreement: a soft green glow. Previewing the
+                                             Hostile Takeover: Shares that would be taken over flip to
+                                             their green Alien side. -->
                                         {#each { length: holding.count } as _, index (index)}
                                             <img
-                                                src={CorporationShareCertificateIcons[holding.corporationId]}
-                                                alt="Share"
+                                                src={takenOver ? alienShareBack : CorporationShareCertificateIcons[holding.corporationId]}
+                                                alt={takenOver ? 'Share - taken over by the Aliens' : 'Share'}
                                                 class="h-4 shrink-0 rounded-[2px] shadow-sm"
-                                                style="width: {SHARE_CERTIFICATE_ASPECT}rem;"
+                                                style="width: {SHARE_CERTIFICATE_ASPECT}rem;{signed
+                                                    ? ' box-shadow: 0 0 0 1px rgba(125, 255, 178, 0.7), 0 0 5px 1px rgba(125, 255, 178, 0.55);'
+                                                    : ''}"
                                             />
                                         {/each}
                                     </div>
