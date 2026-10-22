@@ -193,6 +193,7 @@
                                 class="h-full w-full rounded-md object-cover shadow-md {flipping
                                     ? 'reveal-flip'
                                     : ''}"
+                                class:signed-share-glow={!(resolved && !row.safe)}
                             />
                             {#if resolved && row.safe}
                                 <div

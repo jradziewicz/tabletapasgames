@@ -186,7 +186,7 @@
                         src={CorporationShareCertificateIcons[corporation.id]}
                         alt="{CorporationDisplayNames[corporation.id]} Share Certificate - Alien Shareholdings"
                         title="{CorporationDisplayNames[corporation.id]} - Alien Shareholdings"
-                        class="w-auto rounded-sm object-contain shadow-lg"
+                        class="signed-share-glow w-auto rounded-sm object-contain shadow-lg"
                         style:height={signedCorporations.length > 3 ? 'calc(50% - 2px)' : '100%'}
                     />
                 {/each}

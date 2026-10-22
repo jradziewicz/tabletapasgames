@@ -378,7 +378,7 @@
                                 src={CorporationShareCertificateIcons[otherCorporation.id]}
                                 alt="{CorporationDisplayNames[otherCorporation.id]} Share Certificate - Alien Shareholdings"
                                 title="{CorporationDisplayNames[otherCorporation.id]} - Alien Shareholdings"
-                                class="w-auto rounded-sm object-contain shadow-lg"
+                                class="signed-share-glow w-auto rounded-sm object-contain shadow-lg"
                                 style="aspect-ratio: {SHARE_CERTIFICATE_ASPECT}; height: {shareHeight};"
                             />
                         {/each}
@@ -388,7 +388,7 @@
                                     src={CorporationShareCertificateIcons[corporationId]}
                                     alt="{CorporationDisplayNames[corporationId]} Share Certificate - Alien Shareholdings"
                                     title="Alien Shareholdings"
-                                    class="reveal-flip w-auto rounded-sm object-contain shadow-lg"
+                                    class="reveal-flip signed-share-glow w-auto rounded-sm object-contain shadow-lg"
                                     style="aspect-ratio: {SHARE_CERTIFICATE_ASPECT}; height: {shareHeight};"
                                 />
                             {/key}

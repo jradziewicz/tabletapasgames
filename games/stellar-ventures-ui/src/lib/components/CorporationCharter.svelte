@@ -245,6 +245,7 @@
                     src={CorporationShareCertificateIcons[corporationId]}
                     alt="{CorporationDisplayNames[corporationId]} Share Certificate"
                     class="absolute rounded-sm shadow-lg transition-all duration-150"
+                    class:signed-share-glow={!!corporation?.agreement}
                     style="
                         width: {SHARE_STACK_CARD_WIDTH_PCT}%;
                         aspect-ratio: {SHARE_CERTIFICATE_ASPECT};

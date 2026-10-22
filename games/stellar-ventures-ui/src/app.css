@@ -38,3 +38,11 @@
         display: none;
     }
 }
+
+/* A Share Certificate of a Corporation that has signed The Agreement - a soft green glow
+   wherever its Shares are shown. */
+.signed-share-glow {
+    box-shadow:
+        0 0 0 1px rgba(125, 255, 178, 0.7),
+        0 0 6px 1px rgba(125, 255, 178, 0.55) !important;
+}

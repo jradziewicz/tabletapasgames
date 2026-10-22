@@ -129,6 +129,9 @@
                                 src={CorporationShareCertificateIcons[holding.corporationId]}
                                 alt="{CorporationDisplayNames[holding.corporationId]} Share Certificate"
                                 class="absolute rounded-sm shadow-lg"
+                                class:signed-share-glow={!!gameSession.gameState.corporations.find(
+                                    (c) => c.id === holding.corporationId
+                                )?.agreement}
                                 style="
                                     height: 100%;
                                     width: auto;

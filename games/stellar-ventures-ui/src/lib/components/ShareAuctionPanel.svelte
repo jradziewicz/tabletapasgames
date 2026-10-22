@@ -200,6 +200,7 @@
                 src={CorporationShareCertificateIcons[corporationId]}
                 alt="{CorporationDisplayNames[corporationId]} Share Certificate"
                 class="h-20 shrink-0 rounded-sm shadow-lg max-sm:hidden"
+                class:signed-share-glow={!!corporation?.agreement}
                 style="width: {80 * SHARE_CERTIFICATE_ASPECT}px;"
             />
             <div class="flex-1">

@@ -413,9 +413,8 @@
                                                 src={takenOver ? alienShareBack : CorporationShareCertificateIcons[holding.corporationId]}
                                                 alt={takenOver ? 'Share - taken over by the Aliens' : 'Share'}
                                                 class="h-4 shrink-0 rounded-[2px] shadow-sm"
-                                                style="width: {SHARE_CERTIFICATE_ASPECT}rem;{signed
-                                                    ? ' box-shadow: 0 0 0 1px rgba(125, 255, 178, 0.7), 0 0 5px 1px rgba(125, 255, 178, 0.55);'
-                                                    : ''}"
+                                                class:signed-share-glow={signed}
+                                                style="width: {SHARE_CERTIFICATE_ASPECT}rem;"
                                             />
                                         {/each}
                                     </div>
