@@ -290,6 +290,10 @@ export class DummyRemoteApiService implements RemoteApiService {
         return this.fail('unsubscribeFromPushNotifications')
     }
 
+    async listAllUsers(): Promise<User[]> {
+        return this.fail('listAllUsers')
+    }
+
     async searchUsers(_query: string): Promise<User[]> {
         return this.fail('searchUsers')
     }

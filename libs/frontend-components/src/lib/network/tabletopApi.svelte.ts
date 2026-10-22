@@ -906,6 +906,16 @@ export class TabletopApi {
         return response.payload.users
     }
 
+    async listAllUsers(): Promise<User[]> {
+        const response = await this.wretch
+            .get('/admin/users/all')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<UsersResponse>()
+
+        return response.payload.users
+    }
+
     async assignUserRoles(userId: string, roles: AdminAssignableRole[]): Promise<User> {
         const response = await this.wretch
             .post({ roles }, `/admin/users/${encodeURIComponent(userId)}/roles`)

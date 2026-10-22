@@ -149,6 +149,16 @@ export class FirestoreUserStore implements UserStore, SiteStatsUserSource {
         return undefined
     }
 
+    async findAllUsers(): Promise<User[]> {
+        try {
+            const userDocs = await this.users.get()
+            return userDocs.docs.map((doc) => this.sanitize(doc.data() as StoredUser) as User)
+        } catch (error) {
+            this.handleError(error, 'all')
+            throw Error('unreachable')
+        }
+    }
+
     async findAllUsernames(): Promise<string[]> {
         try {
             const usernames = await this.userUsernames.listDocuments()

@@ -429,6 +429,14 @@ export class UserService {
         return users.filter((user) => user !== undefined)
     }
 
+    // Every user, by username, for the Admin page's user list.
+    async listUsers(): Promise<User[]> {
+        const users = await this.userStore.findAllUsers()
+        return users.toSorted((a, b) =>
+            (a.username ?? a.id).localeCompare(b.username ?? b.id, undefined, { sensitivity: 'base' })
+        )
+    }
+
     async assignRoles(userId: string, assignedRoles: AdminAssignableRole[]): Promise<User> {
         const user = await this.userStore.findById(userId)
         if (!user) {
