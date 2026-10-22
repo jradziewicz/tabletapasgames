@@ -2,11 +2,10 @@
   "frontend": {
     "version": "19.5.12",
     "priorVersions": [
+      "19.5.12",
       "19.5.11",
       "19.5.10",
-      "19.5.9",
-      "19.5.8",
-      "19.5.7"
+      "19.5.9"
     ]
   },
   "games": [
@@ -14,7 +13,7 @@
       "gameId": "stellarventures",
       "packageId": "stellar-ventures",
       "logicVersion": "1.0.9",
-      "uiVersion": "1.0.28",
+      "uiVersion": "1.0.29",
       "priorLogicVersions": [
         "1.0.8",
         "1.0.7",
@@ -23,11 +22,11 @@
         "1.0.4"
       ],
       "priorUiVersions": [
+        "1.0.28",
         "1.0.27",
         "1.0.26",
         "1.0.25",
-        "1.0.24",
-        "1.0.23"
+        "1.0.24"
       ]
     },
     {
