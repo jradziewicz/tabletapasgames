@@ -6,6 +6,7 @@ import type {
 import { StellarVenturesHydrator } from './hydrator.js'
 import { StellarVenturesGameInitializer } from './initializer.js'
 import { StellarVenturesGameExploration } from './exploration.js'
+import { StellarVenturesScoring } from './scoring.js'
 import { StellarVenturesApiActions } from './apiActions.js'
 import { StellarVenturesStateHandlers } from './stateHandlers.js'
 import { StellarVenturesColors } from './colors.js'
@@ -40,6 +41,7 @@ export const Definition: GameDefinition<StellarVenturesGameState, HydratedStella
         stateHandlers: StellarVenturesStateHandlers,
         apiActions: StellarVenturesApiActions,
         playerColors: StellarVenturesColors,
-        stateLogger: new DefaultStateLogger()
+        stateLogger: new DefaultStateLogger(),
+        scoring: new StellarVenturesScoring()
     }
 }

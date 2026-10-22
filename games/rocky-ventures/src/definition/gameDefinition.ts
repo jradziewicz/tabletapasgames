@@ -2,6 +2,7 @@ import { DefaultStateLogger, GameVisibility, type GameDefinition } from '@tablet
 import type { HydratedRockyVenturesGameState, RockyVenturesGameState } from '../model/gameState.js'
 import { RockyVenturesHydrator } from './hydrator.js'
 import { RockyVenturesGameInitializer } from './initializer.js'
+import { RockyVenturesScoring } from './scoring.js'
 import { RockyVenturesApiActions } from './apiActions.js'
 import { RockyVenturesStateHandlers } from './stateHandlers.js'
 import { RockyVenturesColors } from './colors.js'
@@ -39,6 +40,7 @@ export const Definition: GameDefinition<RockyVenturesGameState, HydratedRockyVen
         stateHandlers: RockyVenturesStateHandlers,
         apiActions: RockyVenturesApiActions,
         playerColors: RockyVenturesColors,
-        stateLogger: new DefaultStateLogger()
+        stateLogger: new DefaultStateLogger(),
+        scoring: new RockyVenturesScoring()
     }
 }

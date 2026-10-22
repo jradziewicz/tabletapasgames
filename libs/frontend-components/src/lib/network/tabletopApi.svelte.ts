@@ -1003,6 +1003,16 @@ export class TabletopApi {
         return response.payload.runId
     }
 
+    async startFinalScoresBackfill(): Promise<string> {
+        const response = await this.wretch
+            .post({ write: true }, '/admin/games/finalScoresBackfill')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<unknown>()
+        Value.Assert(Type.Object({ payload: Type.Object({ runId: Type.String() }) }), response)
+        return response.payload.runId
+    }
+
     async setGameState(state: GameState): Promise<void> {
         await this.wretch
             .post({ state }, '/admin/setGameState')
