@@ -1,8 +1,12 @@
 import {
     BonusGemMinimumWeaponLevel,
     BonusInvestMinimumWeaponLevel,
+    GridBlockedVictoryPoints,
     MaxGems,
+    MaxToolLevel,
+    MaxWeaponLevel,
     WeaponTokenKind,
+    canMoveUp,
     gemSupplyLeft,
     type HydratedRockyVenturesGameState
 } from '@tabletop/rocky-ventures'
@@ -33,6 +37,19 @@ export function huntBonusWarnings(
         } else {
             const blocked = gemGainBlockedReason(state, playerId)
             if (blocked) warnings.push(`Bonus Gem gives nothing: ${blocked}`)
+        }
+    }
+    if (tokens.includes(WeaponTokenKind.BonusWeaponLevel)) {
+        const player = state.getPlayerState(playerId)
+        const cell = { weapon: player.weaponLevel, tool: player.toolLevel }
+        if (!canMoveUp(cell)) {
+            if (cell.weapon >= MaxWeaponLevel && cell.tool >= MaxToolLevel) {
+                warnings.push(`Bonus Weapon Level can't move you up: you're at the top of the grid (+${GridBlockedVictoryPoints} VP instead)`)
+            } else if (cell.weapon >= MaxWeaponLevel) {
+                warnings.push('Bonus Weapon Level gives nothing: you are already at the top weapon level')
+            } else {
+                warnings.push('Bonus Weapon Level gives nothing: a wall on the grid blocks moving up')
+            }
         }
     }
     if (tokens.includes(WeaponTokenKind.BonusInvest) && weaponLevel < BonusInvestMinimumWeaponLevel) {

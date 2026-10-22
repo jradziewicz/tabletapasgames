@@ -43,4 +43,17 @@ describe('gem warnings', () => {
         state.getPlayerState(playerId).weaponLevel = 4
         expect(huntBonusWarnings(state, playerId, [WeaponTokenKind.BonusGem, WeaponTokenKind.BonusInvest])).toEqual([])
     })
+
+    it('warns when a wall blocks the Bonus Weapon Level', () => {
+        const state = startedState()
+        const playerId = state.players[0]!.playerId
+        const player = state.getPlayerState(playerId)
+        player.weaponLevel = 1
+        player.toolLevel = 3
+        expect(huntBonusWarnings(state, playerId, [WeaponTokenKind.BonusWeaponLevel])).toEqual([
+            'Bonus Weapon Level gives nothing: a wall on the grid blocks moving up'
+        ])
+        player.toolLevel = 2
+        expect(huntBonusWarnings(state, playerId, [WeaponTokenKind.BonusWeaponLevel])).toEqual([])
+    })
 })
