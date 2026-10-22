@@ -896,6 +896,16 @@ export class TabletopApi {
             .res()
     }
 
+    async listUsers(): Promise<User[]> {
+        const response = await this.wretch
+            .get('/admin/users/list')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<UsersResponse>()
+
+        return response.payload.users
+    }
+
     async searchUsers(query: string): Promise<User[]> {
         const response = await this.wretch
             .get(`/admin/users/search?query=${encodeURIComponent(query.trim())}`)

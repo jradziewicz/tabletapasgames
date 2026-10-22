@@ -159,6 +159,17 @@ export class FirestoreUserStore implements UserStore, SiteStatsUserSource {
         }
     }
 
+    async findAllUsers(): Promise<User[]> {
+        try {
+            const snapshot = await measure('firestore.user.list', () => this.users.get())
+            this.recordRead()
+            return snapshot.docs.flatMap((doc) => this.sanitize(doc.data() as StoredUser) ?? [])
+        } catch (error) {
+            this.handleError(error, 'all')
+            throw Error('unreachable')
+        }
+    }
+
     async createUser(user: User, password?: string): Promise<User> {
         const newStoredUser = structuredClone(user) as StoredUser
 

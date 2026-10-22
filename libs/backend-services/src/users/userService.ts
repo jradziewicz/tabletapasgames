@@ -415,6 +415,15 @@ export class UserService {
         await this.taskService.sendAuthVerificationEmail({ userId, token })
     }
 
+    async listUsers(): Promise<User[]> {
+        const users = await this.userStore.findAllUsers()
+        return users.toSorted((a, b) =>
+            (a.username ?? a.email ?? a.id).localeCompare(b.username ?? b.email ?? b.id, undefined, {
+                sensitivity: 'base'
+            })
+        )
+    }
+
     async searchUsers(query: string): Promise<User[]> {
         const trimmed = query.trim()
         if (!trimmed) return []
