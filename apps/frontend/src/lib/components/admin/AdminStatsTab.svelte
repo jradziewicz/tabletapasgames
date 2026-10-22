@@ -88,6 +88,19 @@
         }
     }
 
+    // Games that finished before their title recorded final scores get them from stored state.
+    // Run this before Rebuild so the rollup sees the scores.
+    async function fillFinalScores() {
+        if (!confirm('Fill in final scores for finished games that have none?')) return
+        try {
+            const runId = await api.startFinalScoresBackfill()
+            rebuildNote = `Final scores fill-in ${runId} started. It runs in the background.`
+        } catch (failure) {
+            rebuildNote =
+                failure instanceof Error ? failure.message : 'Could not start the final scores fill-in'
+        }
+    }
+
     onMount(() => {
         void load()
     })
@@ -126,6 +139,7 @@
         </label>
         <span class="spacer"></span>
         <button class="action" onclick={() => void load()} disabled={busy}>Refresh</button>
+        <button class="action" onclick={() => void fillFinalScores()}>Fill in final scores…</button>
         <button class="action" onclick={() => void rebuild()}>Rebuild…</button>
     </div>
     <p class="status">
