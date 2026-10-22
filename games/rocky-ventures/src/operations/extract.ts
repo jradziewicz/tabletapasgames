@@ -372,16 +372,12 @@ export function planExtraction(
             saleCityId: cityId,
             canBuyVictoryPoints: false
         }
-        if (candidates.length === 1) {
+        if (request.creditCompanyId !== undefined && railroadsOnRoute(route.cubes).includes(request.creditCompanyId)) {
+            plan.creditCompanyId = request.creditCompanyId
+        } else if (request.creditCompanyId !== undefined) {
+            return 'That company did not lay the most track on the route'
+        } else if (candidates.length === 1) {
             plan.creditCompanyId = candidates[0]
-        } else if (candidates.length > 1) {
-            if (request.creditCompanyId === undefined) {
-                plan.creditCompanyId = undefined
-            } else if (candidates.includes(request.creditCompanyId)) {
-                plan.creditCompanyId = request.creditCompanyId
-            } else {
-                return 'That company did not lay the most track on the route'
-            }
         }
     } else {
         const cityId = citySideOfRegion(node.region)
@@ -416,10 +412,17 @@ export function planExtraction(
     return plan
 }
 
-function creditCandidatesFor(cubes: Partial<Record<CompanyId, number>>): CompanyId[] {
-    return CompanyIds.filter((companyId) => (cubes[companyId] ?? 0) > 0).sort(
-        (left, right) => (cubes[right] ?? 0) - (cubes[left] ?? 0)
-    )
+// The railroad with the most track cubes on the route gets the delivery; the player only chooses
+// between railroads tied for the most (2026-10-22).
+export function creditCandidatesFor(cubes: Partial<Record<CompanyId, number>>): CompanyId[] {
+    const most = Math.max(0, ...CompanyIds.map((companyId) => cubes[companyId] ?? 0))
+    return most > 0 ? CompanyIds.filter((companyId) => (cubes[companyId] ?? 0) === most) : []
+}
+
+// Every railroad with track on the route. Earlier games let the player credit any of these, so a
+// recorded choice among them is still accepted when an old game replays.
+function railroadsOnRoute(cubes: Partial<Record<CompanyId, number>>): CompanyId[] {
+    return CompanyIds.filter((companyId) => (cubes[companyId] ?? 0) > 0)
 }
 
 export function reasonExtractInvalid(
