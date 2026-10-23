@@ -34,7 +34,8 @@
         met: { border: '#e0574a', text: '#ffffff', background: '#a3241a' }
     }
 
-    type TriggerChip = { key: string; label: string; tip: string; level: ChipLevel; pulse?: boolean }
+    // `struck` draws a line through the label's first word (the slain dragon).
+    type TriggerChip = { key: string; label: string; tip: string; level: ChipLevel; pulse?: boolean; struck?: boolean }
     const triggerChips: TriggerChip[] = $derived([
         {
             key: 'deck',
@@ -49,6 +50,7 @@
                   key: 'dragon',
                   label: `DRAGON ${DragonLevel}/${DragonLevel}`,
                   level: 'met',
+                  struck: true,
                   tip: 'The dragon has been killed: this end trigger is met'
               }
             : dragonActive
@@ -135,7 +137,7 @@
                     class:dragon-alert={chip.pulse}
                     style="border-color: {ChipColors[chip.level].border}; color: {ChipColors[chip.level].text}; background-color: {ChipColors[chip.level].background};"
                     aria-label={chip.tip}
-                    >{chip.label}<span class="chip-tip" role="tooltip">{chip.tip}</span></button
+                    >{#if chip.struck}<span class="line-through decoration-2">{chip.label.split(' ')[0]}</span> {chip.label.split(' ').slice(1).join(' ')}{:else}{chip.label}{/if}<span class="chip-tip" role="tooltip">{chip.tip}</span></button
                 >
             {/each}
         </div>
