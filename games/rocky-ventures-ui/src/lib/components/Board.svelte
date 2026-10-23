@@ -1,5 +1,6 @@
 <script lang="ts">
     import {
+        DragonLevel,
         BoardArtSize,
         DummyPlayerId,
         BoardBoxLocations,
@@ -47,6 +48,7 @@
     } from '$lib/utils/scourgeBoxLayout.js'
     import boardArt from '$lib/images/board.jpg'
     import GridArtOverrides from '$lib/components/GridArtOverrides.svelte'
+    import { DragonTileImageUrl } from '$lib/utils/dragonImages.js'
     import { RegionMapBounds, RegionRuns, regionAt, regionLabelPoint } from '$lib/utils/regionMap.js'
 
     const gameSession = getGameSession()
@@ -242,6 +244,20 @@
             indices.push(index)
         }
         return indices
+    }
+
+    // While the dragon is out its tile sits on the map in the open mountains just south-east of
+    // Leuchars, below the gemstone track and clear of the Leuchars-Dornoch road, outlined in red.
+    const DragonTileSpot = { x: 1460, y: 335, width: 70, height: Math.round((70 * 633) / 550) }
+    const dragonOut = $derived(gameSession.gameState.dragon.summoned && !gameSession.gameState.dragon.killed)
+    function hexPoints(box: { x: number; y: number; width: number; height: number }, pad = 0) {
+        const left = box.x - pad
+        const right = box.x + box.width + pad
+        const top = box.y - pad
+        const bottom = box.y + box.height + pad
+        const cx = (left + right) / 2
+        const quarter = (bottom - top) / 4
+        return `${cx},${top} ${right},${top + quarter} ${right},${bottom - quarter} ${cx},${bottom} ${left},${bottom - quarter} ${left},${top + quarter}`
     }
 </script>
 
@@ -638,6 +654,60 @@
         {/if}
     {/each}
 
+    {#if dragonOut && DragonTileImageUrl}
+        <g
+            class="dragon-on-board"
+            role="button"
+            tabindex="0"
+            aria-label="The dragon is out: {gameSession.gameState.dragon.hits} of {DragonLevel} hits"
+            onclick={() => gameSession.zoomCard('dragon', DragonTileImageUrl)}
+            onkeydown={(event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    gameSession.zoomCard('dragon', DragonTileImageUrl)
+                }
+            }}
+        >
+            <!-- SVG-native red glow and outline (no CSS drop-shadow: it doesn't render on iPhone) -->
+            <polygon
+                points={hexPoints(DragonTileSpot, 4)}
+                fill="none"
+                stroke="#ff3b2f"
+                stroke-width="10"
+                filter="url(#mine-halo-blur)"
+                class="mine-halo"
+                pointer-events="none"
+            />
+            <image
+                href={DragonTileImageUrl}
+                x={DragonTileSpot.x}
+                y={DragonTileSpot.y}
+                width={DragonTileSpot.width}
+                height={DragonTileSpot.height}
+            />
+            <polygon points={hexPoints(DragonTileSpot, 1)} fill="none" stroke="#e0251b" stroke-width="4" pointer-events="none" />
+            <rect
+                x={DragonTileSpot.x + 8}
+                y={DragonTileSpot.y + DragonTileSpot.height + 4}
+                width={DragonTileSpot.width - 16}
+                height="18"
+                rx="9"
+                fill="#a3241a"
+                stroke="#ff3b2f"
+                stroke-width="1.5"
+                pointer-events="none"
+            />
+            <text
+                x={DragonTileSpot.x + DragonTileSpot.width / 2}
+                y={DragonTileSpot.y + DragonTileSpot.height + 17}
+                text-anchor="middle"
+                font-size="12"
+                font-weight="700"
+                fill="#ffffff"
+                pointer-events="none">{gameSession.gameState.dragon.hits}/{DragonLevel} HITS</text
+            >
+        </g>
+    {/if}
+
     <!-- Click the weapon/tool grid to pop it out (acquire targets drawn later stay clickable) -->
     <rect
         x={GridRegion.x}
@@ -1002,6 +1072,10 @@
     .buildable-box,
     .claimable-mine {
         cursor: pointer;
+    }
+    .dragon-on-board {
+        cursor: zoom-in;
+        outline: none;
     }
     .grid-zoom-target {
         cursor: zoom-in;
