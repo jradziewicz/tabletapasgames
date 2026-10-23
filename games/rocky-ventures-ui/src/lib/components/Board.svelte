@@ -249,7 +249,9 @@
     // While the dragon is out its tile sits on the map in the open mountains just south-east of
     // Leuchars, below the gemstone track and clear of the Leuchars-Dornoch road, outlined in red.
     const DragonTileSpot = { x: 1460, y: 335, width: 70, height: Math.round((70 * 633) / 550) }
-    const dragonOut = $derived(gameSession.gameState.dragon.summoned && !gameSession.gameState.dragon.killed)
+    // Shown from the moment the dragon is summoned; once killed it stays, crossed out.
+    const dragonOnBoard = $derived(gameSession.gameState.dragon.summoned || gameSession.gameState.dragon.killed)
+    const dragonKilled = $derived(gameSession.gameState.dragon.killed)
     function hexPoints(box: { x: number; y: number; width: number; height: number }, pad = 0) {
         const left = box.x - pad
         const right = box.x + box.width + pad
@@ -654,12 +656,12 @@
         {/if}
     {/each}
 
-    {#if dragonOut && DragonTileImageUrl}
+    {#if dragonOnBoard && DragonTileImageUrl}
         <g
             class="dragon-on-board"
             role="button"
             tabindex="0"
-            aria-label="The dragon is out: {gameSession.gameState.dragon.hits} of {DragonLevel} hits"
+            aria-label={dragonKilled ? 'The dragon has been killed' : `The dragon is out: ${gameSession.gameState.dragon.hits} of ${DragonLevel} hits`}
             onclick={() => gameSession.zoomCard('dragon', DragonTileImageUrl)}
             onkeydown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
@@ -674,7 +676,8 @@
                 stroke="#ff3b2f"
                 stroke-width="10"
                 filter="url(#mine-halo-blur)"
-                class="mine-halo"
+                class={dragonKilled ? undefined : 'mine-halo'}
+                opacity={dragonKilled ? 0.6 : undefined}
                 pointer-events="none"
             />
             <image
@@ -685,6 +688,13 @@
                 height={DragonTileSpot.height}
             />
             <polygon points={hexPoints(DragonTileSpot, 1)} fill="none" stroke="#e0251b" stroke-width="4" pointer-events="none" />
+            {#if dragonKilled}
+                <!-- Slain: a red cross over the tile -->
+                <g stroke="#e0251b" stroke-width="7" stroke-linecap="round" pointer-events="none">
+                    <line x1={DragonTileSpot.x + 6} y1={DragonTileSpot.y + 12} x2={DragonTileSpot.x + DragonTileSpot.width - 6} y2={DragonTileSpot.y + DragonTileSpot.height - 12} />
+                    <line x1={DragonTileSpot.x + DragonTileSpot.width - 6} y1={DragonTileSpot.y + 12} x2={DragonTileSpot.x + 6} y2={DragonTileSpot.y + DragonTileSpot.height - 12} />
+                </g>
+            {/if}
             <rect
                 x={DragonTileSpot.x + 8}
                 y={DragonTileSpot.y + DragonTileSpot.height + 4}
@@ -703,7 +713,7 @@
                 font-size="12"
                 font-weight="700"
                 fill="#ffffff"
-                pointer-events="none">{gameSession.gameState.dragon.hits}/{DragonLevel} HITS</text
+                pointer-events="none">{dragonKilled ? 'SLAIN' : `${gameSession.gameState.dragon.hits}/${DragonLevel} HITS`}</text
             >
         </g>
     {/if}
