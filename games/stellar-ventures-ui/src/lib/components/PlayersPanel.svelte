@@ -104,9 +104,17 @@
     let tooltipX: number | undefined = $state()
     let tooltipY: number | undefined = $state()
 
+    // The tooltip is up to TOOLTIP_WIDTH_PX wide and normally centred on the pointer; near the
+    // screen edge (this panel sits against the left edge) that pushed half of it off-screen, so
+    // its left edge is clamped to keep the whole box visible.
+    const TOOLTIP_WIDTH_PX = 240
+    const TOOLTIP_MARGIN_PX = 8
     function showPowerInfo(powerId: string, x: number, y: number) {
         hoveredPowerId = powerId
-        tooltipX = x
+        tooltipX = Math.min(
+            Math.max(x - TOOLTIP_WIDTH_PX / 2, TOOLTIP_MARGIN_PX),
+            window.innerWidth - TOOLTIP_WIDTH_PX - TOOLTIP_MARGIN_PX
+        )
         tooltipY = y
     }
     function hidePowerInfo() {
@@ -717,7 +725,7 @@
 
     {#if hoveredPowerId}
         <div
-            class="pointer-events-none fixed z-30 w-max max-w-[240px] -translate-x-1/2 -translate-y-full rounded-md border border-[#3a4166] bg-[#10142a] px-2.5 py-1.5 text-xs shadow-lg"
+            class="pointer-events-none fixed z-30 w-[240px] -translate-y-full rounded-md border border-[#3a4166] bg-[#10142a] px-2.5 py-1.5 text-xs shadow-lg"
             style="left: {tooltipX}px; top: {(tooltipY ?? 0) - 12}px;"
         >
             <div class="font-semibold text-[#e6e9f5]">

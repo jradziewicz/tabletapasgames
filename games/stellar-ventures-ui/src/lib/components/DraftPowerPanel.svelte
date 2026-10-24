@@ -45,7 +45,7 @@
     <div class="space-y-2 px-4 py-2 text-[#e6e9f5]">
         <div class="text-sm">
             {#if presidentId}
-                <PlayerName playerId={presidentId} /> drafts a Corporate Power for
+                <PlayerName playerId={presidentId} /> {isMe ? 'draft' : 'drafts'} a Corporate Power for
                 <span class="font-semibold">{CorporationDisplayNames[corporationId]}</span>
             {:else}
                 <span class="font-semibold">{CorporationDisplayNames[corporationId]}</span> drafts a

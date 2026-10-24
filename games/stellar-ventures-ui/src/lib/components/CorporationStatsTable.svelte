@@ -62,7 +62,8 @@
 
     function showPowerInfo(powerId: string, x: number, y: number) {
         hoveredPowerId = powerId
-        tooltipX = x
+        // Clamped so the 240px tooltip never runs off either screen edge.
+        tooltipX = Math.min(Math.max(x - 120, 8), window.innerWidth - 248)
         tooltipY = y
     }
     function hidePowerInfo() {
@@ -224,7 +225,7 @@
 
 {#if hoveredPowerId}
     <div
-        class="pointer-events-none fixed z-30 w-max max-w-[240px] -translate-x-1/2 -translate-y-full rounded-md border border-[#3a4166] bg-[#10142a] px-2.5 py-1.5 text-xs shadow-lg"
+        class="pointer-events-none fixed z-30 w-[240px] -translate-y-full rounded-md border border-[#3a4166] bg-[#10142a] px-2.5 py-1.5 text-xs shadow-lg"
         style="left: {tooltipX}px; top: {(tooltipY ?? 0) - 12}px;"
     >
         <div class="font-semibold text-[#e6e9f5]">
