@@ -479,6 +479,18 @@ export class RockyVenturesGameSession extends GameSession<
         )
     }
 
+    // Decline every drawn token ("apply up to N" allows none); they all go back in the bag.
+    async resolveHuntApplyingNone() {
+        if (!this.gameState.pendingHunt) {
+            return
+        }
+        this.huntSelected = []
+        this.huntHitTargets = {}
+        await this.submit(ActionType.ResolveHunt, async () => {
+            await this.applyAction(this.createPlayerAction(ResolveHunt, { tokenIndexes: [], hitTargets: [] }))
+        })
+    }
+
     async resolveHunt() {
         const pending = this.gameState.pendingHunt
         if (!pending || !this.huntReady) {

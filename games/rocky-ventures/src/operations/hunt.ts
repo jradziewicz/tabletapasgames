@@ -169,9 +169,7 @@ export function reasonResolveHuntInvalid(
         return 'That token was not drawn'
     }
     const most = Math.min(pending.apply, pending.drawn.length)
-    if (pending.drawn.length > 0 && request.tokenIndexes.length < 1) {
-        return 'Choose at least one token'
-    }
+    // "Apply up to N": applying none is allowed; unapplied tokens go back in the bag.
     if (request.tokenIndexes.length > most) {
         return `You can apply at most ${most} token${most === 1 ? '' : 's'}`
     }

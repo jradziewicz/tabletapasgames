@@ -834,8 +834,12 @@
                 disabled={!gameSession.huntReady}
                 onclick={() => gameSession.resolveHunt()}
                 class="rv-btn rv-primary"
+                title={gameSession.huntReady ? undefined : 'Tap a token to choose it first'}
             >
                 Apply
+            </button>
+            <button type="button" onclick={() => gameSession.resolveHuntApplyingNone()} class="rv-quiet" title="Apply none of the drawn tokens; they go back in the bag">
+                Apply none
             </button>
         </div>
         {@const huntPlayerId = gameState.activePlayerIds[0]}
