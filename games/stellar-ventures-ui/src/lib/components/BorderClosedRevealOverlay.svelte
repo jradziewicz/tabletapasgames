@@ -49,7 +49,7 @@
     function loadSeenLevels(): number[] {
         try {
             const raw = seenOverlays.get(storageKey)
-            return raw ? (JSON.parse(raw) as number[]) : []
+            return raw ? [...new Set(JSON.parse(raw) as number[])] : []
         } catch {
             return []
         }
@@ -68,23 +68,6 @@
         if (added.length > 0) seenLevels = [...current, ...added]
     })
 
-    // If a Border-closing action gets Undone (canUndo/undoableAction - only possible before
-    // anything revealsInfo-flagged happens after it), board.closedBorderLevels genuinely reverts
-    // - closedBorders above is a live $derived off current state, so a reopened level simply
-    // stops appearing in it and pending below already resolves to undefined for it, with no
-    // overlay shown. This effect goes one step further: it also un-marks that level as "seen"
-    // the moment it's no longer actually closed, so if some OTHER later action closes it again
-    // for real, this reveal fires again instead of staying silently suppressed forever by a
-    // "seen" flag left over from the undone attempt.
-    $effect(() => {
-        const closedLevelSet = new Set(closedBorders.map((border) => border.level))
-        const stillValid = seenLevels.filter((level) => closedLevelSet.has(level))
-        if (stillValid.length !== seenLevels.length) {
-            seenLevels = stillValid
-            saveSeenLevels(stillValid)
-        }
-    })
-
     // Named the way the co-designer talks about them in play ("the First Border's closed") -
     // Borders & Taxes only ever defines 3 levels (data/boardMaps.ts), so this stays a fixed map
     // rather than a general number-to-ordinal formatter.
@@ -93,7 +76,7 @@
     // The Border (and its display color) currently pending acknowledgement, combined into one
     // derived value rather than two separate ones kept in sync by hand.
     const pending = $derived.by(() => {
-        if (!seenOverlays.ready) return undefined
+        if (!seenOverlays.ready || gameSession.isViewingHistory) return undefined
         const border = closedBorders.find((candidate) => !seenLevels.includes(candidate.level))
         return border ? { border, color: borderZoneDisplay(border.level).color } : undefined
     })
@@ -114,7 +97,7 @@
         if (level === undefined) {
             return
         }
-        const next = [...seenLevels, level]
+        const next = seenLevels.includes(level) ? seenLevels : [...seenLevels, level]
         seenLevels = next
         saveSeenLevels(next)
     }

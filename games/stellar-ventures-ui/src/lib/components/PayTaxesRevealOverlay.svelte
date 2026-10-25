@@ -39,15 +39,19 @@
     })
 
     const pending = $derived(
-        seenOverlays.ready && summary && summary.id > seenId ? summary : undefined
+        seenOverlays.ready && !gameSession.isViewingHistory && summary && summary.id > seenId
+            ? summary
+            : undefined
     )
     const taxBoxIncrease = $derived(pending ? pending.taxBoxAfter - pending.taxBoxBefore : 0)
 
     function dismiss() {
-        if (pending) {
-            seenId = pending.id
-            seenOverlays.set(storageKey, String(pending.id))
-        }
+        // Read the id before writing seenId: pending recomputes to undefined the moment seenId
+        // changes, so reading pending.id afterward threw and the account copy was never saved.
+        const id = pending?.id
+        if (id === undefined) return
+        seenId = id
+        seenOverlays.set(storageKey, String(id))
     }
 </script>
 
