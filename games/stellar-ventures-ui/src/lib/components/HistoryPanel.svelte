@@ -243,8 +243,18 @@
         return `${count} ${word}${count === 1 ? '' : 's'}`
     }
 
+    // Deep Space Smuggling / Pirates name the Corporation being COPIED in corporationId; the one
+    // actually using the Power (and paying dividends) is the Corporation whose turn it is.
+    const CopyPowerActions = new Set<string>([
+        ActionType.DeepSpaceSmuggling,
+        ActionType.DeepSpacePirates
+    ])
+
     function entryCorporation(entry: Entry): CorporationId | undefined {
         const first = entry.actions[0] as unknown as Record<string, unknown>
+        if (CopyPowerActions.has(String(first['type']))) {
+            return entry.before?.corporation
+        }
         return (first['corporationId'] as CorporationId | undefined) ?? entry.before?.corporation
     }
 
@@ -336,9 +346,9 @@
             case ActionType.FinePrint:
                 return `used Fine Print to sit out the Boardroom Battle${forCorp}`
             case ActionType.DeepSpaceSmuggling:
-                return `used Deep Space Smuggling to pay dividends on ${corp ?? 'another Corporation'}'s CARGO`
+                return `used Deep Space Smuggling to copy ${corporationName(action['corporationId']) ?? 'another Corporation'}'s CARGO for dividends${forCorp}`
             case ActionType.DeepSpacePirates:
-                return `used Deep Space Pirates to pay dividends on ${corp ?? 'another Corporation'}'s Mining Capacity`
+                return `used Deep Space Pirates to copy ${corporationName(action['corporationId']) ?? 'another Corporation'}'s Mining Capacity for dividends${forCorp}`
             case ActionType.SpareParts:
                 return `used Spare Parts to save a Ship from Scrapping${forCorp}`
             case ActionType.AlienEngineering: {
