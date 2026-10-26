@@ -406,7 +406,10 @@ export function planExtraction(
             canBuyVictoryPoints: false
         }
     }
+    // Agreement D (buy 3 VP) only follows a gold delivery to its city; a silver sale delivers to no
+    // city, so it doesn't qualify (2026-10-26).
     plan.canBuyVictoryPoints =
+        plan.ore === OreKind.Gold &&
         holdsAgreement(state, playerId, plan.saleCityId, AgreementLetter.D) &&
         plan.net >= AgreementPointBuyCost
     return plan
