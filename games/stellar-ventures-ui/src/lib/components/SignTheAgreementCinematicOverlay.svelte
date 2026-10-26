@@ -222,7 +222,10 @@
             <div class="ring ring-3"></div>
 
 
-            <div class="relative z-[1] flex w-full max-w-3xl flex-col items-center gap-5 px-4 text-center">
+            <!-- Scrolls on its own when the content is taller than the screen (a phone with
+                 several payouts), while the starfield layers above stay fixed behind it. -->
+            <div class="scroller">
+            <div class="relative z-[1] mx-auto flex w-full max-w-3xl flex-col items-center gap-5 px-4 py-6 text-center">
                 <div class="emblem relative flex items-center justify-center">
                     <div class="tile">
                         <div class="tile-inner">
@@ -318,6 +321,7 @@
                     Continue
                 </button>
             </div>
+            </div>
         </div>
     {/key}
 {/if}
@@ -330,6 +334,19 @@
         inset: 0;
         z-index: 60;
         color: #e6e9f5;
+    }
+    .scroller {
+        position: absolute;
+        inset: 0;
+        z-index: 1;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+    }
+    .scroller > div {
+        margin-block: auto;
     }
     .backdrop {
         position: absolute;
