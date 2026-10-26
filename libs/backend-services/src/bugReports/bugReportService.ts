@@ -3,6 +3,8 @@ import {
     BUG_REPORT_SCREENSHOT_MAX_COUNT,
     BugReport,
     BugReportStatus,
+    findPlayerForUserId,
+    Role,
     type BugReportRequest,
     type BugReportScreenshot,
     type Game,
@@ -31,7 +33,9 @@ export class BugReportService {
         if (!game) {
             throw new GameNotFoundError({ id: report.gameId })
         }
-        const seat = this.gameService.findValidPlayerForUser({ user, game })
+        const seat = user.roles.includes(Role.Admin)
+            ? findPlayerForUserId(game, user.id)
+            : this.gameService.findValidPlayerForUser({ user, game })
         const screenshots = decodeScreenshots(report.screenshots ?? [])
 
         const bugReport: BugReport = {
@@ -45,7 +49,7 @@ export class BugReportService {
             titleName: this.gameService.getTitle(game.typeId)?.info.metadata.name ?? game.typeId,
             description: report.description.trim(),
             context: {
-                seat: seat.name,
+                seat: seat?.name,
                 gameStatus: game.status,
                 liveActionCount: game.state?.actionCount,
                 activePlayers: activePlayerNames(game),

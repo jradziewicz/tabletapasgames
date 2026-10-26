@@ -258,6 +258,21 @@ describe('BugReportService', () => {
         expect(store.reports.size).toBe(0)
     })
 
+    it('accepts a report from an admin who is not a player in the game', async () => {
+        const stored = await service.reportBug({ user: admin, report })
+
+        expect(store.reports.get(stored.id)).toEqual(stored)
+        expect(stored.reporterId).toBe('a-1')
+        expect(stored.context.seat).toBeUndefined()
+    })
+
+    it('records the seat of an admin who is also a player in the game', async () => {
+        const playingAdmin: User = { ...reporter, roles: [Role.User, Role.Admin] }
+        const stored = await service.reportBug({ user: playingAdmin, report })
+
+        expect(stored.context.seat).toBe('Alice')
+    })
+
     it('rejects a report for a game that does not exist', async () => {
         vi.mocked(gameService.getGame).mockResolvedValueOnce(undefined)
 
