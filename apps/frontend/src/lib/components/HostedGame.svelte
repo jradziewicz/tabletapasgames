@@ -14,6 +14,8 @@
 
     import { onMount, untrack } from 'svelte'
     import type { GameState, HydratedGameState } from '@tabletop/common'
+    import { getAppContext as getSiteContext } from '$lib/stores/appContext.svelte'
+    import PlayerVoteStrip from './PlayerVoteStrip.svelte'
 
     // One instance per game session: the route keys this component on the session so that
     // moving from one game to another (e.g. via "Next game") tears the old session down and
@@ -30,6 +32,7 @@
         gameService.currentGameSession = gameSession
 
         if (!gameSession.game.hotseat) {
+            getSiteContext().gameService.rememberGame(gameSession.game)
             setTimeout(() => {
                 notificationService.showPrompt()
             }, 2000)
@@ -53,8 +56,11 @@
             <ExplorationPanel />
         {:else if $gameHotseat}
             <HotseatPanel />
-        {:else if authorizationService.actAsAdmin}
-            <AdminPanel />
+        {:else}
+            {#if authorizationService.actAsAdmin}
+                <AdminPanel />
+            {/if}
+            <PlayerVoteStrip {gameSession} />
         {/if}
     </div>
     <GameUI {gameSession} />

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { PlayerName } from '@tabletop/frontend-components'
+    import { CalledGameEnding, PlayerName } from '@tabletop/frontend-components'
     import { GameResult } from '@tabletop/common'
     import { totalCredits } from '@tabletop/stellar-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -25,16 +25,21 @@
 </script>
 
 <div class="flex flex-col items-center gap-2 px-4 pt-3 pb-2 text-[#e6e9f5]">
-    <h1 class="text-center text-[22px] font-semibold tracking-[0.02em]">
-        {isDraw ? 'Game ends in a draw' : 'Stellar Ventures winner:'}
-    </h1>
+    {#if gameSession.gameCall}
+        <!-- A called or conceded game ends on the players' agreement, not on the final credits. -->
+        <CalledGameEnding class="text-[16px]" />
+    {:else}
+        <h1 class="text-center text-[22px] font-semibold tracking-[0.02em]">
+            {isDraw ? 'Game ends in a draw' : 'Stellar Ventures winner:'}
+        </h1>
 
-    {#if !isDraw && winningPlayerIds.length > 0}
-        <div class="flex flex-wrap justify-center gap-2 text-[18px] font-semibold">
-            {#each winningPlayerIds as playerId (playerId)}
-                <PlayerName {playerId} />
-            {/each}
-        </div>
+        {#if !isDraw && winningPlayerIds.length > 0}
+            <div class="flex flex-wrap justify-center gap-2 text-[18px] font-semibold">
+                {#each winningPlayerIds as playerId (playerId)}
+                    <PlayerName {playerId} />
+                {/each}
+            </div>
+        {/if}
     {/if}
 
     <div class="mt-2 w-full max-w-sm space-y-1 rounded-lg bg-black/20 p-3">

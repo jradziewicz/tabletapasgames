@@ -20,7 +20,8 @@ import type {
     Tournament,
     TournamentDetail,
     TournamentList,
-    TournamentSchedule
+    TournamentSchedule,
+    UndoVotePreview
 } from '@tabletop/common'
 import type { GameVersionProvider, GetGameOptions } from '$lib/network/tabletopApi.svelte.js'
 import type { Credentials } from '$lib/network/requestTypes.js'
@@ -244,6 +245,30 @@ export class DummyRemoteApiService implements RemoteApiService {
         perspective?: Visibility.Perspective
     }> {
         return this.fail('undoAction')
+    }
+
+    async previewUndoVote(_game: Game, _actionIndex: number): Promise<UndoVotePreview> {
+        return this.fail('previewUndoVote')
+    }
+
+    async openUndoVote(_game: Game, _actionIndex: number, _targetActionId: string): Promise<Game> {
+        return this.fail('openUndoVote')
+    }
+
+    async requestCall(_game: Game, _declaredWinnerId?: string): Promise<Game> {
+        return this.fail('requestCall')
+    }
+
+    async approveVote(_game: Game, _voteId: string): Promise<Game> {
+        return this.fail('approveVote')
+    }
+
+    async declineVote(_game: Game, _voteId: string): Promise<Game> {
+        return this.fail('declineVote')
+    }
+
+    async withdrawVote(_game: Game, _voteId: string): Promise<Game> {
+        return this.fail('withdrawVote')
     }
 
     async checkSync(

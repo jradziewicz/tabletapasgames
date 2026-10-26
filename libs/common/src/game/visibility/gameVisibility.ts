@@ -1,7 +1,8 @@
 import jsonpatch from 'fast-json-patch'
 import * as Value from 'typebox/value'
-import { ActionSource, type GameAction } from '../engine/gameAction.js'
+import { ActionSource, type GameAction, withoutActionPatches } from '../engine/gameAction.js'
 import { createPatch } from '../engine/statePatch.js'
+import { isCallGameAction } from '../engine/callGame.js'
 import type {
     ActionCascadeResult,
     ActionResult,
@@ -96,11 +97,9 @@ export function projectActionCascade<State extends GameState, ProjectedState ext
             options.perspective,
             context
         )
-        const action = options.visibility.actions.project(
-            transition.action,
-            options.perspective,
-            context
-        )
+        const action = isCallGameAction(transition.action)
+            ? withoutActionPatches(transition.action)
+            : options.visibility.actions.project(transition.action, options.perspective, context)
         action.forwardPatch = createPatch(previous, after)
         action.undoPatch = createPatch(after, previous)
         transitions.push({ action, after })

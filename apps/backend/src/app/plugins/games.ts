@@ -8,6 +8,7 @@ import ApplyAction from '../routes/titleSpecific/action.js'
 import UndoAction from '../routes/titleSpecific/undo.js'
 import ForkGame from '../routes/titleSpecific/fork.js'
 import Preferences from '../routes/titleSpecific/preferences.js'
+import PlayerVotes from '../routes/titleSpecific/vote.js'
 
 import { AppOptions } from '../app.js'
 import { GameVersionMismatchError } from '../lib/errors.js'
@@ -70,6 +71,7 @@ async function registerGame(
             await instance.register(UndoAction.bind(null, definition))
             await instance.register(ForkGame.bind(null, definition))
             await instance.register(Preferences.bind(null, definition))
+            await instance.register(PlayerVotes.bind(null, definition))
 
             // Register all the actions
             for (const actionType of Object.keys(definition.runtime.apiActions)) {

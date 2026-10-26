@@ -7,6 +7,7 @@ import type { GameEngine } from './gameEngine.js'
 import type { Game } from '../model/game.js'
 import type { ExplorationState, GameState, HydratedGameState } from '../model/gameState.js'
 import { isRedactedAction } from '../visibility/actionProjector.js'
+import { isCascadedSystemAction } from './actionHistory.js'
 
 export class ExplorationHistory<T extends GameState, U extends HydratedGameState<T>> {
     constructor(private readonly engine: GameEngine<T, U>) {}
@@ -154,7 +155,7 @@ export class ExplorationHistory<T extends GameState, U extends HydratedGameState
                 !!action.skipOptimisticExecution ||
                 !!action.revealsInfo ||
                 isRedactedAction(action)
-            if (action.source !== ActionSource.User) continue
+            if (isCascadedSystemAction(action)) continue
             if (unsafe) return groupEnd
             try {
                 let before = structuredClone(after)
