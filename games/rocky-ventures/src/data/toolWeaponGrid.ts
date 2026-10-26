@@ -9,14 +9,16 @@ export interface OreCapacity {
     silver: number
 }
 
+// Read off the printed tool labels under the grid: each column raises gold (yellow) or silver
+// (blue) by one in turn. Columns 6 and 7 were 4/4 and 5/4 until 2026-10-26.
 export const OreCapacityByToolLevel: Record<number, OreCapacity> = {
     1: { gold: 1, silver: 1 },
     2: { gold: 2, silver: 1 },
     3: { gold: 2, silver: 2 },
     4: { gold: 3, silver: 2 },
     5: { gold: 3, silver: 3 },
-    6: { gold: 4, silver: 4 },
-    7: { gold: 5, silver: 4 },
+    6: { gold: 4, silver: 3 },
+    7: { gold: 4, silver: 4 },
     8: { gold: 5, silver: 5 }
 }
 

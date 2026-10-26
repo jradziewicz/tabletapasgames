@@ -21,3 +21,20 @@ describe('red / blue unlocks', () => {
         expect(hasBlueUnlockAt({ weapon: 5, tool: 1 })).toBe(false)
     })
 })
+
+import { OreCapacityByToolLevel } from './toolWeaponGrid.js'
+
+describe('ore capacity by tool level', () => {
+    it('matches the printed tool labels under the grid', () => {
+        expect([1, 2, 3, 4, 5, 6, 7, 8].map((level) => OreCapacityByToolLevel[level])).toEqual([
+            { gold: 1, silver: 1 },
+            { gold: 2, silver: 1 },
+            { gold: 2, silver: 2 },
+            { gold: 3, silver: 2 },
+            { gold: 3, silver: 3 },
+            { gold: 4, silver: 3 },
+            { gold: 4, silver: 4 },
+            { gold: 5, silver: 5 }
+        ])
+    })
+})
