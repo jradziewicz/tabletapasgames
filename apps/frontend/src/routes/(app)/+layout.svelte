@@ -90,7 +90,8 @@
     let bugReportSession = $derived(
         sessionUser &&
             gameService.currentGameSession &&
-            findPlayerForUserId(gameService.currentGameSession.primaryGame, sessionUser.id)
+            (authorizationService.isAdmin ||
+                findPlayerForUserId(gameService.currentGameSession.primaryGame, sessionUser.id))
             ? gameService.currentGameSession
             : undefined
     )
