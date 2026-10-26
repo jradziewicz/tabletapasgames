@@ -3,6 +3,7 @@ import {
     calculateActionChecksum,
     createPatch,
     ExplorationHistory,
+    isSameSimultaneousGroup,
     type GameAction,
     type GameState,
     type HydratedGameState,
@@ -25,10 +26,9 @@ export class GameUndo<T extends GameState, U extends HydratedGameState<T> & T> {
             assertExists(last, 'Undo target is not in Action History')
             action = last
             if (
-                action.playerId &&
+                action.playerId !== undefined &&
                 action.playerId !== target.playerId &&
-                target.simultaneousGroupId !== undefined &&
-                action.simultaneousGroupId === target.simultaneousGroupId
+                isSameSimultaneousGroup(action, target)
             ) {
                 redoActions.unshift(action)
             }

@@ -6,7 +6,7 @@ import {
 import { getGameVisibility } from '../visibility/gameVisibility.js'
 import { deriveGameSeeds, generateMasterSeed, normalizeMasterSeed } from '../../util/gameSeeds.js'
 import jsonpatch from 'fast-json-patch'
-import { GameAction, type HydratedAction, Patch } from './gameAction.js'
+import { GameAction, type HydratedAction, Patch, withoutActionPatches } from './gameAction.js'
 import { createPatch } from './statePatch.js'
 import { Game, GameStatus } from '../model/game.js'
 import {
@@ -23,6 +23,7 @@ import { generateSeed } from '../../util/prng.js'
 import { assert, assertExists } from '../../util/assertions.js'
 import type { Perspective } from '../visibility/valueProjector.js'
 import { isRedactedAction, UnavailableProjectedActionError } from '../visibility/actionProjector.js'
+import { applyCallGame, CALL_GAME_ACTION_TYPE } from './callGame.js'
 
 export type ActionResult<T extends GameState = GameState> = {
     processedActions: GameAction[]
@@ -168,8 +169,9 @@ export class GameEngine<
     ): string[] {
         const perspective = options.perspective
         if (
-            perspective !== undefined &&
-            (perspective.kind !== 'player' || perspective.playerId !== playerId)
+            state.result !== undefined ||
+            (perspective !== undefined &&
+                (perspective.kind !== 'player' || perspective.playerId !== playerId))
         ) {
             return []
         }
@@ -259,7 +261,7 @@ export class GameEngine<
         game: Game
     }): ActionResult<T> {
         const execution = this.executeThroughRuntime({
-            action: this.cloneWithoutActionPatches(action),
+            action: withoutActionPatches(action),
             state,
             game,
             processGeneratedActions: false
@@ -308,6 +310,9 @@ export class GameEngine<
         }
 
         if (canonical) this.validateCanonicalState(state)
+        assert(state.result === undefined, 'A Game State with a result accepts no further Actions')
+        if (action.type === CALL_GAME_ACTION_TYPE)
+            return this.executeCallGame(action, state, canonical)
 
         const processedActions: GameAction[] = []
         const transitions: CanonicalActionTransition<T>[] = []
@@ -340,6 +345,10 @@ export class GameEngine<
         ) {
             const currentAction = machineContext.nextPendingAction()
             assertExists(currentAction, 'Action to process was unexpectedly null')
+            assert(
+                hydratedState.result === undefined,
+                'A Game State with a result accepts no further Actions'
+            )
 
             assert(
                 this.isPlayerAllowed(currentAction, hydratedState),
@@ -401,6 +410,28 @@ export class GameEngine<
         }
     }
 
+    private executeCallGame(action: GameAction, state: T, canonical: boolean): RuntimeExecution<T> {
+        assert(
+            action.index === undefined || action.index === state.actionCount,
+            `Action index is not valid, expected ${state.actionCount}, got ${action.index}`
+        )
+        const recorded = structuredClone(action)
+        recorded.index = state.actionCount
+        recorded.createdAt ??= new Date()
+        const updatedState = applyCallGame(state, recorded)
+        updatedState.actionCount = state.actionCount + 1
+        updatedState.actionChecksum = calculateActionChecksum(state.actionChecksum, [recorded])
+        if (canonical) this.validateCanonicalState(updatedState)
+        recorded.undoPatch = createPatch(updatedState, state)
+        return {
+            processedActions: [recorded],
+            updatedState,
+            indexOffset: 0,
+            before: state,
+            transitions: [{ action: recorded, after: updatedState }]
+        }
+    }
+
     private guardStateForPerspective(
         state: U,
         perspective: Perspective | undefined,
@@ -429,16 +460,9 @@ export class GameEngine<
     }
 
     private sanitizeUnprocessedAction(action: GameAction): GameAction {
-        const sanitizedAction = this.cloneWithoutActionPatches(action)
+        const sanitizedAction = withoutActionPatches(action)
         Reflect.deleteProperty(sanitizedAction, 'metadata')
         return sanitizedAction
-    }
-
-    private cloneWithoutActionPatches(action: GameAction): GameAction {
-        const actionWithoutPatches = structuredClone(action)
-        delete actionWithoutPatches.undoPatch
-        delete actionWithoutPatches.forwardPatch
-        return actionWithoutPatches
     }
 
     private applyStatePatch(state: T, patch: Patch): T {

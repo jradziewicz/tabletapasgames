@@ -5,6 +5,7 @@
         GameStatus,
         PlayerStatus,
         GameResult,
+        GameCallKind,
         GameOutcome,
         gameOutcome,
         ownerMayDeleteGame
@@ -279,9 +280,20 @@
             case GameResult.Draw:
                 return 'Tied'
             case GameResult.Abandoned:
-                return 'Abandoned'
+                return game.call ? 'No winner' : 'Abandoned'
             default:
                 return 'Winner'
+        }
+    }
+
+    function finishedLabel() {
+        switch (game.call?.kind) {
+            case GameCallKind.Called:
+                return 'Called'
+            case GameCallKind.Conceded:
+                return 'Conceded'
+            default:
+                return 'Finished'
         }
     }
 
@@ -466,7 +478,7 @@
                                     class="text-gray-600"
                                     style="font-size:.7rem; line-height:.8rem"
                                 >
-                                    Finished
+                                    {finishedLabel()}
                                 </div>
                                 {#if game.finishedAt}
                                     <div class="text-xs text-gray-400">

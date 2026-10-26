@@ -1,5 +1,5 @@
 import {
-    ActionSource,
+    isCascadedSystemAction,
     assertExists,
     createPatch,
     findLastIndex,
@@ -232,7 +232,7 @@ export class GameReconciliation<T extends GameState, U extends HydratedGameState
                 continue
             }
             if (handling === ServerActionHandling.Execute) {
-                if (action.source !== ActionSource.User) {
+                if (isCascadedSystemAction(action)) {
                     continue
                 }
                 const result = this.context.engine.executeAction({

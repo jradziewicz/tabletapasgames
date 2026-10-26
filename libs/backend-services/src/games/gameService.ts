@@ -12,6 +12,21 @@ import {
     createGameFork,
     GameForkError,
     findLast,
+    isSameSimultaneousGroup,
+    type CallVote,
+    createCallGameAction,
+    isTwoPlayerGame,
+    PlayerVote,
+    PlayerVoteKind,
+    PlayerVoteOutcome,
+    playerVoteOutcome,
+    PlayerVoteRequestedNotification,
+    UndoVote,
+    UndoVotePreview,
+    playerVoteIneligibility,
+    callRequestIneligibility,
+    playerUndoRestriction,
+    PlayerUndoRestriction,
     findPlayerForUserId,
     ownerMayDeleteGame,
     gameUserIds,
@@ -20,6 +35,7 @@ import {
     GameAction,
     GameDefinition,
     GameEngine,
+    type ActionCascadeResult,
     GameNotificationAction,
     type GameNotificationData,
     GameStartedNotification,
@@ -56,6 +72,7 @@ import {
 } from '../notifications/notificationService.js'
 import {
     DisallowedUndoError,
+    DisallowedPlayerVoteError,
     DuplicatePlayerError,
     GameAlreadyStartedError,
     GameNotFoundError,
@@ -81,7 +98,7 @@ import {
 
 import { GameInvitationTokenData } from '../tokens/tokenData.js'
 import { nanoid } from 'nanoid'
-import { GameStore } from '../persistence/stores/gameStore.js'
+import { GameStore, type GameData, type UndoActionWindow } from '../persistence/stores/gameStore.js'
 import { UpdateValidationResult } from '../persistence/stores/validator.js'
 import { Retryable } from 'typescript-retry-decorator'
 import { RedisCacheService } from '../cache/cacheService.js'
@@ -127,6 +144,14 @@ import {
     type FinalScoresBackfillTask
 } from './finalScoresBackfill.js'
 import { enqueueGameAutoStart, type GameAutoStartTask } from './gameAutoStart.js'
+
+type UndoPlan = {
+    state: GameState
+    actionToUndo: GameAction
+    startIndex: number
+    retainedActions: GameAction[]
+    actions: GameAction[]
+}
 
 export class GameService {
     constructor(
@@ -1221,6 +1246,9 @@ export class GameService {
                     if (lastPlayerAction) {
                         gameUpdates.lastActionPlayerId = lastPlayerAction.playerId
                     }
+                    if (newState.result && existingGame.vote?.kind === PlayerVoteKind.Call) {
+                        gameUpdates.vote = undefined
+                    }
                     if (
                         !existingState.result &&
                         newState.result &&
@@ -1244,6 +1272,59 @@ export class GameService {
             }
         }
 
+        const representation = await this.announceActionResults({
+            definition,
+            user,
+            updatedGame,
+            actionResult,
+            storedActions,
+            relatedActions,
+            priorState
+        })
+
+        const newlyActivePlayerIds = updatedState.activePlayerIds.filter(
+            (playerId) => !priorState.activePlayerIds.includes(playerId)
+        )
+        await this.scheduleTurnNotifications(
+            representation.game,
+            newlyActivePlayerIds,
+            FIRST_TURN_REMINDER_INDEX
+        )
+        const actingPlayerKeepsTurn =
+            priorState.activePlayerIds.includes(player.id) &&
+            updatedState.activePlayerIds.includes(player.id)
+        if (actingPlayerKeepsTurn) {
+            await this.scheduleTurnNotifications(
+                representation.game,
+                [player.id],
+                DEFERRED_TURN_REMINDER_INDEX
+            )
+        }
+
+        if (!game.result && representation.game.result) {
+            await this.sendGameEndEmail(representation.game)
+        }
+
+        return representation
+    }
+
+    private async announceActionResults({
+        definition,
+        user,
+        updatedGame,
+        actionResult,
+        storedActions,
+        relatedActions,
+        priorState
+    }: {
+        definition: GameDefinition
+        user: User
+        updatedGame: Game
+        actionResult: ActionCascadeResult
+        storedActions: GameAction[]
+        relatedActions: GameAction[]
+        priorState: GameState
+    }): Promise<ActionResultsRepresentation> {
         const representation = measureSync('projection.response.action', () =>
             createActionResultsRepresentation({
                 game: updatedGame,
@@ -1270,29 +1351,6 @@ export class GameService {
         )
         await this.notifyGamePlayers(GameNotificationAction.Update, { game: representation.game })
 
-        const newlyActivePlayerIds = updatedState.activePlayerIds.filter(
-            (playerId) => !priorState.activePlayerIds.includes(playerId)
-        )
-        await this.scheduleTurnNotifications(
-            representation.game,
-            newlyActivePlayerIds,
-            FIRST_TURN_REMINDER_INDEX
-        )
-        const actingPlayerKeepsTurn =
-            priorState.activePlayerIds.includes(player.id) &&
-            updatedState.activePlayerIds.includes(player.id)
-        if (actingPlayerKeepsTurn) {
-            await this.scheduleTurnNotifications(
-                representation.game,
-                [player.id],
-                DEFERRED_TURN_REMINDER_INDEX
-            )
-        }
-
-        if (!game.result && representation.game.result) {
-            await this.sendGameEndEmail(representation.game)
-        }
-
         // Save a permanent copy of every game the moment it finishes (see
         // FirestoreGameStore.archiveGame). Best-effort: a failure is logged, never surfaced to
         // the player whose move ended the game, and deleting the game later archives it again.
@@ -1307,6 +1365,10 @@ export class GameService {
         return representation
     }
 
+    private assertGameTitle(game: Game, definition: GameDefinition): void {
+        if (game.typeId !== definition.info.id) throw new GameNotFoundError({ id: game.id })
+    }
+
     @Timed('game.undoAction')
     async undoAction({
         user,
@@ -1319,42 +1381,547 @@ export class GameService {
         gameId: string
         actionId: string
     }): Promise<UndoResultsRepresentation> {
-        const data = await this.gameStore.readGameData(gameId, async (reader) => ({
-            game: reader.game,
-            undoWindow: reader.game.state ? await reader.undoWindow(actionId) : undefined
-        }))
-        const game = data?.game
-        if (!game) {
-            throw new GameNotFoundError({ id: gameId })
-        }
+        const { game, undoWindow } = await this.readUndoWindow(gameId, { actionId })
         assertTournamentUndoAllowed(game)
-        let userPlayer: Player | undefined
+        const userPlayer = user.roles.includes(Role.Admin)
+            ? undefined
+            : this.findValidPlayerForUser({ user, game })
 
-        if (!user.roles.includes(Role.Admin)) {
-            userPlayer = this.findValidPlayerForUser({ user, game })
-        }
-
-        const storedGameState = game.state
-        if (!storedGameState) {
-            throw new DisallowedUndoError({ gameId, actionId, reason: `Game state not found` })
-        }
-        let gameState = storedGameState
-
-        const priorActionCount = gameState.actionCount
-        const priorChecksum = gameState.actionChecksum
-        const undoWindow = data?.undoWindow
-        if (!undoWindow || undoWindow.targetAction.index === undefined) {
-            throw new DisallowedUndoError({ gameId, actionId, reason: `Action not found` })
-        }
-        const actionToUndo = undoWindow.targetAction
-
-        if (!user.roles.includes(Role.Admin) && actionToUndo.playerId !== userPlayer?.id) {
+        if (userPlayer && undoWindow?.targetAction.playerId !== userPlayer.id) {
             throw new DisallowedUndoError({
                 gameId,
                 actionId,
                 reason: `Cannot undo another player's action`
             })
         }
+
+        const plan = this.planUndo({ definition, game, undoWindow, actionId })
+        if (userPlayer) {
+            const restriction = playerUndoRestriction(
+                plan.actions,
+                plan.actionToUndo,
+                userPlayer.id
+            )
+            if (restriction) {
+                throw new DisallowedUndoError({
+                    gameId,
+                    actionId,
+                    reason: this.undoRestrictionReason(restriction)
+                })
+            }
+        }
+
+        return this.reverseActions({ definition, game, user, plan })
+    }
+
+    @Timed('game.previewUndoVote')
+    async previewUndoVote({
+        user,
+        definition,
+        gameId,
+        actionIndex
+    }: {
+        user: User
+        definition: GameDefinition
+        gameId: string
+        actionIndex: number
+    }): Promise<UndoVotePreview> {
+        const { game, plan } = await this.readUndoVotePlan({ definition, gameId, actionIndex })
+        return this.undoVotePreview(plan, this.findVotingPlayer({ user, game }))
+    }
+
+    @Timed('game.openUndoVote')
+    async openUndoVote({
+        user,
+        definition,
+        gameId,
+        actionIndex,
+        targetActionId
+    }: {
+        user: User
+        definition: GameDefinition
+        gameId: string
+        actionIndex: number
+        targetActionId: string
+    }): Promise<Game> {
+        const { game, plan } = await this.readUndoVotePlan({ definition, gameId, actionIndex })
+        const player = this.findVotingPlayer({ user, game })
+        if (plan.actionToUndo.id !== targetActionId) {
+            throw new DisallowedPlayerVoteError({ gameId, reason: 'the history has changed' })
+        }
+        if (this.undoVotePreview(plan, player).ownUndoReaches) {
+            throw new DisallowedPlayerVoteError({ gameId, reason: 'you can undo this yourself' })
+        }
+
+        return this.openVote(game, player, {
+            id: nanoid(),
+            kind: PlayerVoteKind.Undo,
+            initiatorPlayerId: player.id,
+            targetActionId,
+            targetActionIndex: actionIndex,
+            approvingPlayerIds: [player.id]
+        })
+    }
+
+    @Timed('game.requestCall')
+    async requestCall({
+        user,
+        definition,
+        gameId,
+        declaredWinnerId,
+        publishedUiSupportsCalls
+    }: {
+        user: User
+        definition: GameDefinition
+        gameId: string
+        declaredWinnerId?: string
+        publishedUiSupportsCalls: boolean
+    }): Promise<Game> {
+        if (!publishedUiSupportsCalls) {
+            throw new DisallowedPlayerVoteError({
+                gameId,
+                reason: 'this game cannot be called until its next update'
+            })
+        }
+        const game = await this.requireGame(gameId)
+        this.assertGameTitle(game, definition)
+        const player = this.findVotingPlayer({ user, game })
+        const ineligibility = callRequestIneligibility(game)
+        if (ineligibility) {
+            throw new DisallowedPlayerVoteError({ gameId, reason: ineligibility })
+        }
+        this.validateDeclaredWinner(game, player, declaredWinnerId)
+        const vote: CallVote = {
+            id: nanoid(),
+            kind: PlayerVoteKind.Call,
+            initiatorPlayerId: player.id,
+            approvingPlayerIds: [player.id],
+            decliningPlayerIds: []
+        }
+        if (declaredWinnerId !== undefined) vote.declaredWinnerId = declaredWinnerId
+        if (playerVoteOutcome(vote, game.players) === PlayerVoteOutcome.Passed) {
+            return this.passCall({ user, definition, game, vote })
+        }
+        return this.openVote(game, player, vote)
+    }
+
+    private validateDeclaredWinner(game: Game, player: Player, declaredWinnerId?: string) {
+        const disallowed = (reason: string) =>
+            new DisallowedPlayerVoteError({ gameId: game.id, reason })
+        if (
+            declaredWinnerId !== undefined &&
+            !game.players.some((other) => other.id === declaredWinnerId)
+        ) {
+            throw disallowed('the winner is not a player in this game')
+        }
+        if (isTwoPlayerGame(game.players)) {
+            const opponent = game.players.find((other) => other.id !== player.id)
+            if (declaredWinnerId === undefined || declaredWinnerId !== opponent?.id) {
+                throw disallowed('conceding makes the other player the winner')
+            }
+        }
+    }
+
+    private async openVote(game: Game, player: Player, vote: PlayerVote): Promise<Game> {
+        const [updatedGame] = await this.gameStore.updateGame({
+            game,
+            fields: { vote },
+            validator: (existingGame) => {
+                const ineligibility =
+                    vote.kind === PlayerVoteKind.Call
+                        ? callRequestIneligibility(existingGame)
+                        : playerVoteIneligibility(existingGame)
+                if (ineligibility) {
+                    throw new DisallowedPlayerVoteError({ gameId: game.id, reason: ineligibility })
+                }
+                if (existingGame.vote) {
+                    throw new DisallowedPlayerVoteError({
+                        gameId: game.id,
+                        reason: 'a vote is open'
+                    })
+                }
+                return UpdateValidationResult.Proceed
+            }
+        })
+        await this.notifyGamePlayers(GameNotificationAction.Update, { game: updatedGame })
+        await this.notifyPlayerVoteRequested(updatedGame, vote, player)
+        return updatedGame
+    }
+
+    @Timed('game.approveVote')
+    async approveVote({
+        user,
+        definition,
+        gameId,
+        voteId
+    }: {
+        user: User
+        definition: GameDefinition
+        gameId: string
+        voteId: string
+    }): Promise<Game> {
+        const game = await this.requireGame(gameId)
+        const player = this.findVotingPlayer({ user, game })
+        const [updatedGame, updatedFields] = await this.gameStore.updateGame({
+            game,
+            fields: {},
+            validator: (existingGame, fields) => {
+                const vote = existingGame.vote
+                if (vote?.id !== voteId) {
+                    throw new DisallowedPlayerVoteError({ gameId, reason: 'the vote is closed' })
+                }
+                if (vote.approvingPlayerIds.includes(player.id)) {
+                    return UpdateValidationResult.Cancel
+                }
+                if (
+                    vote.kind === PlayerVoteKind.Call &&
+                    vote.decliningPlayerIds.includes(player.id)
+                ) {
+                    throw new DisallowedPlayerVoteError({ gameId, reason: 'you declined' })
+                }
+                fields.vote = {
+                    ...vote,
+                    approvingPlayerIds: [...vote.approvingPlayerIds, player.id]
+                }
+                return UpdateValidationResult.Proceed
+            }
+        })
+        if (updatedFields.length > 0) {
+            await this.notifyGamePlayers(GameNotificationAction.Update, { game: updatedGame })
+        }
+
+        const vote = updatedGame.vote
+        if (
+            vote?.id !== voteId ||
+            playerVoteOutcome(vote, updatedGame.players) !== PlayerVoteOutcome.Passed
+        ) {
+            return updatedGame
+        }
+        return vote.kind === PlayerVoteKind.Undo
+            ? this.resolveUndoVote({ user, definition, gameId, vote })
+            : this.passCall({ user, definition, game: updatedGame, vote })
+    }
+
+    @Timed('game.declineVote')
+    async declineVote({
+        user,
+        gameId,
+        voteId
+    }: {
+        user: User
+        gameId: string
+        voteId: string
+    }): Promise<Game> {
+        const game = await this.requireGame(gameId)
+        const player = this.findVotingPlayer({ user, game })
+        if (game.vote?.kind !== PlayerVoteKind.Call) {
+            return this.closeVote(game, voteId)
+        }
+        const [updatedGame, updatedFields] = await this.gameStore.updateGame({
+            game,
+            fields: {},
+            validator: (existingGame, fields) => {
+                const vote = existingGame.vote
+                if (vote?.id !== voteId || vote.kind !== PlayerVoteKind.Call) {
+                    throw new DisallowedPlayerVoteError({ gameId, reason: 'the vote is closed' })
+                }
+                if (
+                    vote.approvingPlayerIds.includes(player.id) ||
+                    vote.decliningPlayerIds.includes(player.id)
+                ) {
+                    return UpdateValidationResult.Cancel
+                }
+                const declined = {
+                    ...vote,
+                    decliningPlayerIds: [...vote.decliningPlayerIds, player.id]
+                }
+                fields.vote =
+                    playerVoteOutcome(declined, existingGame.players) === PlayerVoteOutcome.Failed
+                        ? undefined
+                        : declined
+                return UpdateValidationResult.Proceed
+            }
+        })
+        if (updatedFields.length > 0) {
+            await this.notifyGamePlayers(GameNotificationAction.Update, { game: updatedGame })
+        }
+        return updatedGame
+    }
+
+    @Timed('game.withdrawVote')
+    async withdrawVote({
+        user,
+        gameId,
+        voteId
+    }: {
+        user: User
+        gameId: string
+        voteId: string
+    }): Promise<Game> {
+        const game = await this.requireGame(gameId)
+        const player = this.findVotingPlayer({ user, game })
+        if (game.vote?.id === voteId && game.vote.initiatorPlayerId !== player.id) {
+            throw new DisallowedPlayerVoteError({
+                gameId,
+                reason: 'only the player who asked can withdraw it'
+            })
+        }
+        return this.closeVote(game, voteId)
+    }
+
+    @Retryable({
+        maxAttempts: 3,
+        value: [GameUpdateCollisionError]
+    })
+    private async resolveUndoVote({
+        user,
+        definition,
+        gameId,
+        vote
+    }: {
+        user: User
+        definition: GameDefinition
+        gameId: string
+        vote: UndoVote
+    }): Promise<Game> {
+        const { game, undoWindow } = await this.readUndoWindow(gameId, {
+            actionId: vote.targetActionId
+        })
+        if (game.vote?.id !== vote.id) {
+            return game
+        }
+        let plan: UndoPlan
+        try {
+            plan = this.planUndo({ definition, game, undoWindow, actionId: vote.targetActionId })
+        } catch (error) {
+            if (error instanceof DisallowedUndoError) {
+                return this.closeVote(game, vote.id)
+            }
+            throw error
+        }
+        const representation = await this.reverseActions({
+            definition,
+            game,
+            user,
+            plan,
+            resolvingVoteId: vote.id
+        })
+        return representation.game
+    }
+
+    private async passCall({
+        user,
+        definition,
+        game,
+        vote
+    }: {
+        user: User
+        definition: GameDefinition
+        game: Game
+        vote: CallVote
+    }): Promise<Game> {
+        try {
+            return await this.endGameByCall({ user, definition, gameId: game.id, vote })
+        } catch (error) {
+            // Nobody is left to vote on a passed call, so a call that cannot be appended closes.
+            await this.closeVote(game, vote.id)
+            throw error
+        }
+    }
+
+    @Retryable({
+        maxAttempts: 3,
+        value: [GameUpdateCollisionError]
+    })
+    private async endGameByCall({
+        user,
+        definition,
+        gameId,
+        vote
+    }: {
+        user: User
+        definition: GameDefinition
+        gameId: string
+        vote: CallVote
+    }): Promise<Game> {
+        const game = await this.getGame({ gameId, withState: true })
+        const state = game?.state
+        if (!game || !state) {
+            throw new GameNotFoundError({ id: gameId })
+        }
+        const gameOver = new DisallowedPlayerVoteError({ gameId, reason: 'the game is over' })
+        if (game.status !== GameStatus.Started || state.result !== undefined) {
+            throw gameOver
+        }
+        const action = createCallGameAction({
+            gameId,
+            index: state.actionCount,
+            ballot: vote,
+            players: game.players
+        })
+        const actionResult = measureSync('engine.execute', () =>
+            new GameEngine(definition.runtime).executeCanonicalAction({ action, state, game })
+        )
+        const { storedActions, updatedGame, relatedActions, priorState } =
+            await this.gameStore.addActionsToGame({
+                game,
+                actions: actionResult.processedActions,
+                state: actionResult.updatedState,
+                validator: async (existingGame, existingState, newState, _actions, gameUpdates) => {
+                    if (existingGame.status !== GameStatus.Started) {
+                        throw gameOver
+                    }
+                    if (
+                        !isTwoPlayerGame(existingGame.players) &&
+                        existingGame.vote?.id !== vote.id
+                    ) {
+                        throw new DisallowedPlayerVoteError({
+                            gameId,
+                            reason: 'the vote is closed'
+                        })
+                    }
+                    if (
+                        existingState.actionCount !== state.actionCount ||
+                        existingState.actionChecksum !== state.actionChecksum
+                    ) {
+                        throw new GameUpdateCollisionError({ id: gameId })
+                    }
+                    gameUpdates.activePlayerIds = newState.activePlayerIds
+                    gameUpdates.vote = undefined
+                    gameUpdates.call = action.call
+                    return UpdateValidationResult.Proceed
+                }
+            })
+
+        const representation = await this.announceActionResults({
+            definition,
+            user,
+            updatedGame,
+            actionResult,
+            storedActions,
+            relatedActions,
+            priorState
+        })
+        await this.sendGameEndEmail(representation.game)
+        return representation.game
+    }
+
+    private async closeVote(game: Game, voteId: string): Promise<Game> {
+        const [updatedGame, updatedFields] = await this.gameStore.updateGame({
+            game,
+            fields: { vote: undefined },
+            validator: (existingGame) =>
+                existingGame.vote?.id === voteId
+                    ? UpdateValidationResult.Proceed
+                    : UpdateValidationResult.Cancel
+        })
+        if (updatedFields.length > 0) {
+            await this.notifyGamePlayers(GameNotificationAction.Update, { game: updatedGame })
+        }
+        return updatedGame
+    }
+
+    private async requireGame(gameId: string): Promise<Game> {
+        const game = await this.gameStore.findGameById(gameId, false)
+        if (!game) {
+            throw new GameNotFoundError({ id: gameId })
+        }
+        return game
+    }
+
+    private findVotingPlayer({ user, game }: { user: User; game: Game }): Player {
+        const reason = playerVoteIneligibility(game)
+        if (reason) {
+            throw new DisallowedPlayerVoteError({ gameId: game.id, reason })
+        }
+        return this.findValidPlayerForUser({ user, game })
+    }
+
+    private async readUndoVotePlan({
+        definition,
+        gameId,
+        actionIndex
+    }: {
+        definition: GameDefinition
+        gameId: string
+        actionIndex: number
+    }): Promise<{ game: Game; plan: UndoPlan }> {
+        const { game, undoWindow } = await this.readUndoWindow(gameId, { actionIndex })
+        if (!undoWindow) {
+            throw new DisallowedPlayerVoteError({
+                gameId,
+                reason: `there is no action at ${actionIndex}`
+            })
+        }
+        const actionId = undoWindow.targetAction.id
+        return { game, plan: this.planUndo({ definition, game, undoWindow, actionId }) }
+    }
+
+    private undoVotePreview(plan: UndoPlan, player: Player): UndoVotePreview {
+        const { actionToUndo, actions } = plan
+        assertExists(actionToUndo.index, 'Undo target has no index')
+        const userActions = actions.filter((action) => action.source === ActionSource.User)
+        return {
+            targetActionId: actionToUndo.id,
+            targetActionIndex: actionToUndo.index,
+            affectedPlayerIds: [...new Set(userActions.flatMap((action) => action.playerId ?? []))],
+            ownUndoReaches:
+                actionToUndo.playerId === player.id &&
+                playerUndoRestriction(actions, actionToUndo, player.id) === undefined
+        }
+    }
+
+    private undoRestrictionReason(restriction: PlayerUndoRestriction): string {
+        switch (restriction) {
+            case PlayerUndoRestriction.CalledGame:
+                return `Cannot undo a game that was called`
+            case PlayerUndoRestriction.RevealsInformation:
+                return `Cannot undo action that reveals information`
+            case PlayerUndoRestriction.OtherPlayersActions:
+                return `Cannot undo another player's actions`
+        }
+    }
+
+    private async readUndoWindow(
+        gameId: string,
+        target: { actionId: string } | { actionIndex: number }
+    ): Promise<{ game: Game; undoWindow: UndoActionWindow | undefined }> {
+        const data = await this.gameStore.readGameData(gameId, async (reader) => {
+            if (!reader.game.state) return { game: reader.game, undoWindow: undefined }
+            const actionId =
+                'actionId' in target
+                    ? target.actionId
+                    : (await reader.actionRange(target.actionIndex, target.actionIndex + 1))[0]?.id
+            return {
+                game: reader.game,
+                undoWindow: actionId ? await reader.undoWindow(actionId) : undefined
+            }
+        })
+        if (!data) {
+            throw new GameNotFoundError({ id: gameId })
+        }
+        return data
+    }
+
+    private planUndo({
+        definition,
+        game,
+        undoWindow,
+        actionId
+    }: {
+        definition: GameDefinition
+        game: Game
+        undoWindow: UndoActionWindow | undefined
+        actionId: string
+    }): UndoPlan {
+        const gameId = game.id
+        if (!game.state) {
+            throw new DisallowedUndoError({ gameId, actionId, reason: `Game state not found` })
+        }
+        if (!undoWindow || undoWindow.targetAction.index === undefined) {
+            throw new DisallowedUndoError({ gameId, actionId, reason: `Action not found` })
+        }
+        const actionToUndo = undoWindow.targetAction
 
         if (actionToUndo.source !== ActionSource.User) {
             throw new DisallowedUndoError({
@@ -1376,7 +1943,7 @@ export class GameService {
             const history = Visibility.projectActionHistory({
                 game: game,
                 startIndex: actionToUndo.index,
-                currentState: gameState,
+                currentState: game.state,
                 actions,
                 visibility,
                 perspective: { kind: 'spectator' }
@@ -1390,35 +1957,36 @@ export class GameService {
             }
         }
 
-        const redoActions = []
-        if (!user.roles.includes(Role.Admin)) {
-            if (actions.some((action) => action.revealsInfo)) {
-                throw new DisallowedUndoError({
-                    gameId,
-                    actionId,
-                    reason: `Cannot undo action that reveals information`
-                })
-            }
-
-            if (
-                actions.some(
-                    (action) =>
-                        action.source === ActionSource.User &&
-                        action.playerId &&
-                        action.playerId !== userPlayer?.id &&
-                        !this.isSameSimultaneousGroup(action, actionToUndo)
-                )
-            ) {
-                throw new DisallowedUndoError({
-                    gameId,
-                    actionId,
-                    reason: `Cannot undo another player's actions`
-                })
-            }
+        return {
+            state: game.state,
+            actionToUndo,
+            startIndex: undoWindow.startIndex,
+            retainedActions,
+            actions
         }
+    }
 
+    private async reverseActions({
+        definition,
+        game,
+        user,
+        plan,
+        resolvingVoteId
+    }: {
+        definition: GameDefinition
+        game: Game
+        user: User
+        plan: UndoPlan
+        resolvingVoteId?: string
+    }): Promise<UndoResultsRepresentation> {
+        const { actionToUndo, actions } = plan
+        let gameState = plan.state
+        const priorActionCount = gameState.actionCount
+        const priorChecksum = gameState.actionChecksum
+
+        const redoActions = []
         for (const action of actions.slice(1)) {
-            if (this.isSameSimultaneousGroup(action, actionToUndo)) {
+            if (isSameSimultaneousGroup(action, actionToUndo)) {
                 const redoAction = structuredClone(action)
                 // These fields will be re-assigned by the game engine
                 redoAction.index = undefined
@@ -1449,8 +2017,52 @@ export class GameService {
             gameState = updatedState
         }
 
-        // store the updated state
-        const updatedState = gameState
+        return this.persistReversal({
+            definition,
+            gameId: game.id,
+            user,
+            actionToUndo,
+            startIndex: plan.startIndex,
+            retainedActions: plan.retainedActions,
+            actions,
+            redoneActions,
+            updatedState: gameState,
+            priorActionCount,
+            priorChecksum,
+            resolvingVoteId
+        })
+    }
+
+    private async persistReversal({
+        definition,
+        gameId,
+        user,
+        actionToUndo,
+        startIndex,
+        retainedActions,
+        actions,
+        redoneActions,
+        updatedState,
+        priorActionCount,
+        priorChecksum,
+        resolvingVoteId
+    }: {
+        definition: GameDefinition
+        gameId: string
+        user: User
+        actionToUndo: GameAction
+        startIndex: number
+        retainedActions: GameAction[]
+        actions: GameAction[]
+        redoneActions: GameAction[]
+        updatedState: GameState
+        priorActionCount: number
+        priorChecksum: number
+        resolvingVoteId?: string
+    }): Promise<UndoResultsRepresentation> {
+        const undoneFromIndex = actionToUndo.index
+        assertExists(undoneFromIndex, 'Undo target has no index')
+        const gameEngine = new GameEngine(definition.runtime)
         measureSync('engine.validate', () => gameEngine.validateCanonicalState(updatedState))
 
         const {
@@ -1500,12 +2112,23 @@ export class GameService {
                 }
 
                 gameUpdates.activePlayerIds = newState.activePlayerIds
+                if (resolvingVoteId !== undefined && existingGame.vote?.id !== resolvingVoteId) {
+                    throw new DisallowedPlayerVoteError({ gameId, reason: 'the vote is closed' })
+                }
+                if (
+                    existingGame.vote &&
+                    (existingGame.vote.id === resolvingVoteId ||
+                        (existingGame.vote.kind === PlayerVoteKind.Undo &&
+                            existingGame.vote.targetActionIndex >= undoneFromIndex))
+                ) {
+                    gameUpdates.vote = undefined
+                }
                 return UpdateValidationResult.Proceed
             }
         })
         const replayActions = [...retainedActions, ...processedRedoneActions]
         const actionReplay = {
-            startIndex: undoWindow.startIndex,
+            startIndex,
             actions: replayActions.map((action) => structuredClone(action))
         }
         const representation = measureSync('projection.response.undo', () =>
@@ -1543,14 +2166,6 @@ export class GameService {
         state.actionChecksum = checksum
         await this.gameStore.setChecksum({ gameId: state.gameId, checksum })
         return checksum
-    }
-
-    private isSameSimultaneousGroup(action: GameAction, other: GameAction): boolean {
-        return (
-            action.simultaneousGroupId !== undefined &&
-            other.simultaneousGroupId !== undefined &&
-            action.simultaneousGroupId === other.simultaneousGroupId
-        )
     }
 
     private verifyUserIsActionPlayer(action: GameAction, game: Game, user: User) {
@@ -1887,6 +2502,30 @@ export class GameService {
             }
         }
         await this.notifyUser(notification)
+    }
+
+    private async notifyPlayerVoteRequested(
+        game: Game,
+        vote: PlayerVote,
+        initiator: Player
+    ): Promise<void> {
+        for (const player of game.players) {
+            if (!player.userId || player.id === initiator.id) {
+                continue
+            }
+            const notification: PlayerVoteRequestedNotification = {
+                id: nanoid(),
+                type: NotificationCategory.User,
+                action: UserNotificationAction.PlayerVoteRequested,
+                data: {
+                    user: { id: player.userId },
+                    game: { id: game.id, typeId: game.typeId, name: game.name },
+                    initiator: { id: initiator.id, name: initiator.name },
+                    kind: vote.kind
+                }
+            }
+            await this.notifyUser(notification)
+        }
     }
 
     private async notifyGameStarted(game: Game): Promise<void> {

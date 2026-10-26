@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mkdtemp, mkdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import type { GameCatalogEntry } from '@tabletop/common'
+import { GameClientCapability, type GameCatalogEntry } from '@tabletop/common'
 import { SiteManifest } from '@tabletop/games-config'
 import { CatalogService } from './catalogService.js'
 
@@ -90,6 +90,21 @@ describe('publication catalog', () => {
         ])
         expect(await service.getCatalog(manifest)).toEqual([entry])
         expect(await service.getCatalog({ ...manifest, games: [] })).toEqual([])
+    })
+
+    it('answers whether the published UI declares a client capability', async () => {
+        const capable = { ...publication, uiVersion: '2.0.0' }
+        await publish(publication)
+        await publish(capable, {
+            ...entry,
+            clientCapabilities: [GameClientCapability.CalledGames]
+        })
+        expect(
+            await service.supportsCapability(publication, GameClientCapability.CalledGames)
+        ).toBe(false)
+        expect(await service.supportsCapability(capable, GameClientCapability.CalledGames)).toBe(
+            true
+        )
     })
 
     it.each(['missing', 'malformed'])(

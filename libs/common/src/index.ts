@@ -31,6 +31,9 @@ export * from './game/definition/gameScoring.js'
 export * from './game/model/gameState.js'
 export * from './game/model/gameResult.js'
 export * from './game/model/game.js'
+export * from './game/model/playerVote.js'
+export * from './game/model/gameCall.js'
+export * from './game/model/playerVoteEligibility.js'
 export * from './game/model/player.js'
 export * from './game/model/playerState.js'
 export * from './game/model/actionGroup.js'
@@ -96,6 +99,8 @@ export * from './util/typebox.js'
 export * from './game/engine/explorationHistory.js'
 
 export * from './game/engine/actionHistory.js'
+export * from './game/engine/playerUndo.js'
+export * from './game/engine/callGame.js'
 
 export * from './util/gameSeeds.js'
 

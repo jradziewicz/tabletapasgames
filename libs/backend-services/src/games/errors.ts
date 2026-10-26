@@ -22,7 +22,8 @@ enum GameServiceError {
     UserAlreadyDeclined = 'UserAlreadyDeclinedError',
     DuplicatePlayer = 'DuplicatePlayerError',
     UnauthorizedAccess = 'UnauthorizedAccessError',
-    DisallowedUndo = 'DisallowedUndoError'
+    DisallowedUndo = 'DisallowedUndoError',
+    DisallowedPlayerVote = 'DisallowedPlayerVoteError'
 }
 
 export class GamePlayerCountInvalidError extends BaseError {
@@ -262,3 +263,14 @@ export class DisallowedUndoError extends BaseError {
         })
     }
 }
+
+export class DisallowedPlayerVoteError extends BaseError {
+    constructor({ gameId, reason }: { gameId: string; reason: string }) {
+        super({
+            name: GameServiceError.DisallowedPlayerVote,
+            message: `Player vote not allowed in game ${gameId} because ${reason}`,
+            metadata: { gameId, reason }
+        })
+    }
+}
+
