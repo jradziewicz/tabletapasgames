@@ -3,6 +3,7 @@
     import {
         assertExists,
         playerVoteIneligibility,
+        PlayerVoteKind,
         votingPlayers,
         type GameState,
         type HydratedGameState,
@@ -15,9 +16,11 @@
     import { untrack } from 'svelte'
     import { getAppContext } from '$lib/stores/appContext.svelte'
     import {
+        callWinnerDetail,
         undoneDetail,
         undoneSummary,
-        voteErrorMessage
+        voteErrorMessage,
+        voteTally
     } from '$lib/utils/playerVoteText'
 
     type Proposal =
@@ -67,7 +70,9 @@
 
     let voteSummary: UndoVotePreview | undefined = $state()
     const summaryTarget = $derived(
-        vote && canVote ? { vote, lastActionAt: game.lastActionAt } : undefined
+        vote?.kind === PlayerVoteKind.Undo && canVote
+            ? { vote, lastActionAt: game.lastActionAt }
+            : undefined
     )
     $effect(() => {
         const target = summaryTarget
@@ -87,7 +92,10 @@
     let ownVoteTarget: number | undefined
     $effect(() => {
         if (vote) {
-            ownVoteTarget = vote.initiatorPlayerId === voter?.id ? vote.targetActionIndex : undefined
+            ownVoteTarget =
+                vote.kind === PlayerVoteKind.Undo && vote.initiatorPlayerId === voter?.id
+                    ? vote.targetActionIndex
+                    : undefined
             return
         }
         if (!position) {
@@ -147,6 +155,7 @@
 
 {#if canVote && vote}
     {@const approvals = vote.approvingPlayerIds}
+    {@const declines = vote.kind === PlayerVoteKind.Call ? vote.decliningPlayerIds : []}
     <div class="vote-strip" role="status">
         <span class="line">
             <span>
@@ -155,32 +164,35 @@
                     style:background-color={$colors.getPlayerBgColorValue(vote.initiatorPlayerId)}
                     style:color={$colors.getPlayerTextColorValue(vote.initiatorPlayerId)}
                     >{playerName(vote.initiatorPlayerId)}</span
-                ><span class="font-medium text-white">is asking to undo to an earlier point</span
-                >{#if voteSummary}<span class="text-gray-400"
-                        >{` undoing ${undoneDetail(voteSummary)}`}</span
+                >{#if vote.kind === PlayerVoteKind.Undo}<span class="font-medium text-white"
+                        >is asking to undo to an earlier point</span
+                    >{#if voteSummary}<span class="text-gray-400"
+                            >{` undoing ${undoneDetail(voteSummary)}`}</span
+                        >{/if}{:else}<span class="font-medium text-white"
+                        >is asking to end the game</span
+                    ><span class="text-gray-400"
+                        >{` ${callWinnerDetail(vote.declaredWinnerId === undefined ? undefined : playerName(vote.declaredWinnerId))}`}</span
                     >{/if}
             </span>
         </span>
         <span class="line">
-            <span
-                class="inline-flex gap-1"
-                aria-label="{approvals.length} of {voters.length} agreed"
-            >
+            <span class="inline-flex gap-1" aria-label={voteTally(vote, game.players)}>
                 {#each voters as player (player.id)}
                     <span
                         class="h-2.5 w-2.5 rounded-full border-2"
-                        class:border-gray-500={!approvals.includes(player.id)}
+                        class:border-gray-500={!approvals.includes(player.id) &&
+                            !declines.includes(player.id)}
                         class:border-green-400={approvals.includes(player.id)}
                         class:bg-green-400={approvals.includes(player.id)}
+                        class:border-red-400={declines.includes(player.id)}
+                        class:bg-red-400={declines.includes(player.id)}
                     ></span>
                 {/each}
             </span>
-            <span class="text-xs text-gray-400 tabular-nums"
-                >{approvals.length} of {voters.length} agreed</span
-            >
+            <span class="text-xs text-gray-400 tabular-nums">{voteTally(vote, game.players)}</span>
         </span>
         <span class="buttons">
-            {#if showHistoryBeforeAction}
+            {#if showHistoryBeforeAction && vote.kind === PlayerVoteKind.Undo}
                 <Button
                     size="xs"
                     color="alternative"
@@ -199,7 +211,7 @@
                     onclick={() => run(() => gameService.withdrawVote(game, vote.id))}
                     >Withdraw</Button
                 >
-            {:else if voter && !approvals.includes(voter.id)}
+            {:else if voter && !approvals.includes(voter.id) && !declines.includes(voter.id)}
                 <Button
                     size="xs"
                     color="alternative"

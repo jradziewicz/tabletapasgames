@@ -16,6 +16,7 @@ const PAGE_SIZE = 25
 export enum FinalScoresBackfillOutcome {
     AlreadyScored = 'alreadyScored',
     Abandoned = 'abandoned',
+    Called = 'called',
     NoScoring = 'noScoring',
     Unreadable = 'unreadable',
     WinnerMismatch = 'winnerMismatch',
@@ -109,6 +110,7 @@ async function backfillGame(
     if (listed.finalScores) return { outcome: FinalScoresBackfillOutcome.AlreadyScored }
     if (listed.result === GameResult.Abandoned)
         return { outcome: FinalScoresBackfillOutcome.Abandoned }
+    if (listed.call) return { outcome: FinalScoresBackfillOutcome.Called }
     const scoring = titles[listed.typeId]?.runtime.scoring
     if (!scoring) return { outcome: FinalScoresBackfillOutcome.NoScoring }
 

@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { Type, type Static } from 'typebox'
-import { GameDefinition } from '@tabletop/common'
+import { GameClientCapability, GameDefinition } from '@tabletop/common'
 
 type UndoVoteTarget = Static<typeof UndoVoteTarget>
 const UndoVoteTarget = Type.Object(
@@ -17,6 +17,15 @@ const UndoVoteOpening = Type.Object(
         gameId: Type.String(),
         actionIndex: Type.Integer({ minimum: 0 }),
         targetActionId: Type.String()
+    },
+    { additionalProperties: false }
+)
+
+type CallRequest = Static<typeof CallRequest>
+const CallRequest = Type.Object(
+    {
+        gameId: Type.String(),
+        declaredWinnerId: Type.Optional(Type.String())
     },
     { additionalProperties: false }
 )
@@ -59,6 +68,31 @@ export default async function (definition: GameDefinition, fastify: FastifyInsta
             const game = await fastify.gameService.openUndoVote({
                 user: request.user,
                 definition,
+                ...request.body
+            })
+            return { status: 'ok', payload: { game } }
+        }
+    )
+
+    fastify.post<{ Body: CallRequest }>(
+        '/vote/call',
+        { schema: { body: CallRequest }, onRequest },
+        async function (request) {
+            if (!request.user) {
+                throw Error('No user found for calling a game')
+            }
+            const manifest = await fastify.libraryService.getManifest()
+            const publication = manifest.games.find((game) => game.gameId === definition.info.id)
+            const publishedUiSupportsCalls =
+                publication !== undefined &&
+                (await fastify.catalogService.supportsCapability(
+                    publication,
+                    GameClientCapability.CalledGames
+                ))
+            const game = await fastify.gameService.requestCall({
+                user: request.user,
+                definition,
+                publishedUiSupportsCalls,
                 ...request.body
             })
             return { status: 'ok', payload: { game } }

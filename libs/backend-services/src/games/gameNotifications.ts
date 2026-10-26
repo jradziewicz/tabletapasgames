@@ -1,5 +1,5 @@
 import {
-    ActionSource,
+    isCascadedSystemAction,
     GameNotificationAddProjectedActionsData,
     GameNotificationReplaceProjectedActionsData,
     GameNotificationAction,
@@ -63,7 +63,7 @@ export async function publishActionResults({
         await publish({
             data: {
                 game: omitGameState(game),
-                actions: storedActions.filter((action) => action.source === ActionSource.User)
+                actions: storedActions.filter((action) => !isCascadedSystemAction(action))
             },
             action: GameNotificationAction.AddActions,
             notificationService,
@@ -133,7 +133,7 @@ export async function publishUndoResults({
                     startIndex: actionReplay.startIndex,
                     actionIds: actionReplay.actions.map((action) => action.id),
                     userActionIds: actionReplay.actions
-                        .filter((action) => action.source === ActionSource.User)
+                        .filter((action) => !isCascadedSystemAction(action))
                         .map((action) => action.id)
                 },
                 checksum: currentState.actionChecksum
