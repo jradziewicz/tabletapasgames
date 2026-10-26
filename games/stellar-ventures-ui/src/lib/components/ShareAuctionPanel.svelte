@@ -222,6 +222,7 @@
                     statusLabel={statusLabel(previewedStatus)}
                     remainingOutposts={corporation.unbuiltOutposts}
                     shipLevels={corporation.deliveredShipLevels}
+                    orderedShipLevels={corporation.orderedShipLevels}
                 />
             </div>
         </div>

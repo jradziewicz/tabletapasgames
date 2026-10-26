@@ -45,6 +45,7 @@
         remainingOutposts,
         shipLevels,
         shipLevelsLabel = 'Ships',
+        orderedShipLevels,
         deliveredShipLevels,
         voteMarkers,
         showOutpostCostTable = false,
@@ -106,6 +107,10 @@
         // Issue Share step - ShareAuctionPanel.svelte); undefined skips it entirely for every
         // other caller, same as every other optional row here.
         shipLevels?: number[]
+        // Ships already Ordered but not yet Delivered, drawn right after shipLevels on the same
+        // row, hatched and faded (the "ordered" mask) so they read as on their way, not yet
+        // generating Cargo. Undefined or empty adds nothing.
+        orderedShipLevels?: number[]
         // Label for the shipLevels row - "Ships" by default; Order Ships passes "Ordered" since
         // what it shows there is this Corporation's Ordered (not yet Delivered) Ships.
         shipLevelsLabel?: string
@@ -299,12 +304,21 @@
                 >
                     {shipLevelsLabel}:
                 </span>
-                {#if shipLevels.length > 0}
+                {#if shipLevels.length > 0 || (orderedShipLevels?.length ?? 0) > 0}
                     {#each shipLevels as level, index (index)}
                         <img
                             src={ShipLevelIcons[level]}
                             alt="Level {level} Ship"
                             class="h-6 shrink-0 object-contain drop-shadow"
+                            style="width: {1.5 * (ShipAspect[level] ?? 1)}rem;"
+                        />
+                    {/each}
+                    {#each orderedShipLevels ?? [] as level, index (index)}
+                        <img
+                            src={ShipLevelIcons[level]}
+                            alt="Level {level} Ship (ordered, not yet delivered)"
+                            title="Ordered - delivered at the next Administration"
+                            class="ordered-ship h-6 shrink-0 object-contain"
                             style="width: {1.5 * (ShipAspect[level] ?? 1)}rem;"
                         />
                     {/each}
@@ -385,6 +399,13 @@
     /* Mirrors CorporationCharter.svelte's .charter-queued-ship / ShipyardPanel.svelte's
        .shipyard-orderable-ship exactly (same colors, same timing) - duplicated here rather than
        shared/imported since Svelte component styles are scoped per-file. */
+    /* An Ordered (not yet Delivered) Ship: diagonal hatching like the Charter's printed
+       "ordered" slot, faded so it reads as on its way rather than already working. */
+    .ordered-ship {
+        opacity: 0.75;
+        -webkit-mask-image: repeating-linear-gradient(135deg, #000 0 2px, rgba(0, 0, 0, 0.3) 2px 4px);
+        mask-image: repeating-linear-gradient(135deg, #000 0 2px, rgba(0, 0, 0, 0.3) 2px 4px);
+    }
     .queued-vote-marker {
         animation: queued-vote-marker-pulse 1.8s ease-in-out infinite;
     }
