@@ -90,7 +90,9 @@
         corporation ? Math.min(MAX_CARGO, corporation.cargo + pendingCargoLevelsSum) : 0
     )
     const cargoGain = $derived(corporation ? futureCargo - corporation.cargo : 0)
-    const futurePayout = $derived(dividendPayoutPerShare(futureCargo, miningCapacity, previewedStatus))
+    const futurePayout = $derived(
+        previewedStatus !== undefined ? dividendPayoutPerShare(futureCargo, miningCapacity, previewedStatus) : 0
+    )
 
     function statusLabel(status?: CorporationStatus) {
         switch (status) {

@@ -302,7 +302,7 @@
                           queued: true
                       }))
                     : [])
-            ]}
+            ].filter((marker): marker is typeof marker & { src: string } => marker.src !== undefined)}
             <!-- max-sm:flex/h-full only below sm: - lets CorporationInfoBox's own matching
                  max-sm: h-full stretch it to this row's tallest card on a narrow phone, where
                  grid-cols-2 never drops to 1 column. At sm: and up this is a plain block button
