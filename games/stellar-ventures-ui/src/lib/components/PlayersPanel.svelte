@@ -146,6 +146,16 @@
     // withTakeover: the alien-head preview on a player card - the same estimate, but with the
     // Hostile Takeover assessed as if Liquidation happened now (operations/liquidation.ts's
     // shareValuePerShare, which pays ₮1 a Share for a signed Corporation at or below the Aliens).
+    // Both assume every Ship already Ordered gets Delivered first, so Cargo counts the incoming
+    // Ships' levels too (capped at MAX_CARGO), as the Share auction's Cargo preview does.
+    function withOrderedCargoDelivered<C extends { cargo: number; orderedShipLevels: number[] }>(corporation: C): C {
+        const incoming = corporation.orderedShipLevels.reduce((sum, level) => sum + level, 0)
+        if (incoming === 0) return corporation
+        return Object.create(corporation, {
+            cargo: { value: Math.min(MAX_CARGO, corporation.cargo + incoming) }
+        }) as C
+    }
+
     function liquidationValueForPlayer(playerId: string, withTakeover = false) {
         const player = gameSession.gameState.players.find((p) => p.playerId === playerId)
         if (!player) {
@@ -158,9 +168,10 @@
                 gameSession.gameState,
                 corporation.id
             )
+            const delivered = withOrderedCargoDelivered(corporation)
             const perShare = withTakeover
-                ? shareValuePerShare(miningCapacity, corporation, alienMiningCapacity)
-                : corporateShareValuePerShare(miningCapacity, corporation)
+                ? shareValuePerShare(miningCapacity, delivered, alienMiningCapacity)
+                : corporateShareValuePerShare(miningCapacity, delivered)
             if (perShare <= 0) {
                 continue
             }
