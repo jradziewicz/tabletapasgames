@@ -50,7 +50,7 @@
     )
 </script>
 
-<div data-game-ui="locust" class="bg-[#1a140c]">
+<div data-game-ui="locust" class="locust-root bg-[#1a140c]">
     <DefaultTableLayout>
         {#snippet mobileControlsContent()}
             <HistoryControls
@@ -128,6 +128,12 @@
 </div>
 
 <style>
+    /* Base colours set here rather than through utility classes so the text stays readable even
+       if the host page's CSS or theme differs from the standalone harness. */
+    .locust-root {
+        background-color: #1a140c;
+        color: #f1e6cf;
+    }
     :global([data-game-ui='locust'] .lc-btn) {
         --accent: #c9a961;
         display: inline-flex;
