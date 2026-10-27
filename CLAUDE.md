@@ -12,12 +12,12 @@ on top of the upstream guidance in `AGENTS.md`.
 ### Branches and worktrees
 
 - `main` (this checkout, `~/Documents/tabletop`) is what is live. Keep it
-  deployable at all times; Stellar Ventures and website fixes land here.
-- `rocky-ventures` is checked out as a git worktree at
-  `~/Documents/tabletop-rocky`. Rocky Ventures (`games/rocky-ventures`,
-  `games/rocky-ventures-ui`) is developed there, local-only, until it is
-  ready. Merge `main` into it periodically; never deploy from it and never
-  add it to `config/config-games/src/site-manifest.json` until launch.
+  deployable at all times; Stellar Ventures, Rocky Ventures and website
+  fixes land here.
+- Rocky Ventures (`games/rocky-ventures`, `games/rocky-ventures-ui`) is live
+  in alpha (decided 2026-10-26) and deploys from `main` exactly like Stellar
+  Ventures. The old `~/Documents/tabletop-rocky` worktree is historical;
+  never deploy from it.
 - Each worktree has its own `node_modules`; run `pnpm install` in each on
   the Mac.
 
