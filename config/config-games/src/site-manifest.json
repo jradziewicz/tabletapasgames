@@ -13,14 +13,14 @@
     {
       "gameId": "stellarventures",
       "packageId": "stellar-ventures",
-      "logicVersion": "1.0.9",
+      "logicVersion": "1.0.10",
       "uiVersion": "1.0.35",
       "priorLogicVersions": [
+        "1.0.9",
         "1.0.8",
         "1.0.7",
         "1.0.6",
-        "1.0.5",
-        "1.0.4"
+        "1.0.5"
       ],
       "priorUiVersions": [
         "1.0.34",
