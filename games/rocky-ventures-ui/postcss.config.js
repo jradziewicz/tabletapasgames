@@ -1,6 +1,9 @@
 import tailwindcss from '@tailwindcss/postcss'
 
-const scopePrefix = '[data-game-ui="rocky-ventures"]'
+// Must match the data-game-ui attribute GameUI.svelte puts on the game's root, derived from the
+// typeId ('rockyventures'), not the package name; otherwise none of this bundle's Tailwind CSS
+// applies on the live site.
+const scopePrefix = '[data-game-ui="rockyventures"]'
 
 const scopeGameCssPlugin = {
     postcssPlugin: 'scope-game-css-plugin',
