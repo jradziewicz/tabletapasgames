@@ -12,6 +12,7 @@ import { HydratedPlaceBid, isPlaceBid } from '../actions/placeBid.js'
 import { HydratedPassAuction, isPassAuction } from '../actions/passAuction.js'
 import { HydratedStellarVenturesGameState } from '../model/gameState.js'
 import { activeAuctionParticipantCount, turnOrderStartingWith } from '../operations/auction.js'
+import { startingDirectorPlayerId } from '../operations/administrationRound.js'
 
 type InitialAuctionAction = HydratedPlaceBid | HydratedPassAuction
 
@@ -137,6 +138,7 @@ export class InitialAuctionStateHandler
         corporation.issueShareToPlayer(winner.playerId, state.actionCount, auction.highBid)
         corporation.treasury += auction.highBid
         state.getPlayerState(winner.playerId).spendLiquidFunds(auction.highBid)
+        state.directorPlayerId = startingDirectorPlayerId(state) ?? state.directorPlayerId
 
         state.previousInitialAuctionWinnerId = winner.playerId
         state.activeInitialAuctionCorporationId = undefined

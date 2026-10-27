@@ -37,6 +37,7 @@ import {
     StellarVenturesGameConfig
 } from './config.js'
 import { StellarVenturesColors } from './colors.js'
+import { startingDirectorPlayerId } from '../operations/administrationRound.js'
 
 // Confirmed rulebook Setup values.
 const STARTING_FUNDS_POOL = 120 // Each player starts with STARTING_FUNDS_POOL / player count.
@@ -378,8 +379,10 @@ export class StellarVenturesGameInitializer
             alienCorporation: {
                 miningCapacity: StartingAlienMiningCapacityByDifficulty[difficulty]
             },
-            // The starting Director is not yet confirmed against the rulebook's Setup steps;
-            // defaulting to the first player in (randomly generated) turn order for now.
+            // Only a placeholder until Corporations have Presidents: the real starting Director
+            // is the President of the Corporation 5th in turn order (startingDirectorPlayerId),
+            // set when that Corporation's Initial Auction resolves, or right after New Investor
+            // Setup below.
             directorPlayerId: turnManager.turnOrder[0],
             availableCorporatePowerIds,
             corporatePowerDrawPileIds,
@@ -397,6 +400,8 @@ export class StellarVenturesGameInitializer
 
         if (skipInitialAuction) {
             this.applyNewInvestorSetup(hydratedState)
+            hydratedState.directorPlayerId =
+                startingDirectorPlayerId(hydratedState) ?? hydratedState.directorPlayerId
         }
 
         return hydratedState

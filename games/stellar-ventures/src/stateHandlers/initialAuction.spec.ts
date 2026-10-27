@@ -265,6 +265,23 @@ describe('InitialAuctionStateHandler', () => {
         expect(shipCounts[8]?.unlimited).toBe(true)
     })
 
+    it('makes the President of the Corporation 5th in turn order the starting Director', () => {
+        // Rulebook Setup: "The President of the Corporation 5th in turn order is the Director."
+        // That's the Corporation auctioned first, since turn order runs opposite to the auction.
+        const state = createTestState(4)
+        const handler = new InitialAuctionStateHandler()
+        const corporationId = state.activeInitialAuctionCorporationId
+        expect(corporationId).toBe(state.corporationTurnOrder[state.corporationTurnOrder.length - 1])
+
+        const [opener, ...others] = state.initialAuctionBidOrder ?? []
+        expect(opener).not.toBe(state.turnManager.turnOrder[0])
+        placeBid(state, handler, opener, 1)
+        for (const playerId of others) passBid(state, handler, playerId)
+
+        expect(state.getCorporation(corporationId!).getPresidentPlayerId()).toBe(opener)
+        expect(state.directorPlayerId).toBe(opener)
+    })
+
     it('New Investor Setup assigns Presidents to the 5 starting Corporations only, never Amethyst Agency', () => {
         const players: Player[] = Array.from({ length: 4 }, (_, index) => ({
             id: `p${index + 1}`,
@@ -303,6 +320,10 @@ describe('InitialAuctionStateHandler', () => {
         const initialState = new StellarVenturesGameInitializer().initializeGameState(game, state)
 
         expect(initialState.machineState).toBe(MachineState.IssueShare)
+        const fifthCorporationId = initialState.corporationTurnOrder[initialState.corporationTurnOrder.length - 1]
+        expect(initialState.directorPlayerId).toBe(
+            initialState.getCorporation(fifthCorporationId).getPresidentPlayerId()
+        )
         for (const corporation of initialState.corporations) {
             if (corporation.id === CorporationId.AmethystAgency) {
                 expect(corporation.issuedShareCount).toBe(0)

@@ -22,6 +22,14 @@ export function corporationTurnOrderByMiningCapacity(
 // Administration Round step 4 (rulebook page 20): "Pass clockwise to next player." Reuses the
 // same turnManager.turnOrder every other "next player clockwise" rule in this game reads from
 // (see operations/auction.ts's turnOrderStartingWith, which this wraps).
+// Setup (rulebook): "The President of the Corporation 5th in turn order is the Director."
+// corporationTurnOrder runs opposite to the Initial Auction queue, so that's the Corporation
+// auctioned first. Returns undefined until that Corporation has a President.
+export function startingDirectorPlayerId(state: HydratedStellarVenturesGameState): string | undefined {
+    const lastCorporationId = state.corporationTurnOrder[state.corporationTurnOrder.length - 1]
+    return lastCorporationId ? state.getCorporation(lastCorporationId).getPresidentPlayerId() : undefined
+}
+
 export function nextDirectorPlayerId(state: HydratedStellarVenturesGameState): string {
     const turnOrder = state.turnManager.turnOrder
     const currentIndex = turnOrder.indexOf(state.directorPlayerId)
