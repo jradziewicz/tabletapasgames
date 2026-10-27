@@ -14,6 +14,7 @@
     import { playerSortValue, playerStatusDisplay } from '$lib/utils/player'
     import { hasPendingGameInvitation } from '$lib/utils/gameInvitation'
     import { canShareJoinLink as isShareableForJoining, joinLinkUrl } from '$lib/utils/joinLink'
+    import { bgStatsPlayUrl, canPostToBgStats, meaningfulFinalScores } from '$lib/utils/bgStats'
     import { startCountdownText } from '$lib/utils/startCountdown'
     import { goto } from '$app/navigation'
     import { fade, slide } from 'svelte/transition'
@@ -58,17 +59,8 @@
         )
     )
 
-    // Final scores replace the host/joined status once a game is over. Games whose
-    // scores only mark the winner (1/0) have nothing worth showing.
-    let finalScores = $derived.by(() => {
-        const scores = game.finalScores
-        if (game.status !== GameStatus.Finished || !scores) return undefined
-        if (!game.players.every((player) => Number.isFinite(scores[player.id]))) return undefined
-        const onlyMarkWinners = game.players.every(
-            (player) => scores[player.id] === (isWinner(player.id) ? 1 : 0)
-        )
-        return onlyMarkWinners ? undefined : scores
-    })
+    // Final scores replace the host/joined status once a game is over.
+    let finalScores = $derived(meaningfulFinalScores(game))
     let listedPlayers = $derived(
         finalScores
             ? sortedPlayers.toSorted(
@@ -312,6 +304,12 @@
     }
 
     let title = $derived.by(() => titlesById[game.typeId])
+
+    let bgStatsUrl = $derived(
+        title && canPostToBgStats(game, sessionUser?.id)
+            ? bgStatsPlayUrl(game, title.info.metadata.name)
+            : undefined
+    )
     let displayableConfigs = $derived(
         gameCardOptions(game.config ?? {}, title?.info.configurator?.options ?? [])
     )
@@ -576,7 +574,7 @@
                         </div>
                     {/if}
 
-                    {#if canJoin || canStart || canEdit || canDecline || canLeave || canPlay || canWatch || canRevisit || canDelete || canShareJoinLink}
+                    {#if canJoin || canStart || canEdit || canDecline || canLeave || canPlay || canWatch || canRevisit || canDelete || canShareJoinLink || bgStatsUrl}
                         <Hr class="mt-1 mb-1" />
                         <div class="pt-4 pb-0 flex flex-row justify-center items-middle text-white">
                             {#if canDecline}
@@ -627,6 +625,18 @@
                                     'light',
                                     'mx-2 dark:text-gray-200'
                                 )}
+                            {/if}
+                            {#if bgStatsUrl}
+                                <Button
+                                    size="xs"
+                                    color="light"
+                                    class="mx-2 dark:text-gray-200"
+                                    href={bgStatsUrl}
+                                    target="_blank"
+                                    rel="noopener"
+                                    onclick={(event: Event) => event.stopPropagation()}
+                                    >Post to BG Stats</Button
+                                >
                             {/if}
                             {#if canDelete}
                                 <Button size="xs" color="red" class="mx-2" onclick={deleteGame}
