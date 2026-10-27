@@ -39,7 +39,7 @@
         remainingActionKinds,
         skippedIndexes
     } from '@tabletop/rocky-ventures'
-    import { PlayerName } from '@tabletop/frontend-components'
+    import { CalledGameEnding, PlayerName } from '@tabletop/frontend-components'
     import { CityRouteColors } from '$lib/utils/routePath.js'
     import AgreementDiscard from '$lib/components/AgreementDiscard.svelte'
     import GemActions from '$lib/components/GemActions.svelte'
@@ -148,6 +148,10 @@
     {/if}
 
     {#if gameSession.gameState.result}
+        {#if gameSession.gameCall}
+            <!-- A called or conceded game ends on the players' agreement; the scores below are where it stood. -->
+            <CalledGameEnding class="mb-2" />
+        {/if}
         {@const scores = [...finalScores(gameState)].sort((left, right) => right.total - left.total)}
         <table class="text-sm">
             <thead>
