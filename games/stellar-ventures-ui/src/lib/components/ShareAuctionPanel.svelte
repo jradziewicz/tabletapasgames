@@ -72,7 +72,7 @@
     // Payout, which is looked up by Status - see dividendPayoutPerShare) as if this Share were
     // already issued, rather than waiting for the auction to actually resolve. Before the
     // auction opens (still on the President's Issue/Decline choice), this is just the
-    // Corporation's real current Status.
+    // Corporation's real current Status. Shares Remaining below is previewed the same way.
     const previewedStatus = $derived(
         corporation
             ? corporation.statusForIssuedShareCount(corporation.issuedShareCount + (auction ? 1 : 0))
@@ -220,7 +220,7 @@
                     {cargoGain}
                     {currentPayout}
                     {futurePayout}
-                    availableShareCount={corporation.availableShareCount}
+                    availableShareCount={Math.max(0, corporation.availableShareCount - (auction ? 1 : 0))}
                     statusLabel={statusLabel(previewedStatus)}
                     remainingOutposts={corporation.unbuiltOutposts}
                     shipLevels={corporation.deliveredShipLevels}
