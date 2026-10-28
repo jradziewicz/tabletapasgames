@@ -194,8 +194,8 @@ export const AlphaBoardHexes: Hex[] = [
     // Row 10
     { id: '-3,10', coordinate: { q: -3, r: 10 }, type: HexType.AlienPlanet, outposts: [] },
     { id: '-2,10', coordinate: { q: -2, r: 10 }, type: HexType.DeepSpace, outposts: [] },
-    { id: '-1,10', coordinate: { q: -1, r: 10 }, type: HexType.NeutralPlanet, baseValue: 2, outposts: [] },
-    { id: '0,10', coordinate: { q: 0, r: 10 }, type: HexType.NeutralPlanet, baseValue: 1, outposts: [] },
+    { id: '-1,10', coordinate: { q: -1, r: 10 }, type: HexType.DeepSpace, outposts: [] },
+    { id: '0,10', coordinate: { q: 0, r: 10 }, type: HexType.NeutralPlanet, baseValue: 2, outposts: [] },
     { id: '1,10', coordinate: { q: 1, r: 10 }, type: HexType.HomePlanet, baseValue: 1, homeCorporationId: CorporationId.FrostFederated, outposts: [] },
     { id: '2,10', coordinate: { q: 2, r: 10 }, type: HexType.DeepSpace, outposts: [] },
     { id: '5,10', coordinate: { q: 5, r: 10 }, type: HexType.AlienPlanet, outposts: [] },
