@@ -10,7 +10,8 @@
         dividendPayoutPerShare,
         loansNeededForShip,
         loanHexesNeeded,
-        LoanCreditPerLoan
+        LoanCreditPerLoan,
+        ALIEN_ALCHEMIST_OUTPOST_COST
     } from '@tabletop/stellar-ventures'
     import { CorporationDisplayNames, CHARTER_ASPECT } from '$lib/utils/corporationDisplay.js'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -56,6 +57,11 @@
         }
     })
 
+    // Alien Alchemist drafted on signing The Agreement this turn: offered once, before any Ship is
+    // Ordered (see alienAlchemistOfferedAfterSigning in the game state). Ordering a Ship or
+    // declining passes on it.
+    const canAlienAlchemist = $derived(gameSession.validActionTypes.includes(ActionType.AlienAlchemist))
+
     // Every other option this step allows now has its own controls (Order Ship, Decline, Forced
     // Ship Purchase, Leaked Research above/below) - this generic fallback is kept around for
     // whatever's left, currently nothing.
@@ -65,7 +71,8 @@
                 actionType !== ActionType.OrderShip &&
                 actionType !== ActionType.DeclineOrderShips &&
                 actionType !== ActionType.ForcedShipPurchase &&
-                actionType !== ActionType.LeakedResearch
+                actionType !== ActionType.LeakedResearch &&
+                actionType !== ActionType.AlienAlchemist
         )
     )
 
@@ -264,6 +271,22 @@
             {isOrAre(presidentId)} ordering Ships for
             <span class="font-semibold">{CorporationDisplayNames[corporationId]}</span>
         </div>
+
+        {#if isMe && canAlienAlchemist}
+            <div class="flex flex-wrap items-center gap-2 rounded-md border border-[#3ddc84]/60 bg-[#123a2a] px-2.5 py-1.5 text-xs text-[#c3f2d6]">
+                <span class="flex-1">
+                    Just gained Alien Alchemist: use it now to remove {ALIEN_ALCHEMIST_OUTPOST_COST}
+                    unbuilt Outposts and gain 1 Alien Technology Cube, before ordering Ships.
+                </span>
+                <button
+                    type="button"
+                    onclick={() => gameSession.alienAlchemist()}
+                    class="rounded-md bg-[#2f6fed] px-2.5 py-1 font-semibold text-white hover:bg-[#3f7dfa]"
+                >
+                    Use Alien Alchemist
+                </button>
+            </div>
+        {/if}
 
         <!-- Both children get their width fixed here, on a definite-width flex container,
              rather than each sizing itself internally - a percentage width inside ShipyardPanel

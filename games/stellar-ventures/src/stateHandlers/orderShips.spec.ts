@@ -16,6 +16,9 @@ import { OrderShipsStateHandler } from './orderShips.js'
 import { HydratedOrderShip, OrderShip } from '../actions/orderShip.js'
 import { HydratedDeclineOrderShips, DeclineOrderShips } from '../actions/declineOrderShips.js'
 import { HydratedLeakedResearch, LeakedResearch } from '../actions/leakedResearch.js'
+import { HydratedAlienAlchemist, AlienAlchemist } from '../actions/alienAlchemist.js'
+import { HydratedDraftPower, DraftPower } from '../actions/draftPower.js'
+import { DraftPowerStateHandler } from './draftPower.js'
 import {
     HydratedForcedShipPurchase,
     ForcedShipPurchase
@@ -480,4 +483,70 @@ describe('OrderShipsStateHandler', () => {
             expect(HydratedForcedShipPurchase.canOfferForcedShipPurchase(state, 'p2')).toBe(false)
         })
     })
+
+    describe('Alien Alchemist drafted on signing', () => {
+        function draftAlienAlchemistOnSigning(state: HydratedStellarVenturesGameState) {
+            state.availableCorporatePowerIds = [CorporatePowerId.AlienAlchemist]
+            state.draftPowerCorporationId = CorporationId.PinkInc
+            state.draftPowerResumeState = MachineState.PayDividends
+            const context = createMachineContext(state)
+            const action = new HydratedDraftPower({
+                id: 'draft-alchemist',
+                gameId: state.gameId,
+                source: ActionSource.User,
+                type: ActionType.DraftPower,
+                playerId: 'p1',
+                powerId: CorporatePowerId.AlienAlchemist
+            } as DraftPower)
+            action.apply(state, context)
+            new DraftPowerStateHandler().onAction(action, context)
+            state.machineState = MachineState.OrderShips
+        }
+
+        function alienAlchemistAction(state: HydratedStellarVenturesGameState) {
+            return new HydratedAlienAlchemist({
+                id: 'alchemist',
+                gameId: state.gameId,
+                source: ActionSource.User,
+                type: ActionType.AlienAlchemist,
+                playerId: 'p1'
+            } as AlienAlchemist)
+        }
+
+        it('offers Alien Alchemist at Order Ships right after it is drafted on signing', () => {
+            const state = createTestState()
+            const handler = new OrderShipsStateHandler()
+            draftAlienAlchemistOnSigning(state)
+            handler.enter(createMachineContext(state))
+            expect(state.getCorporation(CorporationId.PinkInc).hasActivePower(CorporatePowerId.AlienAlchemist)).toBe(true)
+            expect(handler.validActionsForPlayer('p1', createMachineContext(state))).toContain(ActionType.AlienAlchemist)
+
+            const context = createMachineContext(state)
+            const outpostsBefore = state.getCorporation(CorporationId.PinkInc).unbuiltOutposts
+            const action = alienAlchemistAction(state)
+            action.apply(state, context)
+            expect(handler.onAction(action, context)).toBe(MachineState.OrderShips)
+            expect(state.getCorporation(CorporationId.PinkInc).unbuiltOutposts).toBe(outpostsBefore - 2)
+            expect(handler.validActionsForPlayer('p1', createMachineContext(state))).not.toContain(ActionType.AlienAlchemist)
+            expect(handler.validActionsForPlayer('p1', createMachineContext(state))).toContain(ActionType.OrderShip)
+        })
+
+        it('stops offering it once a Ship is Ordered instead', () => {
+            const state = createTestState()
+            const handler = new OrderShipsStateHandler()
+            draftAlienAlchemistOnSigning(state)
+            handler.enter(createMachineContext(state))
+            orderShip(state, handler, 'p1', 1)
+            expect(handler.validActionsForPlayer('p1', createMachineContext(state))).not.toContain(ActionType.AlienAlchemist)
+        })
+
+        it('is not offered at Order Ships when Alien Alchemist was not just drafted', () => {
+            const state = createTestState()
+            const handler = new OrderShipsStateHandler()
+            state.getCorporation(CorporationId.PinkInc).powers.push({ id: CorporatePowerId.AlienAlchemist })
+            handler.enter(createMachineContext(state))
+            expect(handler.validActionsForPlayer('p1', createMachineContext(state))).not.toContain(ActionType.AlienAlchemist)
+        })
+    })
 })
+

@@ -8,6 +8,7 @@ import {
 } from '../actions/forcedShipPurchase.js'
 import { HydratedDeclineOrderShips, isDeclineOrderShips } from '../actions/declineOrderShips.js'
 import { HydratedLeakedResearch, isLeakedResearch } from '../actions/leakedResearch.js'
+import { HydratedAlienAlchemist, isAlienAlchemist } from '../actions/alienAlchemist.js'
 import { HydratedStellarVenturesGameState } from '../model/gameState.js'
 import { advanceToNextCorporationOrInvestorRound } from '../operations/corporationRound.js'
 
@@ -16,6 +17,7 @@ type OrderShipsAction =
     | HydratedForcedShipPurchase
     | HydratedDeclineOrderShips
     | HydratedLeakedResearch
+    | HydratedAlienAlchemist
 
 /**
  * Runs Order Ships, the fourth and final step of each Corporation's turn during the Corporation
@@ -39,7 +41,8 @@ export class OrderShipsStateHandler
             isOrderShip(action) ||
             isForcedShipPurchaseAction(action) ||
             isDeclineOrderShips(action) ||
-            isLeakedResearch(action)
+            isLeakedResearch(action) ||
+            isAlienAlchemist(action)
         )
     }
 
@@ -70,6 +73,12 @@ export class OrderShipsStateHandler
         if (HydratedLeakedResearch.canOfferLeakedResearch(state, playerId)) {
             validActions.push(ActionType.LeakedResearch)
         }
+        if (
+            state.alienAlchemistOfferedAfterSigning &&
+            HydratedAlienAlchemist.canAlienAlchemist(state, playerId)
+        ) {
+            validActions.push(ActionType.AlienAlchemist)
+        }
 
         return validActions
     }
@@ -91,7 +100,12 @@ export class OrderShipsStateHandler
         context: MachineContext<HydratedStellarVenturesGameState>
     ): string {
         const state = context.gameState
+        // The just-drafted Alien Alchemist is offered only before anything else is done here.
+        state.alienAlchemistOfferedAfterSigning = undefined
         switch (true) {
+            case isAlienAlchemist(action): {
+                return MachineState.OrderShips
+            }
             case isOrderShip(action): {
                 // Ordering a section's first-ever Ship can trigger a Scrapping Event
                 // (resolveFirstShipOrderedEffects), which may in turn have paused awaiting a

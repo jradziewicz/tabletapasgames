@@ -227,6 +227,12 @@ export const StellarVenturesGameState = Type.Evaluate(
             // actions/dismantlingOutposts.ts - reset alongside it in the same place.
             dismantlingOutpostsUsedThisCorporationRound: Type.Boolean(),
 
+            // Alien Alchemist drafted by the active Corporation when it just signed The
+            // Agreement: its President gets to use it right away, at the start of Order Ships,
+            // before ordering anything (actions/alienAlchemist.ts). Cleared once used, by any
+            // other Order Ships choice, and when the Corporation's round ends.
+            alienAlchemistOfferedAfterSigning: Type.Optional(Type.Boolean()),
+
             // Fine Print (Corporate Power Glossary, page 29): the Corporation (at most 1 - each
             // Neutral Power is a single physical tile) that discarded Fine Print to exempt itself
             // from THIS specific Boardroom Battle (no Votes placeable on it, can't be forced to
@@ -363,6 +369,7 @@ export class HydratedStellarVenturesGameState
     declare draftPowerResumeState?: MachineState
     declare alienAlchemistUsedThisCorporationRound: boolean
     declare dismantlingOutpostsUsedThisCorporationRound: boolean
+    declare alienAlchemistOfferedAfterSigning?: boolean
     declare finePrintExemptCorporationId?: CorporationId
     declare finePrintOfferResolved?: boolean
     declare payDividendsCopyCargoFromCorporationId?: CorporationId

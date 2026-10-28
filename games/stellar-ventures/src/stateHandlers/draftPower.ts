@@ -3,6 +3,7 @@ import { MachineState } from '../definition/states.js'
 import { ActionType } from '../definition/actions.js'
 import { HydratedDraftPower, isDraftPower } from '../actions/draftPower.js'
 import { HydratedStellarVenturesGameState } from '../model/gameState.js'
+import { CorporatePowerId } from '../model/corporation.js'
 
 /**
  * Runs Draft Power (see actions/draftPower.ts for the two rulebook moments that reach this
@@ -53,10 +54,21 @@ export class DraftPowerStateHandler
     }
 
     onAction(
-        _action: HydratedDraftPower,
+        action: HydratedDraftPower,
         context: MachineContext<HydratedStellarVenturesGameState>
     ): string {
         const state = context.gameState
+
+        // Alien Alchemist drafted on signing The Agreement during this Corporation's own round:
+        // offer it straight away at Order Ships (see alienAlchemistOfferedAfterSigning).
+        if (
+            action.powerId === CorporatePowerId.AlienAlchemist &&
+            state.draftPowerCorporationId !== undefined &&
+            state.draftPowerCorporationId === state.activeCorporationId &&
+            state.draftPowerResumeState === MachineState.PayDividends
+        ) {
+            state.alienAlchemistOfferedAfterSigning = true
+        }
 
         // End-of-Initial-Auction reveal (rulebook page 11) - see class docs above. A no-op once
         // the pile has already been emptied by an earlier draft. New Investor Setup has no

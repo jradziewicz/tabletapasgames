@@ -26,6 +26,7 @@ export function advanceToNextCorporationOrInvestorRound(
     // Corporation's round hands off to the next - or ends entirely.
     state.alienAlchemistUsedThisCorporationRound = false
     state.dismantlingOutpostsUsedThisCorporationRound = false
+    state.alienAlchemistOfferedAfterSigning = undefined
 
     const nextIndex = state.activeCorporationIndex + 1
     if (nextIndex < state.corporationTurnOrder.length) {
