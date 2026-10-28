@@ -9,7 +9,7 @@ import {
 } from '@tabletop/common'
 import { StellarVenturesPlayerState, HydratedStellarVenturesPlayerState } from './playerState.js'
 import { CorporationId, CorporationState, HydratedCorporationState } from './corporation.js'
-import { BoardState, HydratedBoardState } from './board.js'
+import { BoardState, HexType, HydratedBoardState } from './board.js'
 import { ShipyardState, HydratedShipyardState } from './shipyard.js'
 import { BoardMap, Difficulty } from '../definition/config.js'
 import { type BoardMapDefinition, BoardMapDefinitions } from '../data/boardMaps.js'
@@ -391,6 +391,7 @@ export class HydratedStellarVenturesGameState
             (corporation) => new HydratedCorporationState(corporation)
         )
         this.board = new HydratedBoardState(data.board)
+        correctAlphaMapHexes(this)
         this.shipyard = new HydratedShipyardState(data.shipyard)
         this.activeInitialAuction = data.activeInitialAuction
             ? new HydratedSimpleAuction(data.activeInitialAuction)
@@ -439,5 +440,25 @@ export class HydratedStellarVenturesGameState
 
     get activeCorporationId(): CorporationId | undefined {
         return this.corporationTurnOrder[this.activeCorporationIndex]
+    }
+}
+
+// Games started on the Alpha map before 2026-10-28 stored two hexes next to Frost Federated's
+// Home Planet swapped from the printed board: -1,10 as a value-2 Neutral Planet (the art shows
+// empty Deep Space) and 0,10 as value 1 (the art shows 2). Each game keeps its own copy of the
+// board, so the correction is applied whenever such a state is loaded. Outposts already there
+// stay put; only the hex type and value change (decided by Justin, 2026-10-28).
+function correctAlphaMapHexes(state: HydratedStellarVenturesGameState) {
+    if ((state.boardMap ?? BoardMap.Alpha) !== BoardMap.Alpha) {
+        return
+    }
+    const deepSpaceHex = state.board.hexes['-1,10']
+    if (deepSpaceHex?.type === HexType.NeutralPlanet && deepSpaceHex.baseValue === 2) {
+        deepSpaceHex.type = HexType.DeepSpace
+        delete deepSpaceHex.baseValue
+    }
+    const planetHex = state.board.hexes['0,10']
+    if (planetHex?.type === HexType.NeutralPlanet && planetHex.baseValue === 1) {
+        planetHex.baseValue = 2
     }
 }
