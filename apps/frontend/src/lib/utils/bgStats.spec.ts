@@ -25,6 +25,7 @@ function finishedGame(overrides: Partial<Game> = {}): Game {
         hotseat: false,
         config: {},
         createdAt: new Date('2026-09-01T00:00:00Z'),
+        startedAt: new Date('2026-10-23T18:31:10Z'),
         finishedAt: new Date('2026-10-23T19:16:58.123Z'),
         result: GameResult.Win,
         winningPlayerIds: ['p1'],
@@ -73,7 +74,10 @@ describe('bgStatsPlay', () => {
             sourceName: 'TableTapas Games',
             sourcePlayId: 'g1',
             playDate: '2026-10-23 19:16:58',
+            durationMin: 46,
             location: 'TableTapas Games',
+            board: '',
+            comments: '',
             game: {
                 name: 'Stellar Ventures',
                 sourceGameId: 'stellarventures',
@@ -82,20 +86,53 @@ describe('bgStatsPlay', () => {
                 noPoints: false
             },
             players: [
-                { name: 'Ada', sourcePlayerId: 'u1', winner: true, score: 47 },
-                { name: 'Bo', sourcePlayerId: 'u2', winner: false, score: 36 }
+                {
+                    name: 'Ada',
+                    sourcePlayerId: 'u1',
+                    winner: true,
+                    startPlayer: false,
+                    score: 47,
+                    rank: 1,
+                    role: ''
+                },
+                {
+                    name: 'Bo',
+                    sourcePlayerId: 'u2',
+                    winner: false,
+                    startPlayer: false,
+                    score: 36,
+                    rank: 2,
+                    role: ''
+                }
             ]
         })
     })
 
-    it('sends a title without a BGG listing by name only, without scores when there are none', () => {
+    it('sends a title without a BGG listing by name only, ranking by winner when there are no scores', () => {
         const play = bgStatsPlay(
             finishedGame({ typeId: 'locust', finalScores: undefined }),
             'Locust: Swarm or Die'
         )
-        expect(play.game.bggId).toBe(undefined)
+        expect(play.game.bggId).toBe(0)
         expect(play.game.noPoints).toBe(true)
-        expect(play.players[0].score).toBe(undefined)
+        expect(play.players.map((p) => [p.score, p.rank])).toEqual([
+            [0, 1],
+            [0, 2]
+        ])
+    })
+
+    it('ties ranks on equal scores', () => {
+        const game = finishedGame({
+            players: [player('p1'), player('p2'), player('p3')],
+            finalScores: { p1: 30, p2: 30, p3: 12 },
+            winningPlayerIds: ['p1', 'p2']
+        })
+        expect(bgStatsPlay(game, 'Stellar Ventures').players.map((p) => p.rank)).toEqual([1, 1, 3])
+    })
+
+    it('leaves the duration unknown for long async games', () => {
+        const game = finishedGame({ startedAt: new Date('2026-10-20T00:00:00Z') })
+        expect(bgStatsPlay(game, 'Stellar Ventures').durationMin).toBe(0)
     })
 
     it('identifies players without an account by game and seat', () => {
