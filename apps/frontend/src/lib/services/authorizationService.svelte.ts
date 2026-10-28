@@ -1,4 +1,4 @@
-import { Role, UserStatus, type User } from '@tabletop/common'
+import { canHoldAuthenticatedSession, Role, UserStatus, type User } from '@tabletop/common'
 import { goto } from '$app/navigation'
 import { redirect } from '@sveltejs/kit'
 import type { TabletopApi } from '@tabletop/frontend-components'
@@ -129,11 +129,7 @@ export class AuthorizationService {
     private async loadSessionUser() {
         try {
             const sessionUser = await this.api.getSelf()
-            if (
-                sessionUser &&
-                sessionUser.status !== UserStatus.Deleted &&
-                sessionUser.status !== UserStatus.Inactive
-            ) {
+            if (sessionUser && canHoldAuthenticatedSession(sessionUser)) {
                 this.adoptSessionUser(sessionUser)
             }
         } catch {
