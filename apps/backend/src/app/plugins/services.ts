@@ -41,7 +41,9 @@ import {
     PreferenceService,
     FirestorePreferenceStore,
     BugReportService,
-    FirestoreBugReportStore
+    FirestoreBugReportStore,
+    FirestoreSessionStore,
+    SessionService
 } from '@tabletop/backend-services'
 import type { GameDefinition } from '@tabletop/common'
 
@@ -52,6 +54,7 @@ declare module 'fastify' {
     interface FastifyInstance {
         taskService: TaskService
         tokenService: TokenService
+        sessionService: SessionService
         userService: UserService
         emailService: EmailService
         secretsService: SecretsService
@@ -109,6 +112,9 @@ export default fp(async (fastify: FastifyInstance) => {
         redisCacheService,
         fastify.firestore,
         service === 'local'
+    )
+    const sessionService = new SessionService(
+        new FirestoreSessionStore(redisCacheService, fastify.firestore)
     )
     const userService = new UserService(userStore, tokenService, taskService)
 
@@ -202,6 +208,7 @@ export default fp(async (fastify: FastifyInstance) => {
         if (taskService instanceof LocalTaskService) taskService.close()
     })
     fastify.decorate('tokenService', tokenService)
+    fastify.decorate('sessionService', sessionService)
     fastify.decorate('userService', userService)
     fastify.decorate('emailService', emailService)
     fastify.decorate('secretsService', secretsService)

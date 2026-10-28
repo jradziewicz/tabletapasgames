@@ -125,6 +125,10 @@ export class DummyRemoteApiService implements RemoteApiService {
         return this.fail('logout')
     }
 
+    async logoutAll(): Promise<void> {
+        return this.fail('logoutAll')
+    }
+
     async searchUsernames(_query: string): Promise<string[]> {
         return this.fail('searchUsernames')
     }

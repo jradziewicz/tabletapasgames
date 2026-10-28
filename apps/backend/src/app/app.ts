@@ -1,5 +1,6 @@
 import RequestTimingsPlugin from './plugins/requestTimings.js'
 import { measure } from '@tabletop/backend-services/diagnostics'
+import { SESSION_LIFETIME_SECONDS } from '@tabletop/backend-services'
 import * as path from 'path'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import AutoLoad from '@fastify/autoload'
@@ -32,7 +33,6 @@ const GCLOUD_PROJECT = process.env['GCLOUD_PROJECT'] ?? ''
 const STATIC_ROOT = process.env['STATIC_ROOT'] ?? path.join(__dirname, '../../../../.local-static')
 const FRONTEND_VERSION_OVERRIDE = process.env['FRONTEND_VERSION'] ?? null
 const MIN_RESTART_INTERVAL_MS = 30_000
-const SESSION_EXPIRY_SECONDS = 30 * 24 * 60 * 60
 
 const SESSION_SECRET = process.env['SESSION_SECRET']
     ? process.env['SESSION_SECRET']
@@ -137,13 +137,13 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
         cookieName: '__session',
         secret: SESSION_SECRET,
         salt: SESSION_SALT,
-        expiry: SESSION_EXPIRY_SECONDS,
+        expiry: SESSION_LIFETIME_SECONDS,
         cookie: {
             path: '/',
             httpOnly: true,
             secure: service === 'local' ? false : true,
             sameSite: service === 'local' ? false : true,
-            maxAge: SESSION_EXPIRY_SECONDS
+            maxAge: SESSION_LIFETIME_SECONDS
         }
     })
 

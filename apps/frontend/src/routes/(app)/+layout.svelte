@@ -28,6 +28,7 @@
     import { getAppContext as getSiteContext } from '$lib/stores/appContext.svelte'
     import PreferencesPanel from '$lib/components/PreferencesPanel.svelte'
     import { setLoginModal } from '$lib/stores/loginModal'
+    import { broadcastLogout, onLogoutBroadcast } from '$lib/utils/logoutChannel'
     import { onMount } from 'svelte'
     import { PUBLIC_API_HOST } from '$env/static/public'
     import { fromStore } from 'svelte/store'
@@ -228,14 +229,13 @@
         await authorizationService.onLogout()
     }
 
-    const logoutChannel = new BroadcastChannel('logout')
-    logoutChannel.onmessage = function (e) {
-        onLogout()
-    }
+    onLogoutBroadcast(() => {
+        void onLogout()
+    })
 
     async function logout() {
-        onLogout()
-        logoutChannel.postMessage({})
+        void onLogout()
+        broadcastLogout()
     }
 
     async function gotoProfile() {
