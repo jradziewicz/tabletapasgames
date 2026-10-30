@@ -3,6 +3,7 @@
     import { goto } from '$app/navigation'
     import { UserStatus } from '@tabletop/common'
     import { getAppContext } from '@tabletop/frontend-components'
+    import { challengeExpiryText } from '$lib/utils/challengeExpiry'
 
     let { authorizationService, api } = getAppContext()
 
@@ -13,6 +14,7 @@
     let verificationToken: string | undefined = $state(undefined)
     let verificationError = $state(false)
     let newEmailSent = $state(false)
+    let codeExpiresAt: Date | undefined = $state(undefined)
 
     let user = $derived(authorizationService.getSessionUser())
 
@@ -51,7 +53,7 @@
         }
     }
 
-    async function verifyToken(event: SubmitEvent) {
+    async function verifyEmail(event: SubmitEvent) {
         event.preventDefault()
         if (!verificationToken) {
             return
@@ -60,7 +62,7 @@
         verificationToken = verificationToken.trim()
 
         try {
-            let updatedUser = await api.verifyToken(verificationToken)
+            let updatedUser = await api.verifyEmail(verificationToken)
             verificationError = false
 
             authorizationService.setSessionUser(updatedUser)
@@ -77,7 +79,7 @@
 
     async function sendVerificationEmail() {
         verificationError = false
-        await api.sendVerificationEmail()
+        codeExpiresAt = await api.sendVerificationEmail()
         newEmailSent = true
     }
 
@@ -104,14 +106,15 @@
             {#if verificationError}
                 <Alert class="dark:bg-red-200 dark:text-red-700 mb-4">
                     <span class="font-bold text-lg">Verification Failed</span><br />
-                    Please check to make sure you entered the correct token, and that the token was not
-                    created more than 30 minutes ago.
+                    Please check that you entered the most recent code and that it has not expired. A
+                    code works for 15 minutes.
                 </Alert>
             {/if}
             {#if newEmailSent}
                 <Alert class="dark:bg-green-200 dark:text-green-700 mb-4">
                     <span class="font-bold text-lg">Email Sent</span><br />
-                    Please check your email for a new verification token.
+                    Please check your email for a new verification code.
+                    {#if codeExpiresAt}{challengeExpiryText(codeExpiresAt)}{/if}
                 </Alert>
             {/if}
             <P class="dark:text-gray-300"
@@ -119,7 +122,7 @@
                     ><strong>{user.email}</strong></span
                 > with a verification token. Please enter the token below to verify your email address.</P
             >
-            <form class="flex flex-col space-y-6 mt-4" action="/" onsubmit={verifyToken}>
+            <form class="flex flex-col space-y-6 mt-4" action="/" onsubmit={verifyEmail}>
                 <Input
                     bind:value={verificationToken}
                     oninput={trim}

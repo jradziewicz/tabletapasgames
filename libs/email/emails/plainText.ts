@@ -15,22 +15,34 @@ function plainTextEmail(heading: string, body: string[], footer: string): string
         .concat('\n')
 }
 
-export const emailVerificationText = ({ token }: { token: string }): string =>
+export const emailVerificationText = ({
+    token,
+    expiresInMinutes = 15
+}: {
+    token: string
+    expiresInMinutes?: number
+}): string =>
     plainTextEmail(
         'Confirm your email address',
         [
             'Enter this code on the verification screen to finish signing in.',
             token,
-            'This code expires soon.'
+            `This code stops working ${expiresInMinutes} minutes after it was requested, and only the most recent code works.`
         ],
         'If you did not request this, you can safely ignore this email.'
     )
 
-export const passwordResetText = ({ url }: { url: string }): string =>
+export const passwordResetText = ({
+    url,
+    expiresInMinutes = 15
+}: {
+    url: string
+    expiresInMinutes?: number
+}): string =>
     plainTextEmail(
         'Reset your password',
         [
-            'Open this link to choose a new password. It will expire shortly.',
+            `Open this link to choose a new password. The link stops working ${expiresInMinutes} minutes after it was requested, and only the most recent link works.`,
             url
         ],
         'If you did not request a password reset, you can safely ignore this email.'
