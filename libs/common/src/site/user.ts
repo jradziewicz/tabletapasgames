@@ -25,6 +25,10 @@ export enum ExternalAuthService {
     Discord = 'discord'
 }
 
+export function externalIdentityProvider(externalId: string): string {
+    return externalId.split(':', 2)[0]
+}
+
 export const REMINDER_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
 export type ReminderDay = (typeof REMINDER_DAYS)[number]
 
@@ -104,6 +108,10 @@ export const User = Type.Object({
 
 export function sessionGenerationOf(user: Pick<User, 'sessionGeneration'>): number {
     return user.sessionGeneration ?? 0
+}
+
+export function nextSessionGeneration(user: Pick<User, 'sessionGeneration'>): number {
+    return sessionGenerationOf(user) + 1
 }
 
 export function canHoldAuthenticatedSession(user: Pick<User, 'status'>): boolean {

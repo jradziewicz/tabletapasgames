@@ -3,6 +3,7 @@ import { goto } from '$app/navigation'
 import { redirect } from '@sveltejs/kit'
 import type { TabletopApi } from '@tabletop/frontend-components'
 import { browserTimeZone } from '$lib/utils/timeZones'
+import { reauthentication } from '$lib/stores/reauthentication.svelte'
 
 /**
  *
@@ -102,15 +103,18 @@ export class AuthorizationService {
     }
 
     public setSessionUser(user: User) {
+        if (this.sessionUser?.id !== user.id) reauthentication.cancel()
         this.sessionUser = user
         this.onSessionUserSet()
     }
 
     public clearSessionUser() {
+        reauthentication.cancel()
         this.sessionUser = undefined
     }
 
     public async onLogin(user: User) {
+        reauthentication.cancel()
         this.adoptSessionUser(user)
 
         if (this.continueUrl) {

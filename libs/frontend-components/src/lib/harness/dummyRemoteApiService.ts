@@ -21,7 +21,8 @@ import type {
     TournamentList,
     TournamentSchedule,
     UndoVotePreview,
-    SensitiveChangeRequest
+    SensitiveChangeRequest,
+    PendingEmailChange
 } from '@tabletop/common'
 import type { GameVersionProvider, GetGameOptions } from '$lib/network/tabletopApi.svelte.js'
 import type { Credentials } from '$lib/network/requestTypes.js'
@@ -126,6 +127,18 @@ export class DummyRemoteApiService implements RemoteApiService {
         return this.fail('linkDiscord')
     }
 
+    async reauthenticateDiscord(_code: string, _state: string): Promise<void> {
+        return this.fail('reauthenticateDiscord')
+    }
+
+    async reauthenticateWithPassword(_password: string): Promise<void> {
+        return this.fail('reauthenticateWithPassword')
+    }
+
+    async reauthenticateGoogle(_credential: string): Promise<void> {
+        return this.fail('reauthenticateGoogle')
+    }
+
     async logout(): Promise<void> {
         return this.fail('logout')
     }
@@ -177,6 +190,22 @@ export class DummyRemoteApiService implements RemoteApiService {
 
     async sendSensitiveChangeChallenge(_request: SensitiveChangeRequest): Promise<Date> {
         return this.fail('sendSensitiveChangeChallenge')
+    }
+
+    async pendingEmailChange(): Promise<PendingEmailChange | undefined> {
+        return this.fail('pendingEmailChange')
+    }
+
+    async requestEmailChange(_email: string): Promise<PendingEmailChange> {
+        return this.fail('requestEmailChange')
+    }
+
+    async confirmEmailChange(_email: string, _code: string): Promise<User> {
+        return this.fail('confirmEmailChange')
+    }
+
+    async cancelEmailChange(): Promise<void> {
+        return this.fail('cancelEmailChange')
     }
 
     async sendPasswordResetEmail(_email: string): Promise<Date> {

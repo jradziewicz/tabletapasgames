@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest'
 import { Role, UserStatus, type User } from '@tabletop/common'
 import { TabletopApi } from '@tabletop/frontend-components'
 import { AuthorizationService } from './authorizationService.svelte.js'
+import { reauthentication } from '$lib/stores/reauthentication.svelte'
 
 function createUser(roles: Role[]): User {
     return {
@@ -66,4 +67,18 @@ describe('AuthorizationService session lifecycle', () => {
             expect(api.getSelf).toHaveBeenCalledTimes(1)
         }
     )
+
+    it('cancels a pending confirmation when the session user changes or signs out', () => {
+        const service = new AuthorizationService(new TabletopApi(), vi.fn())
+        const action = { description: 'change your password', retry: async () => {} }
+        service.setSessionUser(createUser([Role.User]))
+        reauthentication.request(action)
+        service.setSessionUser(createUser([Role.User]))
+        expect(reauthentication.pending).toEqual(action)
+        service.setSessionUser({ ...createUser([Role.User]), id: 'another-user' })
+        expect(reauthentication.pending).toBeUndefined()
+        reauthentication.request(action)
+        service.clearSessionUser()
+        expect(reauthentication.pending).toBeUndefined()
+    })
 })

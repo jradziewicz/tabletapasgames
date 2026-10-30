@@ -53,6 +53,8 @@ const formatTimestamp = (timestamp: Date): string =>
     `${timestamp.toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short', timeZone: 'UTC' })} UTC`
 
 const accountChanges: Record<string, string> = {
+    [AccountChangeType.EmailChangeRequested]:
+        'A request was made to change your email address; your current address remains active until the new address is verified',
     [AccountChangeType.PasswordReset]: 'A request was made to reset the password for your account',
     [AccountChangeType.Email]: 'Your email address was changed',
     [AccountChangeType.Password]: 'Your password was changed'

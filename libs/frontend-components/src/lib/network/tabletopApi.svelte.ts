@@ -30,6 +30,7 @@ import {
     SiteStatsReport,
     type UtcDayRange,
     type SensitiveChangeRequest,
+    type PendingEmailChange,
     User,
     UserPreferences,
     Visibility,
@@ -64,6 +65,8 @@ import type {
     UsernameSearchResponse,
     UserResponse,
     ChallengeIssuedResponse,
+    PendingEmailChangeResponse,
+    EmailChangeRequestedResponse,
     DiscordAuthorizationPurpose,
     DiscordAuthorizationStart,
     DiscordAuthorizationStartResponse,
@@ -178,6 +181,7 @@ export class TabletopApi {
         const response = await this.wretch
             .post({ credential }, '/auth/google/link')
             .unauthorized(this.on401)
+            .forbidden(this.handleError)
             .badRequest(this.handleError)
             .json<UserResponse>()
 
@@ -190,6 +194,7 @@ export class TabletopApi {
         const response = await this.wretch
             .post(undefined, `/auth/discord/begin/${purpose}`)
             .unauthorized(this.on401)
+            .forbidden(this.handleError)
             .badRequest(this.handleError)
             .json<DiscordAuthorizationStartResponse>()
 
@@ -210,10 +215,36 @@ export class TabletopApi {
         const response = await this.wretch
             .post({ code, state }, '/auth/discord/link')
             .unauthorized(this.handleError)
+            .forbidden(this.handleError)
             .badRequest(this.handleError)
             .json<UserResponse>()
 
         return response.payload.user
+    }
+
+    async reauthenticateDiscord(code: string, state: string): Promise<void> {
+        await this.wretch
+            .post({ code, state }, '/auth/discord/reauthenticate')
+            .unauthorized(this.handleError)
+            .badRequest(this.handleError)
+            .json()
+    }
+
+    async reauthenticateWithPassword(password: string): Promise<void> {
+        await this.wretch
+            .post({ password }, '/auth/reauthenticate')
+            .unauthorized(this.onPasswordReauthenticationUnauthorized)
+            .error(429, this.onReauthenticationRateLimit)
+            .badRequest(this.handleError)
+            .json()
+    }
+
+    async reauthenticateGoogle(credential: string): Promise<void> {
+        await this.wretch
+            .post({ credential }, '/auth/google/reauthenticate')
+            .unauthorized(this.handleError)
+            .badRequest(this.handleError)
+            .json()
     }
 
     async logout() {
@@ -247,6 +278,7 @@ export class TabletopApi {
         const response = await this.wretch
             .post(user, '/user/update')
             .unauthorized(this.on401)
+            .forbidden(this.handleError)
             .badRequest(this.handleError)
             .json<UserResponse>()
 
@@ -261,6 +293,40 @@ export class TabletopApi {
             .json<UserResponse>()
 
         return response.payload.user
+    }
+
+    async pendingEmailChange(): Promise<PendingEmailChange | undefined> {
+        const response = await this.wretch
+            .get('/user/email/change')
+            .unauthorized(this.on401)
+            .json<PendingEmailChangeResponse>()
+        const pending = response.payload.pending
+        return pending ? { ...pending, expiresAt: new Date(pending.expiresAt) } : undefined
+    }
+
+    async requestEmailChange(email: string): Promise<PendingEmailChange> {
+        const response = await this.wretch
+            .post({ email }, '/user/email/change')
+            .unauthorized(this.on401)
+            .forbidden(this.handleError)
+            .badRequest(this.handleError)
+            .json<EmailChangeRequestedResponse>()
+        const pending = response.payload.pending
+        return { ...pending, expiresAt: new Date(pending.expiresAt) }
+    }
+
+    async confirmEmailChange(email: string, code: string): Promise<User> {
+        const response = await this.wretch
+            .post({ email, code }, '/user/email/change/confirm')
+            .unauthorized(this.on401)
+            .forbidden(this.handleError)
+            .badRequest(this.handleError)
+            .json<UserResponse>()
+        return response.payload.user
+    }
+
+    async cancelEmailChange(): Promise<void> {
+        await this.wretch.delete('/user/email/change').unauthorized(this.on401).json()
     }
 
     async updateUserTimeZone(
@@ -1174,7 +1240,24 @@ export class TabletopApi {
         }
     }
 
-    private async on401() {
+    private onPasswordReauthenticationUnauthorized = async (error: WretchError) => {
+        if (error.json?.error?.name === 'ReauthenticationFailedError') {
+            return this.handleError(error)
+        }
+        return this.on401()
+    }
+
+    private onReauthenticationRateLimit = (error: WretchError) => {
+        const retryAfter = error.response?.headers.get('retry-after')
+        throw new APIError({
+            name: 'ReauthenticationRateLimitError',
+            message: retryAfter
+                ? `Too many confirmation attempts. Try again in ${retryAfter} seconds.`
+                : 'Too many confirmation attempts. Please wait before trying again.'
+        })
+    }
+
+    private on401 = async () => {
         toast.error('Your session has timed out.  Rerouting to login page.')
         window.location.reload()
         // let the window reload

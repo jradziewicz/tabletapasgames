@@ -30,6 +30,8 @@
     import { setLoginModal } from '$lib/stores/loginModal'
     import { broadcastLogout, onLogoutBroadcast } from '$lib/utils/logoutChannel'
     import { onDiscordAuthorizationResult } from '$lib/utils/discordAuthorization'
+    import ReauthenticationPrompt from '$lib/components/ReauthenticationPrompt.svelte'
+    import { reauthentication } from '$lib/stores/reauthentication.svelte'
     import { onMount } from 'svelte'
     import { PUBLIC_API_HOST } from '$env/static/public'
     import { fromStore } from 'svelte/store'
@@ -148,6 +150,7 @@
     }
 
     onNavigate((navigation) => {
+        reauthentication.cancel()
         const from = navigation.from?.url.pathname
         const to = navigation.to?.url.pathname
         const libraryMove =
@@ -225,6 +228,7 @@
     )
 
     async function onLogout() {
+        reauthentication.cancel()
         await api.logout()
         gameService.clear()
         await authorizationService.onLogout()
@@ -297,7 +301,7 @@
         }
         if (result.purpose === 'login') {
             void authorizationService.onLogin(result.user)
-        } else {
+        } else if (result.purpose === 'link') {
             authorizationService.setSessionUser(result.user)
         }
     })
@@ -638,7 +642,13 @@
         </div>
     </Navbar>
 </div>
-{#if !sessionUser}
+{#if sessionUser}
+    {#if reauthentication.pending}
+        {#key reauthentication.pending}
+            <ReauthenticationPrompt action={reauthentication.pending} />
+        {/key}
+    {/if}
+{:else}
     <AuthModal
         bind:open={showLoginModal}
         title={loginViewTitles[loginView]}

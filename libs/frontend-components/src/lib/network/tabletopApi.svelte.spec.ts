@@ -8,6 +8,48 @@ afterEach(() => {
     vi.unstubAllGlobals()
 })
 
+describe('TabletopApi password reauthentication', () => {
+    test('keeps the session when password reauthentication refuses only the supplied proof', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi
+                .fn<typeof globalThis.fetch>()
+                .mockResolvedValue(
+                    Response.json(
+                        { error: { name: 'ReauthenticationFailedError', message: 'Wrong proof' } },
+                        { status: 401 }
+                    )
+                )
+        )
+        const reload = vi.fn()
+        vi.stubGlobal('window', { location: { reload } })
+        const api = new TabletopApi()
+        await expect(api.reauthenticateWithPassword('incorrect')).rejects.toMatchObject({
+            name: 'ReauthenticationFailedError'
+        })
+        expect(reload).not.toHaveBeenCalled()
+    })
+
+    test('preserves the confirmation throttle delay from the server', async () => {
+        vi.stubGlobal(
+            'fetch',
+            vi
+                .fn<typeof globalThis.fetch>()
+                .mockResolvedValue(
+                    Response.json(
+                        { error: { message: 'Limited' } },
+                        { status: 429, headers: { 'retry-after': '780' } }
+                    )
+                )
+        )
+        const api = new TabletopApi()
+        await expect(api.reauthenticateWithPassword('correct')).rejects.toMatchObject({
+            name: 'ReauthenticationRateLimitError',
+            message: 'Too many confirmation attempts. Try again in 780 seconds.'
+        })
+    })
+})
+
 describe('TabletopApi undo compatibility', () => {
     test('derives the processed replay when an older host omits it', async () => {
         const game = Value.Create(Game)
