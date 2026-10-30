@@ -73,7 +73,13 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
             return `ip:${clientIp}`
         },
         onExceeded: (request: FastifyRequest, key: string) => {
-            console.log('REQUEST LIMIT EXCEEDED to', request.url, 'for key', key)
+            // The route pattern, not the URL: a URL can carry a credential in its path or query
+            console.log(
+                'REQUEST LIMIT EXCEEDED to',
+                request.routeOptions.url ?? 'an unknown route',
+                'for key',
+                key
+            )
         }
     })
 
@@ -369,7 +375,7 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
             if (request.url.startsWith(API_PREFIX) || request.url.startsWith(TASKS_PREFIX)) {
                 await reply.code(404).send({ message: 'Not Found' })
             } else if (frontendStaticReady) {
-                console.log('Serving index.html for unknown frontend path:', request.url)
+                request.log.info('Serving index.html for an unknown frontend path')
                 setNoCacheHeaders(reply)
                 await reply.sendFile('index.html', { cacheControl: false })
             } else {
