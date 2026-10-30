@@ -1,25 +1,19 @@
 import { getAppContext } from '$lib/stores/appContext.svelte.js'
+import { completeDiscordAuthorization } from '$lib/utils/discordAuthorization'
 import type { PageLoad } from './$types.js'
 
+// On success the popup closes (every tab's layout applies the linked user); on failure it stays
+// open so the person can read why, and the tab that began the link also reports it.
 export const load: PageLoad = async ({ url }) => {
-    const code = url.searchParams.get('code')
-    if (!code) {
+    const result = await completeDiscordAuthorization({
+        url,
+        purpose: 'link',
+        api: getAppContext().api
+    })
+    if (!result) {
         return
     }
-
-    try {
-        const newUser = await getAppContext().api.linkDiscord(code)
-        const channel = new BroadcastChannel('userUpdated')
-        channel.postMessage({ user: newUser })
-        return { linked: true }
-    } catch (e) {
-        console.log(e)
-        return {
-            linked: false,
-            error:
-                e instanceof Error && e.message
-                    ? e.message
-                    : 'Something went wrong linking your Discord account. Please close this window and try again.'
-        }
-    }
+    return result.outcome === 'success'
+        ? { linked: true }
+        : { linked: false, error: result.message }
 }

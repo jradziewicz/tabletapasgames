@@ -6,33 +6,28 @@
 </script>
 
 <script lang="ts">
+    import { toast } from 'svelte-sonner'
+    import { getAppContext } from '@tabletop/frontend-components'
+    import { openDiscordAuthorization, popupFeatures } from '$lib/utils/discordAuthorization'
+
     let { mode = 'login' }: { mode: 'link' | 'login' | 'bot' } = $props()
 
-    function discordLogin() {
-        const width = 550
-        const height = 700
-        const left = (screen.width - width) / 2
-        const top = (screen.height - height) / 2
-        const FRONTEND_HOST = window.location.origin
-        const encodedHost = encodeURIComponent(FRONTEND_HOST ?? '')
-        let url = ''
-        if (mode === 'bot') {
-            url = `https://discord.com/oauth2/authorize?client_id=${PUBLIC_DISCORD_CLIENT_ID}`
-        } else if (mode === 'link') {
-            // Linking also adds the site's app to the user's Discord account (a "user install",
-            // integration_type=1 + applications.commands). Without that the bot can't DM them -
-            // Discord only lets a bot message people who share a server with it or have added it.
-            url = `https://discord.com/oauth2/authorize?client_id=${PUBLIC_DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${encodedHost}%2Foauth%2Fdiscord%2Flink&scope=identify+email+applications.commands&integration_type=1`
-        } else {
-            // Signing in also adds the app to the user's Discord account (same user install as
-            // 'link'), so the bot can DM them as soon as they turn direct messages on.
-            url = `https://discord.com/oauth2/authorize?client_id=${PUBLIC_DISCORD_CLIENT_ID}&response_type=code&redirect_uri=${encodedHost}%2Foauth%2Fdiscord&scope=identify+email+applications.commands&integration_type=1`
-        }
+    const { api } = getAppContext()
+
+    function addBot() {
         window.open(
-            url,
+            `https://discord.com/oauth2/authorize?client_id=${PUBLIC_DISCORD_CLIENT_ID}`,
             'Discord Authorization',
-            `popup=true,resizable=no, width=${width},height=${height},top=${top},left=${left}`
+            popupFeatures()
         )
+    }
+
+    function onclick() {
+        if (mode === 'bot') {
+            addBot()
+            return
+        }
+        openDiscordAuthorization({ purpose: mode, api, report: toast.error })
     }
 </script>
 
@@ -46,7 +41,7 @@
         : mode === 'link'
           ? 'w-[100px]'
           : 'w-[110px]'} {mode === 'link' || mode === 'bot' ? 'h-[30px]' : ''}"
-    onclick={discordLogin}
+    {onclick}
 >
     <svg
         class="h-6 w-6 mr-2"
