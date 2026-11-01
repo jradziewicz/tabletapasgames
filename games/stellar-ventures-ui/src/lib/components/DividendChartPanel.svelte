@@ -482,32 +482,23 @@
         return { cellKey: splayedCellKey, left, top, width: right - left, height: bottom - top }
     })
 
-    // Standing "40+" flags for the bottom row (row 0, the printed chart's one full-width box) -
-    // one physical token per Corporation/Alien Corporation that has wrapped the chart at least
-    // once (lap > 0), regardless of where their own moving marker currently sits. Laid out as a
-    // small evenly-spaced strip along the lower portion of that row so it doesn't collide with
-    // whichever marker(s) are also centered in that same box.
-    type FortyPlusBadge = {
-        key: string
-        label: string
-        icon: string
-        left: number
-        top: number
-    }
-
-    const fortyPlusBadges = $derived.by(() => {
-        const wrapped = rawMarkers.filter((m) => m.track === 'mining' && m.lap > 0)
-        const n = wrapped.length
-        if (n === 0) return []
-        const top = rowTop(0) + ROW_HEIGHT * 0.6
-        return wrapped.map((m, i) => ({
-            key: `${m.key}-40plus`,
-            label: `${m.label} - wrapped the chart ${m.lap} time${m.lap === 1 ? '' : 's'}`,
-            icon: Corporation40PlusIcons[m.iconKey] ?? m.icon,
-            left: MINING_ZONE.left + (MINING_ZONE.width * (i + 0.5)) / n,
-            top
-        }))
-    })
+    // Standing "40+" flags - one physical token per Corporation/Alien Corporation that has
+    // wrapped the chart at least once (lap > 0), stacked right on top of that same company's own
+    // Mining Capacity marker and moving with it, so it never covers another company's marker.
+    const fortyPlusBadges = $derived(
+        markers
+            .filter((m) => m.track === 'mining' && m.lap > 0)
+            .map((m) => ({
+                key: `${m.key}-40plus`,
+                label: `${m.label} - wrapped the chart ${m.lap} time${m.lap === 1 ? '' : 's'}`,
+                icon: Corporation40PlusIcons[m.iconKey] ?? m.icon,
+                left: m.left,
+                top: m.top,
+                // Markers render at zIndex * 2, so this sits directly above its own marker and
+                // below the next marker stacked in the same cell.
+                zIndex: m.zIndex * 2 + 1
+            }))
+    )
 
     // Backroom Deal's own two candidate-destination ghost markers (BackroomDealPanel.svelte) -
     // only ever populated once the President has clicked the glowing Alien marker
@@ -620,7 +611,7 @@
                       : isDeepSpacePiratesTarget
                         ? 'deep-space-pirates-target-pulse'
                         : 'drop-shadow-md'}"
-                style="left: {marker.left}%; top: {marker.top}%; height: {heightPct}%; width: {widthPct}%; z-index: {marker.zIndex}; transform: translate(-50%, -50%); transition: left {markerMoveMs}ms ease-in-out, top {markerMoveMs}ms ease-in-out;"
+                style="left: {marker.left}%; top: {marker.top}%; height: {heightPct}%; width: {widthPct}%; z-index: {marker.zIndex * 2}; transform: translate(-50%, -50%); transition: left {markerMoveMs}ms ease-in-out, top {markerMoveMs}ms ease-in-out;"
                 data-cell-key={marker.cellKey}
                 onclick={() => onMarkerClick(marker)}
                 onpointerenter={() => onMarkerPointerEnter(marker)}
@@ -645,7 +636,8 @@
                 alt={badge.label}
                 title={badge.label}
                 class="absolute drop-shadow-md"
-                style="left: {badge.left}%; top: {badge.top}%; height: {heightPct}%; width: {widthPct}%; z-index: 200; transform: translate(-50%, -50%);"
+                class:pointer-events-none={true}
+                style="left: {badge.left}%; top: {badge.top}%; height: {heightPct}%; width: {widthPct}%; z-index: {badge.zIndex}; transform: translate(-50%, -50%); transition: left {markerMoveMs}ms ease-in-out, top {markerMoveMs}ms ease-in-out;"
             />
         {/each}
 

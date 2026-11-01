@@ -328,9 +328,9 @@
         <div class="flex flex-wrap items-center gap-3">
             <!-- Full-width on mobile - at 34.5% of an already-narrow phone sidebar this row art
                  (and its 4 click circles) rendered as an illegible, barely-tappable sliver; it
-                 only needs to shrink back to 34.5% once there's a wide enough action panel
+                 only needs to shrink back to 41.4% once there's a wide enough action panel
                  (sm:) for that to still read clearly. -->
-            <div class="relative w-full shrink-0 overflow-hidden rounded-lg sm:w-[34.5%]" style="aspect-ratio: {7140 / 1035};"> <!-- 25% smaller, then another 20% smaller, then another 25% smaller, then another 33% smaller, then 15% bigger (34.5% of the original full-width row art); overflow-hidden + rounded-lg rounds the row art corners -->
+            <div class="relative w-full shrink-0 overflow-hidden rounded-lg sm:w-[41.4%]" style="aspect-ratio: {7140 / 1035};"> <!-- 25% smaller, then another 20% smaller, then another 25% smaller, then another 33% smaller, then 15% bigger, then 20% bigger on desktop (41.4% of the original full-width row art); overflow-hidden + rounded-lg rounds the row art corners -->
                 <img src={investorActionRow} alt="Investor Action" class="absolute inset-0 h-full w-full" />
 
                 {#each CIRCLES as circle (circle.discId)}

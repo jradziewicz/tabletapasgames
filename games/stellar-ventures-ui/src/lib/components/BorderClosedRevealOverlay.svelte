@@ -122,6 +122,7 @@
             <button
                 type="button"
                 onclick={dismiss}
+                style="touch-action: manipulation;"
                 class="mt-1 rounded-lg bg-[#2f6fed] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
             >
                 Continue

@@ -1157,18 +1157,20 @@
     .closed-border-reveal-pulse {
         /* stroke color is set inline per-instance (pulsingBorderColor) to match the specific
            Border that's closing, rather than a single fixed color here. */
+        /* Opacity only, and only a few beats: animating stroke-width repainted the whole board
+           every frame, which on iPhone Safari starved the main thread badly enough that the
+           Border Closed dialog's Continue taps stopped registering. */
         stroke-linecap: round;
-        animation: closed-border-reveal-pulse 1.1s ease-in-out infinite;
+        stroke-width: 12;
+        animation: closed-border-reveal-pulse 1.1s ease-in-out 4;
     }
     @keyframes closed-border-reveal-pulse {
         0%,
         100% {
-            stroke-width: 6;
-            opacity: 0.6;
+            opacity: 1;
         }
         50% {
-            stroke-width: 14;
-            opacity: 1;
+            opacity: 0.45;
         }
     }
     .tax-box-amount {

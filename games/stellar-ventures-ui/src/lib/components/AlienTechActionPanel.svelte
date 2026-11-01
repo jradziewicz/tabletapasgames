@@ -300,7 +300,7 @@
         <div class="flex flex-wrap items-center gap-3">
             <!-- Full-width on phones, like InvestorActionPanel's row: at 34.5% of a phone screen the
                  row art and its click circles were an unreadable, barely tappable sliver. -->
-            <div class="relative w-full shrink-0 overflow-hidden rounded-lg sm:w-[34.5%]" style="aspect-ratio: {7173 / 947};"> <!-- Matched to InvestorActionPanel.svelte row art sizing (34.5% of the original full-width row art) so the two panels come out the same overall size - keep these two in sync, including overflow-hidden + rounded-lg for the row art corners. -->
+            <div class="relative w-full shrink-0 overflow-hidden rounded-lg sm:w-[41.4%]" style="aspect-ratio: {7173 / 947};"> <!-- Matched to InvestorActionPanel.svelte row art sizing (41.4% of the original full-width row art) so the two panels come out the same overall size - keep these two in sync, including overflow-hidden + rounded-lg for the row art corners. -->
                 <img src={alienTechActionRow} alt="Alien Tech Action" class="absolute inset-0 h-full w-full" />
 
                 {#each CIRCLES as circle (circle.discId)}
