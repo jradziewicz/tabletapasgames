@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { Definition } from '../definition/gameDefinition.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { GemSupplySize, gainGems, gemSupplyLeft } from './gems.js'
+import { StartingGems } from '../data/setup.js'
 
 const engine = new GameEngine(Definition.runtime)
 
@@ -27,25 +28,26 @@ function startedState(playerCount: number): HydratedRockyVenturesGameState {
 }
 
 describe('gem supply', () => {
-    it('starts with 15 gems less the 2 each player holds', () => {
-        expect(gemSupplyLeft(startedState(4))).toBe(GemSupplySize - 8)
+    it('starts with 15 gems less the ones each player starts with', () => {
+        expect(gemSupplyLeft(startedState(4))).toBe(GemSupplySize - 4 * StartingGems)
     })
 
     it('counts spent gems as gone from the game', () => {
         const state = startedState(2)
         state.gemsSpent = 5
-        expect(gemSupplyLeft(state)).toBe(GemSupplySize - 4 - 5)
+        expect(gemSupplyLeft(state)).toBe(GemSupplySize - 2 * StartingGems - 5)
     })
 
     it('gives no gem when the supply is empty, and never above 3', () => {
         const state = startedState(2)
         const playerId = state.players[0]!.playerId
-        state.gemsSpent = GemSupplySize - 4
+        state.gemsSpent = GemSupplySize - 2 * StartingGems
         expect(gemSupplyLeft(state)).toBe(0)
         expect(gainGems(state, playerId, 1)).toBe(0)
-        expect(state.getPlayerState(playerId).gems).toBe(2)
+        expect(state.getPlayerState(playerId).gems).toBe(StartingGems)
 
         state.gemsSpent = 0
+        state.getPlayerState(playerId).gems = 2
         expect(gainGems(state, playerId, 1)).toBe(1)
         expect(gainGems(state, playerId, 1)).toBe(0)
         expect(state.getPlayerState(playerId).gems).toBe(3)

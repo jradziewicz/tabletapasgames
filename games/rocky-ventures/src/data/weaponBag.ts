@@ -32,5 +32,5 @@ export const HuntDrawRuleByWeaponLevel: Record<number, HuntDrawRule> = {
     2: { draw: 2, apply: 1 },
     3: { draw: 3, apply: 2 },
     4: { draw: 4, apply: 2 },
-    5: { draw: 5, apply: 3 }
+    5: { draw: 5, apply: 2 } // was apply 3 until 2026-11-01
 }
