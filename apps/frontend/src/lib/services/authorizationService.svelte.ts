@@ -1,8 +1,9 @@
-import { Role, UserStatus, type User } from '@tabletop/common'
+import { canHoldAuthenticatedSession, Role, UserStatus, type User } from '@tabletop/common'
 import { goto } from '$app/navigation'
 import { redirect } from '@sveltejs/kit'
 import type { TabletopApi } from '@tabletop/frontend-components'
 import { browserTimeZone } from '$lib/utils/timeZones'
+import { reauthentication } from '$lib/stores/reauthentication.svelte'
 
 /**
  *
@@ -102,15 +103,18 @@ export class AuthorizationService {
     }
 
     public setSessionUser(user: User) {
+        if (this.sessionUser?.id !== user.id) reauthentication.cancel()
         this.sessionUser = user
         this.onSessionUserSet()
     }
 
     public clearSessionUser() {
+        reauthentication.cancel()
         this.sessionUser = undefined
     }
 
     public async onLogin(user: User) {
+        reauthentication.cancel()
         this.adoptSessionUser(user)
 
         if (this.continueUrl) {
@@ -121,6 +125,13 @@ export class AuthorizationService {
         }
     }
 
+    public async logout() {
+        // Forget the user before the session ends so a request it refuses never reads as an expiry
+        this.clearSessionUser()
+        await this.api.logout()
+        await goto('/')
+    }
+
     public async onLogout() {
         this.clearSessionUser()
         await goto('/')
@@ -129,11 +140,7 @@ export class AuthorizationService {
     private async loadSessionUser() {
         try {
             const sessionUser = await this.api.getSelf()
-            if (
-                sessionUser &&
-                sessionUser.status !== UserStatus.Deleted &&
-                sessionUser.status !== UserStatus.Inactive
-            ) {
+            if (sessionUser && canHoldAuthenticatedSession(sessionUser)) {
                 this.adoptSessionUser(sessionUser)
             }
         } catch {

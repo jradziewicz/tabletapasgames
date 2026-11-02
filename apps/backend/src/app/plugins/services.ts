@@ -41,7 +41,11 @@ import {
     PreferenceService,
     FirestorePreferenceStore,
     BugReportService,
-    FirestoreBugReportStore
+    FirestoreBugReportStore,
+    FirestoreSessionStore,
+    SessionService,
+    type DiscordOAuth,
+    DiscordOAuthClient
 } from '@tabletop/backend-services'
 import type { GameDefinition } from '@tabletop/common'
 
@@ -52,6 +56,8 @@ declare module 'fastify' {
     interface FastifyInstance {
         taskService: TaskService
         tokenService: TokenService
+        sessionService: SessionService
+        discordOAuth: DiscordOAuth
         userService: UserService
         emailService: EmailService
         secretsService: SecretsService
@@ -110,7 +116,14 @@ export default fp(async (fastify: FastifyInstance) => {
         fastify.firestore,
         service === 'local'
     )
+    const sessionService = new SessionService(
+        new FirestoreSessionStore(redisCacheService, fastify.firestore)
+    )
     const userService = new UserService(userStore, tokenService, taskService)
+    const discordOAuth = new DiscordOAuthClient({
+        clientId: process.env['DISCORD_CLIENT_ID'] ?? '',
+        clientSecret: () => secretsService.getSecret('DISCORD_SECRET')
+    })
 
     let pubSubService: PubSubService = new NullPubSubService()
     if (!useAbly) {
@@ -202,6 +215,8 @@ export default fp(async (fastify: FastifyInstance) => {
         if (taskService instanceof LocalTaskService) taskService.close()
     })
     fastify.decorate('tokenService', tokenService)
+    fastify.decorate('sessionService', sessionService)
+    fastify.decorate('discordOAuth', discordOAuth)
     fastify.decorate('userService', userService)
     fastify.decorate('emailService', emailService)
     fastify.decorate('secretsService', secretsService)

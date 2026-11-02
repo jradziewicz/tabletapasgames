@@ -1,10 +1,6 @@
-import { Game, GameDefinition, User } from '@tabletop/common'
+import { type AccountChangeType, Game, GameDefinition, User } from '@tabletop/common'
 
-export enum AccountChangeType {
-    Email = 'email',
-    Password = 'password',
-    PasswordReset = 'passwordReset'
-}
+export { AccountChangeType } from '@tabletop/common'
 
 export interface EmailService {
     sendVerificationEmail(token: string, toEmail: string): Promise<void>
