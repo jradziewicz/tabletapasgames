@@ -26,6 +26,10 @@ import {
     routeNeighbors,
     planExtraction,
     DeliveryCityId,
+    CardBonusKind,
+    CardKind,
+    getCard,
+    ChooseAgreementGemCost,
     type ExtractionPlan,
     MachineState,
     buildableBoxes,
@@ -67,6 +71,8 @@ export class RockyVenturesGameSession extends GameSession<
     lastActionError: string | undefined = $state()
 
     zoomedImage: { url: string; alt: string } | undefined = $state()
+    // Buying an agreement card while holding a gem: choose which agreement to take first.
+    agreementPick: { slotIndex: number; cityId: DeliveryCityId } | undefined = $state()
     gridZoomOpen = $state(false)
     hoveredCard: { url: string; alt: string } | undefined = $state()
     botSeats: Record<string, BotProfile> = $state({})
@@ -978,8 +984,28 @@ export class RockyVenturesGameSession extends GameSession<
     }
 
     async invest(slotIndex: number) {
+        const cardId = this.gameState.market.slots[slotIndex]
+        const card = cardId === undefined ? undefined : getCard(cardId)
+        const playerId = this.gameState.activePlayerIds[0]
+        const gems = playerId ? this.gameState.getPlayerState(playerId).gems : 0
+        if (
+            card?.kind === CardKind.Development &&
+            card.bonus.kind === CardBonusKind.Agreement &&
+            gems >= ChooseAgreementGemCost &&
+            (this.gameState.agreementStacks[card.bonus.cityId]?.length ?? 0) > 1
+        ) {
+            this.agreementPick = { slotIndex, cityId: card.bonus.cityId }
+            return
+        }
+        await this.investWithAgreement(slotIndex, undefined)
+    }
+
+    async investWithAgreement(slotIndex: number, agreementLetter: AgreementLetter | undefined) {
+        this.agreementPick = undefined
         await this.submit(ActionType.Invest, async () => {
-            await this.applyAction(this.createPlayerAction(Invest, { slotIndex }))
+            await this.applyAction(
+                this.createPlayerAction(Invest, agreementLetter ? { slotIndex, agreementLetter } : { slotIndex })
+            )
         })
     }
 

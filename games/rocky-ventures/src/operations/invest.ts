@@ -6,8 +6,12 @@ import type { DeliveryCityId } from '../data/board.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { marketCardCost, removeFromMarket } from './market.js'
 import { startPointBuy } from './turn.js'
-import { recordActionStat, recordCash, recordStat } from './stats.js'
+import { recordActionStat, recordCash, recordGems, recordStat } from './stats.js'
 import { StatKind } from '../model/stats.js'
+import type { AgreementLetter } from '../data/agreements.js'
+
+// Spend this many gems to take any agreement from the city's pile instead of the top one.
+export const ChooseAgreementGemCost = 1
 
 export function investCost(
     state: HydratedRockyVenturesGameState,
@@ -17,21 +21,51 @@ export function investCost(
     return card ? marketCardCost(card, slotIndex) : undefined
 }
 
+// Why picking `letter` from the city's agreement pile isn't allowed, if it isn't. Picking the top
+// one is free; any other costs a gem (2026-11-02).
+export function reasonChooseAgreementInvalid(
+    state: HydratedRockyVenturesGameState,
+    playerId: string,
+    cityId: DeliveryCityId,
+    letter: AgreementLetter
+): string | undefined {
+    const stack = state.agreementStacks[cityId] ?? []
+    if (!stack.includes(letter)) {
+        return 'That agreement is not in the pile'
+    }
+    if (stack[0] !== letter && state.getPlayerState(playerId).gems < ChooseAgreementGemCost) {
+        return 'Choosing an agreement other than the top one costs a gem'
+    }
+    return undefined
+}
+
 export function awardAgreement(
     state: HydratedRockyVenturesGameState,
     playerId: string,
-    cityId: DeliveryCityId
+    cityId: DeliveryCityId,
+    chosenLetter?: AgreementLetter
 ) {
-    const letter = state.agreementStacks[cityId]?.shift()
-    if (letter !== undefined) {
-        state.getPlayerState(playerId).agreements.push({ cityId, letter })
+    const stack = state.agreementStacks[cityId]
+    if (!stack || stack.length === 0) {
+        return
     }
+    const player = state.getPlayerState(playerId)
+    let letter = stack[0]!
+    if (chosenLetter !== undefined && chosenLetter !== stack[0] && stack.includes(chosenLetter)) {
+        player.spendGems(ChooseAgreementGemCost)
+        state.gemsSpent += ChooseAgreementGemCost
+        recordGems(state, playerId, ChooseAgreementGemCost, 'chooseAgreement', true)
+        letter = chosenLetter
+    }
+    stack.splice(stack.indexOf(letter), 1)
+    player.agreements.push({ cityId, letter })
 }
 
 export function investInMarketCard(
     state: HydratedRockyVenturesGameState,
     playerId: string,
-    slotIndex: number
+    slotIndex: number,
+    agreementLetter?: AgreementLetter
 ) {
     const player = state.getPlayerState(playerId)
     const cardId = state.market.slots[slotIndex]
@@ -69,7 +103,7 @@ export function investInMarketCard(
     player.tableau.push(cardId)
     switch (card.bonus.kind) {
         case CardBonusKind.Agreement:
-            awardAgreement(state, playerId, card.bonus.cityId)
+            awardAgreement(state, playerId, card.bonus.cityId, agreementLetter)
             return
         case CardBonusKind.Share: {
             const companyIds: CompanyId[] = card.bonus.companyIds.filter(

@@ -22,6 +22,7 @@
     import DragonPanel from '$lib/components/DragonPanel.svelte'
     import CardZoom from '$lib/components/CardZoom.svelte'
     import GridZoom from '$lib/components/GridZoom.svelte'
+    import AgreementChoice from '$lib/components/AgreementChoice.svelte'
     import CardHoverPreview from '$lib/components/CardHoverPreview.svelte'
     import GameOverOverlay from '$lib/components/GameOverOverlay.svelte'
     import DragonOverlay from '$lib/components/DragonOverlay.svelte'
@@ -422,6 +423,9 @@
     {/if}
     {#if session.hoveredCard && !session.zoomedImage}
         <CardHoverPreview imageUrl={session.hoveredCard.url} alt={session.hoveredCard.alt} />
+    {/if}
+    {#if session.agreementPick}
+        <AgreementChoice slotIndex={session.agreementPick.slotIndex} cityId={session.agreementPick.cityId} />
     {/if}
     {#if session.gridZoomOpen}
         <GridZoom onclose={() => (session.gridZoomOpen = false)} />

@@ -3,10 +3,11 @@ import { Compile } from 'typebox/compile'
 import { GameAction, HydratableAction, MachineContext } from '@tabletop/common'
 import { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { ActionType } from '../definition/actions.js'
-import { CardActionKind } from '../data/cards.js'
+import { CardActionKind, CardBonusKind, CardKind, getCard } from '../data/cards.js'
 import { MarketSize } from '../data/setup.js'
 import { remainingActionKinds } from '../operations/turn.js'
-import { investCost, investInMarketCard } from '../operations/invest.js'
+import { investCost, investInMarketCard, reasonChooseAgreementInvalid } from '../operations/invest.js'
+import { AgreementLetter } from '../data/agreements.js'
 
 export type Invest = Type.Static<typeof Invest>
 export const Invest = Type.Evaluate(
@@ -15,7 +16,10 @@ export const Invest = Type.Evaluate(
         Type.Object({
             type: Type.Literal(ActionType.Invest),
             playerId: Type.String(),
-            slotIndex: Type.Number()
+            slotIndex: Type.Number(),
+            // Agreement-bonus cards only: take this agreement instead of the top of the pile
+            // (costs a gem unless it is the top one).
+            agreementLetter: Type.Optional(Type.Enum(AgreementLetter))
         })
     ])
 )
@@ -30,17 +34,37 @@ export class HydratedInvest extends HydratableAction<typeof Invest> implements I
     declare type: ActionType.Invest
     declare playerId: string
     declare slotIndex: number
+    declare agreementLetter?: AgreementLetter
 
     constructor(data: Invest) {
         super(data, InvestValidator)
     }
 
     apply(state: HydratedRockyVenturesGameState, _context?: MachineContext) {
-        const invalidReason = HydratedInvest.reasonInvestInvalid(state, this.playerId, this.slotIndex)
+        const invalidReason =
+            HydratedInvest.reasonInvestInvalid(state, this.playerId, this.slotIndex) ??
+            HydratedInvest.reasonAgreementChoiceInvalid(state, this.playerId, this.slotIndex, this.agreementLetter)
         if (invalidReason) {
             throw Error(invalidReason)
         }
-        investInMarketCard(state, this.playerId, this.slotIndex)
+        investInMarketCard(state, this.playerId, this.slotIndex, this.agreementLetter)
+    }
+
+    static reasonAgreementChoiceInvalid(
+        state: HydratedRockyVenturesGameState,
+        playerId: string,
+        slotIndex: number,
+        agreementLetter: AgreementLetter | undefined
+    ): string | undefined {
+        if (agreementLetter === undefined) {
+            return undefined
+        }
+        const cardId = state.market.slots[slotIndex]
+        const card = cardId === undefined ? undefined : getCard(cardId)
+        if (!card || card.kind !== CardKind.Development || card.bonus.kind !== CardBonusKind.Agreement) {
+            return 'That card does not give an agreement'
+        }
+        return reasonChooseAgreementInvalid(state, playerId, card.bonus.cityId, agreementLetter)
     }
 
     static canInvest(state: HydratedRockyVenturesGameState, playerId: string): boolean {
