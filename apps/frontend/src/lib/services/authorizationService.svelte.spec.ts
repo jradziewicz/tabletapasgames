@@ -3,6 +3,9 @@ import { Role, UserStatus, type User } from '@tabletop/common'
 import { TabletopApi } from '@tabletop/frontend-components'
 import { AuthorizationService } from './authorizationService.svelte.js'
 import { reauthentication } from '$lib/stores/reauthentication.svelte'
+import { goto } from '$app/navigation'
+
+vi.mock('$app/navigation', () => ({ goto: vi.fn() }))
 
 function createUser(roles: Role[]): User {
     return {
@@ -80,5 +83,25 @@ describe('AuthorizationService session lifecycle', () => {
         reauthentication.request(action)
         service.clearSessionUser()
         expect(reauthentication.pending).toBeUndefined()
+    })
+
+    it('forgets the user before the session ends when signing out', async () => {
+        const api = new TabletopApi()
+        let endSession: () => void = () => {}
+        vi.spyOn(api, 'logout').mockReturnValue(
+            new Promise((resolve) => {
+                endSession = resolve
+            })
+        )
+        const service = new AuthorizationService(api, vi.fn())
+        service.setSessionUser(createUser([Role.User]))
+
+        const signingOut = service.logout()
+        expect(service.getSessionUser()).toBeUndefined()
+        expect(api.logout).toHaveBeenCalledTimes(1)
+
+        endSession()
+        await signingOut
+        expect(goto).toHaveBeenCalledWith('/')
     })
 })

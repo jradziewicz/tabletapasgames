@@ -104,7 +104,8 @@ export class TabletopApi {
     constructor(
         host: string = DEFAULT_HOST,
         sseHost: string = DEFAULT_HOST,
-        private readonly version?: string
+        private readonly version?: string,
+        private readonly isSignedIn?: () => boolean
     ) {
         this.host = host
         this.sseHost = sseHost
@@ -1258,6 +1259,10 @@ export class TabletopApi {
     }
 
     private on401 = async () => {
+        // Signing out ends the session before the site stops the requests that need it
+        if (this.isSignedIn?.() === false) {
+            throw new APIError({ name: 'Unauthorized', message: 'No one is signed in' })
+        }
         toast.error('Your session has timed out.  Rerouting to login page.')
         window.location.reload()
         // let the window reload

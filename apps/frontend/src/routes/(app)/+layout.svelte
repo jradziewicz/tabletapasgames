@@ -229,9 +229,8 @@
 
     async function onLogout() {
         reauthentication.cancel()
-        await api.logout()
         gameService.clear()
-        await authorizationService.onLogout()
+        await authorizationService.logout()
     }
 
     onLogoutBroadcast(() => {

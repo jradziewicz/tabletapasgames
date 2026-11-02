@@ -125,6 +125,13 @@ export class AuthorizationService {
         }
     }
 
+    public async logout() {
+        // Forget the user before the session ends so a request it refuses never reads as an expiry
+        this.clearSessionUser()
+        await this.api.logout()
+        await goto('/')
+    }
+
     public async onLogout() {
         this.clearSessionUser()
         await goto('/')
