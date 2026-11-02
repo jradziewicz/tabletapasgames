@@ -1,18 +1,19 @@
 import { Color } from '@tabletop/common'
 import { DefaultColorizer } from '@tabletop/frontend-components'
 
-// Player colours sampled from the v0.40 player card headers (yellow, purple, white, green, red).
+// Player colours sampled from the printed starter card banners. The platform's Green and Red
+// seats show as the cards' teal and pink.
 // Tailwind only emits classes it can see as literals, so every class string below is spelled out.
 export const PlayerColorHex: Partial<Record<Color, string>> = {
-    [Color.Yellow]: '#d9d24a',
-    [Color.Purple]: '#8a2fc9',
-    [Color.White]: '#f5f2dc',
-    [Color.Green]: '#5cb85c',
-    [Color.Red]: '#c9302c'
+    [Color.Yellow]: '#fab220',
+    [Color.Purple]: '#5c3079',
+    [Color.White]: '#f1eeec',
+    [Color.Green]: '#66ccce',
+    [Color.Red]: '#f580c5'
 }
 
 export function isLightPlayerColor(color?: Color): boolean {
-    return color === Color.Yellow || color === Color.White
+    return color !== undefined && color !== Color.Purple
 }
 
 export class RockyVenturesColorizer extends DefaultColorizer {
@@ -23,15 +24,15 @@ export class RockyVenturesColorizer extends DefaultColorizer {
     override getBgColor(color?: Color): string {
         switch (color) {
             case Color.Yellow:
-                return 'bg-[#d9d24a]'
+                return 'bg-[#fab220]'
             case Color.Purple:
-                return 'bg-[#8a2fc9]'
+                return 'bg-[#5c3079]'
             case Color.White:
-                return 'bg-[#f5f2dc]'
+                return 'bg-[#f1eeec]'
             case Color.Green:
-                return 'bg-[#5cb85c]'
+                return 'bg-[#66ccce]'
             case Color.Red:
-                return 'bg-[#c9302c]'
+                return 'bg-[#f580c5]'
             default:
                 return 'bg-[#555555]'
         }
@@ -40,15 +41,15 @@ export class RockyVenturesColorizer extends DefaultColorizer {
     override getBorderColor(color?: Color): string {
         switch (color) {
             case Color.Yellow:
-                return 'border-[#d9d24a]'
+                return 'border-[#fab220]'
             case Color.Purple:
-                return 'border-[#8a2fc9]'
+                return 'border-[#5c3079]'
             case Color.White:
-                return 'border-[#f5f2dc]'
+                return 'border-[#f1eeec]'
             case Color.Green:
-                return 'border-[#5cb85c]'
+                return 'border-[#66ccce]'
             case Color.Red:
-                return 'border-[#c9302c]'
+                return 'border-[#f580c5]'
             default:
                 return 'border-[#555555]'
         }
@@ -58,15 +59,15 @@ export class RockyVenturesColorizer extends DefaultColorizer {
         if (asPlayerColor) {
             switch (color) {
                 case Color.Yellow:
-                    return 'text-[#d9d24a]'
+                    return 'text-[#fab220]'
                 case Color.Purple:
-                    return 'text-[#8a2fc9]'
+                    return 'text-[#5c3079]'
                 case Color.White:
-                    return 'text-[#f5f2dc]'
+                    return 'text-[#f1eeec]'
                 case Color.Green:
-                    return 'text-[#5cb85c]'
+                    return 'text-[#66ccce]'
                 case Color.Red:
-                    return 'text-[#c9302c]'
+                    return 'text-[#f580c5]'
                 default:
                     return 'text-[#555555]'
             }
