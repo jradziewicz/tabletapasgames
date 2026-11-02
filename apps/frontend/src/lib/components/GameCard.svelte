@@ -16,13 +16,12 @@
     import { canShareJoinLink as isShareableForJoining, joinLinkUrl } from '$lib/utils/joinLink'
     import { bgStatsPlayUrl, canPostToBgStats, meaningfulFinalScores } from '$lib/utils/bgStats'
     import { startCountdownText } from '$lib/utils/startCountdown'
+    import { secondClock, timeSince } from '$lib/utils/clock.svelte'
     import { goto } from '$app/navigation'
     import { fade, slide } from 'svelte/transition'
     import DeleteModal from './DeleteModal.svelte'
-    import { createTimeAgo, GameEditForm, getAppContext } from '@tabletop/frontend-components'
+    import { GameEditForm, getAppContext } from '@tabletop/frontend-components'
     import { toast } from 'svelte-sonner'
-
-    const timeAgo = createTimeAgo()
 
     let {
         game,
@@ -130,23 +129,16 @@
             myPlayer?.status === PlayerStatus.Joined
     )
 
-    let now = $state(Date.now())
     let autoStartAt = $derived(
         game.status === GameStatus.WaitingToStart && game.autoStartAt
             ? new Date(game.autoStartAt).getTime()
             : undefined
     )
     let autoStartText = $derived(
-        autoStartAt === undefined ? undefined : startCountdownText(autoStartAt, now)
+        autoStartAt === undefined
+            ? undefined
+            : startCountdownText(autoStartAt, secondClock.now.getTime())
     )
-
-    $effect(() => {
-        if (autoStartAt === undefined) return
-        const tick = () => (now = Date.now())
-        tick()
-        const clock = setInterval(tick, 1000)
-        return () => clearInterval(clock)
-    })
 
     let isMyTurn = $derived(
         game.status === GameStatus.Started &&
@@ -467,7 +459,7 @@
                                     Last Action
                                 </div>
                                 <div class="text-xs text-gray-400">
-                                    {timeAgo.format(new Date(game.lastActionAt))}
+                                    {timeSince(new Date(game.lastActionAt))}
                                 </div>
                             </div>
                         {:else if game.status === GameStatus.Finished}
@@ -480,7 +472,7 @@
                                 </div>
                                 {#if game.finishedAt}
                                     <div class="text-xs text-gray-400">
-                                        {timeAgo.format(new Date(game.finishedAt))}
+                                        {timeSince(new Date(game.finishedAt))}
                                     </div>
                                 {/if}
                             </div>

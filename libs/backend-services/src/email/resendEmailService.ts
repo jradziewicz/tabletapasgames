@@ -6,7 +6,13 @@ import {
     AccountChangeNotification,
     GameInvitation,
     GameEnd,
-    YourTurn
+    YourTurn,
+    emailVerificationText,
+    passwordResetText,
+    accountChangeNotificationText,
+    gameInvitationText,
+    gameEndText,
+    yourTurnText
 } from '@tabletop/email'
 
 import { Resend } from 'resend'
@@ -31,11 +37,13 @@ export class ResendEmailService implements EmailService {
 
     async sendVerificationEmail(token: string, toEmail: string): Promise<void> {
         const emailHTML = await render(EmailVerification({ token }))
+        const emailText = emailVerificationText({ token })
         const { error } = await this.resend.emails.send({
             from: 'noreply@playtest.tabletapasgames.com',
             to: toEmail,
             subject: 'Verify your email address',
             html: emailHTML,
+            text: emailText,
             headers: {
                 'X-Entity-Ref-ID': nanoid()
             }
@@ -47,11 +55,13 @@ export class ResendEmailService implements EmailService {
 
     async sendPasswordResetEmail(token: string, url: string, toEmail: string): Promise<void> {
         const emailHTML = await render(PasswordReset({ url }))
+        const emailText = passwordResetText({ url })
         const { error } = await this.resend.emails.send({
             from: 'noreply@playtest.tabletapasgames.com',
             to: toEmail,
             subject: 'Reset your password',
             html: emailHTML,
+            text: emailText,
             headers: {
                 'X-Entity-Ref-ID': nanoid()
             }
@@ -67,11 +77,13 @@ export class ResendEmailService implements EmailService {
         toEmail: string
     ): Promise<void> {
         const emailHTML = await render(AccountChangeNotification({ changeType, timestamp }))
+        const emailText = accountChangeNotificationText({ changeType, timestamp })
         const { error } = await this.resend.emails.send({
             from: 'noreply@playtest.tabletapasgames.com',
             to: toEmail,
             subject: 'Account change notification',
             html: emailHTML,
+            text: emailText,
             headers: {
                 'X-Entity-Ref-ID': nanoid()
             }
@@ -94,19 +106,20 @@ export class ResendEmailService implements EmailService {
         url: string
         toEmail: string
     }): Promise<void> {
-        const emailHTML = await render(
-            GameInvitation({
-                ownerName: owner.username ?? 'someone',
-                gameName: game.name,
-                title: definition.info.metadata.name,
-                url
-            })
-        )
+        const invitation = {
+            ownerName: owner.username ?? 'someone',
+            gameName: game.name,
+            title: definition.info.metadata.name,
+            url
+        }
+        const emailHTML = await render(GameInvitation(invitation))
+        const emailText = gameInvitationText(invitation)
         const { error } = await this.resend.emails.send({
             from: 'noreply@playtest.tabletapasgames.com',
             to: toEmail,
             subject: `Join ${owner.username}'s game of ${definition.info.metadata.name}`,
             html: emailHTML,
+            text: emailText,
             headers: {
                 'X-Entity-Ref-ID': nanoid()
             }
@@ -134,20 +147,21 @@ export class ResendEmailService implements EmailService {
             return
         }
 
-        const emailHTML = await render(
-            GameEnd({
-                result: game.result,
-                winners: winners.map((w) => w.username || 'A Player'),
-                gameName: game.name,
-                title: definition.info.metadata.name,
-                url
-            })
-        )
+        const ending = {
+            result: game.result,
+            winners: winners.map((w) => w.username || 'A Player'),
+            gameName: game.name,
+            title: definition.info.metadata.name,
+            url
+        }
+        const emailHTML = await render(GameEnd(ending))
+        const emailText = gameEndText(ending)
         const { error } = await this.resend.emails.send({
             from: 'noreply@playtest.tabletapasgames.com',
             to: toEmail,
             subject: `Your game of ${definition.info.metadata.name} ${game.name} has ended`,
             html: emailHTML,
+            text: emailText,
             headers: {
                 'X-Entity-Ref-ID': nanoid()
             }
@@ -169,11 +183,13 @@ export class ResendEmailService implements EmailService {
         toEmail: string
     }): Promise<void> {
         const emailHTML = await render(YourTurn({ title, gameName, url }))
+        const emailText = yourTurnText({ title, gameName, url })
         const { error } = await this.resend.emails.send({
             from: 'noreply@playtest.tabletapasgames.com',
             to: toEmail,
             subject: `It's your turn in ${gameName}!`,
             html: emailHTML,
+            text: emailText,
             headers: {
                 'X-Entity-Ref-ID': nanoid()
             }
