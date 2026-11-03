@@ -406,7 +406,7 @@
     {#each gameSession.buildableTrackBoxes as buildable (buildable.boxId)}
         {@const location = BoardBoxLocations.find((candidate) => candidate.box.id === buildable.boxId)}
         {#if location}
-            {@const glow = gameSession.trackGlowCompanyId === CompanyId.GoblinCentral ? '#000000' : CompanyColors[gameSession.trackGlowCompanyId ?? CompanyIds[0]]}
+            {@const glow = CompanyColors[gameSession.trackGlowCompanyId ?? CompanyIds[0]]}
             <g
                 class="buildable-box"
                 role="button"
