@@ -3,11 +3,14 @@
     import { goto } from '$app/navigation'
     import { INAPPROPRIATE_USERNAME_ERROR, isInappropriateUsername, UserStatus } from '@tabletop/common'
     import { getAppContext } from '@tabletop/frontend-components'
+    import UsernameReviewPrompt from '$lib/components/UsernameReviewPrompt.svelte'
 
     let { authorizationService, api } = getAppContext()
 
     let unexpectedError = $state(false)
     let errors: Record<string, string[]> = $state({})
+    // The name the filter refused, offered for review ("Think this is a mistake?").
+    let blockedUsername: string | undefined = $state()
     let username: string | undefined = $state(undefined)
     let email: string | undefined = $state(undefined)
     let verificationToken: string | undefined = $state(undefined)
@@ -21,8 +24,10 @@
         username = username?.trim()
         email = email?.trim()
 
+        blockedUsername = undefined
         if (username && isInappropriateUsername(username)) {
             errors.username = ['That username is not allowed. Please choose another.']
+            blockedUsername = username
             return
         }
 
@@ -44,6 +49,7 @@
         } catch (e) {
             if (e instanceof Error && e.name === INAPPROPRIATE_USERNAME_ERROR) {
                 errors.username = ['That username is not allowed. Please choose another.']
+                blockedUsername = payload.username
             } else if (e instanceof Error && e.name === 'AlreadyExistsError') {
                 if (e.message.includes('username')) {
                     errors.username = ['Username already exists']
@@ -170,6 +176,9 @@
                                 ><span class="font-medium">{error}</span></Helper
                             >
                         {/each}
+                    {/if}
+                    {#if blockedUsername}
+                        <UsernameReviewPrompt username={blockedUsername} />
                     {/if}
                 {/if}
                 {#if user && !user.email}

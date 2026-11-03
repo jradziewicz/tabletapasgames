@@ -13,6 +13,7 @@
     import { goto } from '$app/navigation'
     import googleLogo from '$lib/components/images/google.jpg'
     import discordLogo from '$lib/components/images/discord.png'
+    import UsernameReviewPrompt from '$lib/components/UsernameReviewPrompt.svelte'
     import GoogleSignIn, {
         isEnabled as isGoogleSigninEnabled
     } from '$lib/components/GoogleSignIn.svelte'
@@ -114,6 +115,7 @@
             delete data.username
         } else if (typeof data.username === 'string' && isInappropriateUsername(data.username)) {
             errors.username = ['That username is not allowed. Please choose another.']
+            blockedUsername = data.username
             return
         }
 
@@ -148,6 +150,7 @@
                 errorMessage = 'Invalid password, could not update profile.'
             } else if (e instanceof Error && e.name === INAPPROPRIATE_USERNAME_ERROR) {
                 errors.username = ['That username is not allowed. Please choose another.']
+                blockedUsername = typeof data.username === 'string' ? data.username : undefined
             } else if (e instanceof Error && e.name === 'AlreadyExistsError') {
                 if (e.message.includes('username')) {
                     errors.username = ['Username already exists']
@@ -170,7 +173,11 @@
     function clearErrors() {
         errorMessage = undefined
         errors = {}
+        blockedUsername = undefined
     }
+
+    // The name the filter refused, offered for review ("Think this is a mistake?").
+    let blockedUsername: string | undefined = $state()
 </script>
 
 <div class="min-h-[calc(100dvh-70px)] flex flex-col items-center justify-center space-y-6 py-6">
@@ -202,6 +209,9 @@
                         ><span class="font-medium">{error}</span></Helper
                     >
                 {/each}
+            {/if}
+            {#if blockedUsername}
+                <UsernameReviewPrompt username={blockedUsername} />
             {/if}
             <Label class="mb-2">Password</Label>
             <Input

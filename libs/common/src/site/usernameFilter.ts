@@ -1,4 +1,6 @@
+import * as Type from 'typebox'
 import { BaseError } from '../util/errors.js'
+import { DateType } from '../util/typebox.js'
 
 // Usernames are public on every game, chat and leaderboard, so slurs and obvious profanity are
 // refused at sign-up and on rename (see isInappropriateUsername). The check normalizes case,
@@ -190,3 +192,43 @@ export class InappropriateUsernameError extends BaseError {
         })
     }
 }
+
+// "Think this is a mistake? Let us know." - a blocked name sent to the admins. Approving it lets
+// that exact name (any letter case) through the filter from then on.
+export enum UsernameReviewStatus {
+    Open = 'open',
+    Approved = 'approved',
+    Dismissed = 'dismissed'
+}
+
+export const USERNAME_REVIEW_NOTE_MAX_LENGTH = 500
+
+export type UsernameReviewRequest = Type.Static<typeof UsernameReviewRequest>
+export const UsernameReviewRequest = Type.Object(
+    {
+        username: Type.String({ minLength: 1, maxLength: 64 }),
+        note: Type.Optional(Type.String({ maxLength: USERNAME_REVIEW_NOTE_MAX_LENGTH }))
+    },
+    { additionalProperties: false }
+)
+
+export type UsernameReview = Type.Static<typeof UsernameReview>
+export const UsernameReview = Type.Object({
+    id: Type.String(),
+    username: Type.String(),
+    note: Type.Optional(Type.String()),
+    requesterId: Type.Optional(Type.String()),
+    requesterEmail: Type.Optional(Type.String()),
+    status: Type.Enum(UsernameReviewStatus),
+    createdAt: DateType(),
+    resolvedAt: Type.Optional(DateType())
+})
+
+export type UsernameReviewList = Type.Static<typeof UsernameReviewList>
+export const UsernameReviewList = Type.Object({ reviews: Type.Array(UsernameReview) })
+
+export type UsernameReviewStatusUpdate = Type.Static<typeof UsernameReviewStatusUpdate>
+export const UsernameReviewStatusUpdate = Type.Object(
+    { status: Type.Enum(UsernameReviewStatus) },
+    { additionalProperties: false }
+)

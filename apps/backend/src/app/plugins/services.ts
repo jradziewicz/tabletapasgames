@@ -41,7 +41,8 @@ import {
     PreferenceService,
     FirestorePreferenceStore,
     BugReportService,
-    FirestoreBugReportStore
+    FirestoreBugReportStore,
+    UsernameReviewService
 } from '@tabletop/backend-services'
 import type { GameDefinition } from '@tabletop/common'
 
@@ -68,6 +69,7 @@ declare module 'fastify' {
         tournamentService: TournamentService
         preferenceService: PreferenceService
         bugReportService: BugReportService
+        usernameReviewService: UsernameReviewService
         siteStatsService: SiteStatsService
     }
 }
@@ -202,6 +204,9 @@ export default fp(async (fastify: FastifyInstance) => {
         if (taskService instanceof LocalTaskService) taskService.close()
     })
     fastify.decorate('tokenService', tokenService)
+    const usernameReviewService = new UsernameReviewService(fastify.firestore)
+    userService.isUsernameApproved = (username) => usernameReviewService.isApproved(username)
+    fastify.decorate('usernameReviewService', usernameReviewService)
     fastify.decorate('userService', userService)
     fastify.decorate('emailService', emailService)
     fastify.decorate('secretsService', secretsService)

@@ -15,6 +15,10 @@ import {
     BugReportList,
     BugReportStatus,
     type BugReportRequest,
+    UsernameReview,
+    UsernameReviewList,
+    UsernameReviewStatus,
+    type UsernameReviewRequest,
     CanonicalActionReplay,
     ProcessedActionReplay,
     Game,
@@ -996,6 +1000,43 @@ export class TabletopApi {
         const report = Value.Convert(BugReport, response.payload.report)
         Value.Assert(BugReport, report)
         return report
+    }
+
+    /** "Think this is a mistake? Let us know." for a username the filter blocked. */
+    async requestUsernameReview(request: UsernameReviewRequest): Promise<void> {
+        await this.wretch
+            .post(request, '/user/usernameReview')
+            .badRequest(this.handleError)
+            .json<void>()
+    }
+
+    async getUsernameReviews(status?: UsernameReviewStatus): Promise<UsernameReview[]> {
+        const query = status ? `?status=${encodeURIComponent(status)}` : ''
+        const response = await this.wretch
+            .options({ cache: 'no-store' })
+            .get(`/admin/usernameReviews/list${query}`)
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<unknown>()
+        Value.Assert(Type.Object({ payload: Type.Unknown() }), response)
+        const list = Value.Convert(UsernameReviewList, response.payload)
+        Value.Assert(UsernameReviewList, list)
+        return list.reviews
+    }
+
+    async setUsernameReviewStatus(
+        reviewId: string,
+        status: UsernameReviewStatus
+    ): Promise<UsernameReview> {
+        const response = await this.wretch
+            .post({ status }, `/admin/usernameReviews/${encodeURIComponent(reviewId)}/status`)
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .json<unknown>()
+        Value.Assert(Type.Object({ payload: Type.Object({ review: Type.Unknown() }) }), response)
+        const review = Value.Convert(UsernameReview, response.payload.review)
+        Value.Assert(UsernameReview, review)
+        return review
     }
 
     /** One screenshot of a bug report as a JPEG; admin only. */

@@ -5,6 +5,9 @@ import type {
     BugReport,
     BugReportRequest,
     BugReportStatus,
+    UsernameReview,
+    UsernameReviewRequest,
+    UsernameReviewStatus,
     UserGameStats,
     CanonicalActionReplay,
     Game,
@@ -341,6 +344,21 @@ export class DummyRemoteApiService implements RemoteApiService {
 
     async setBugReportStatus(_reportId: string, _status: BugReportStatus): Promise<BugReport> {
         return this.fail('setBugReportStatus')
+    }
+
+    async requestUsernameReview(_request: UsernameReviewRequest): Promise<void> {
+        return this.fail('requestUsernameReview')
+    }
+
+    async getUsernameReviews(_status?: UsernameReviewStatus): Promise<UsernameReview[]> {
+        return this.fail('getUsernameReviews')
+    }
+
+    async setUsernameReviewStatus(
+        _reviewId: string,
+        _status: UsernameReviewStatus
+    ): Promise<UsernameReview> {
+        return this.fail('setUsernameReviewStatus')
     }
 
     async getBugReportScreenshot(_reportId: string, _index: number): Promise<Blob> {
