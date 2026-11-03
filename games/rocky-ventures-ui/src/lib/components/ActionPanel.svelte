@@ -266,7 +266,7 @@
                         type="button"
                         disabled={!legal}
                         onclick={() => gameSession.selectMoveTarget(index)}
-                        class="relative z-10 block overflow-hidden rounded border-2 bg-white transition"
+                        class="relative z-10 block overflow-hidden rounded border-2 transition {cardId === StartingPlayerCardId ? '' : 'bg-white'}"
                         style="border-color: {isTarget ? '#ffd166' : isSkipped ? (discarded ? '#c9302c' : '#b8700a') : '#4a3620'}; filter: {legal ? 'none' : 'brightness(0.55)'};"
                         title={legal ? `Move to ${cardLabel(cardId)}` : 'Not a legal move'}
                     >
