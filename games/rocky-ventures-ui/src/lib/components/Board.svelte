@@ -47,7 +47,6 @@
         ScourgeSplayStep
     } from '$lib/utils/scourgeBoxLayout.js'
     import boardArt from '$lib/images/board.jpg'
-    import GridArtOverrides from '$lib/components/GridArtOverrides.svelte'
     import { DragonTileImageUrl } from '$lib/utils/dragonImages.js'
     import { RegionMapBounds, RegionRuns, regionAt, regionLabelPoint } from '$lib/utils/regionMap.js'
 
@@ -248,7 +247,7 @@
 
     // While the dragon is out its tile sits on the map in the open mountains just south-east of
     // Leuchars, below the gemstone track and clear of the Leuchars-Dornoch road, outlined in red.
-    const DragonTileSpot = { x: 1460, y: 335, width: 70, height: Math.round((70 * 633) / 550) }
+    const DragonTileSpot = { x: 1482, y: 345, width: 70, height: Math.round((70 * 633) / 550) }
     // Shown from the moment the dragon is summoned; once killed it stays, crossed out.
     const dragonOnBoard = $derived(gameSession.gameState.dragon.summoned || gameSession.gameState.dragon.killed)
     const dragonKilled = $derived(gameSession.gameState.dragon.killed)
@@ -282,7 +281,6 @@
         </filter>
     </defs>
     <image href={boardArt} x="0" y="0" width={BoardArtSize.width} height={BoardArtSize.height} />
-    <GridArtOverrides artUrl={boardArt} idPrefix="board" />
 
     <!-- Company boards: share stacks, value-track cubes, delivered mines -->
     {#each CompanyIds as companyId (companyId)}

@@ -3,7 +3,7 @@ interface Point {
     y: number
 }
 
-const Columns = [1469.3, 1508.8, 1548.3]
+const Columns = [1498.5, 1538, 1577.5]
 const Rows = [103, 145.5, 188, 231]
 
 export const GemHexRadius = 15.5

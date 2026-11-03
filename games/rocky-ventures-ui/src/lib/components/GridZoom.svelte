@@ -19,7 +19,7 @@
     onclick={onclose}
 >
     <div class="grid-zoom-panel overflow-hidden rounded-xl border-2 border-[#c9a961] shadow-2xl">
-        <GridView idPrefix="grid-zoom" class="block h-auto w-[min(92vw,1100px)] max-h-[80vh]" />
+        <GridView class="block h-auto w-[min(92vw,1100px)] max-h-[80vh]" />
     </div>
     <div class="absolute bottom-6 text-sm text-[#f1e6cf] opacity-80">Click anywhere or press Esc to close</div>
 </div>

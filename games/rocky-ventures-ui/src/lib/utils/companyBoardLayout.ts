@@ -1,7 +1,7 @@
 import { CompanyId } from '@tabletop/rocky-ventures'
 
 // Art-space (2000 x 1481) positions of the four company boards printed down the left edge of the
-// v0.50 game board: the value-slot column and the delivery circle column of each.
+// v8 game board: the value-slot column and the delivery circle column of each.
 export interface CompanyBoardLayout {
     slotX: number
     circleX: number

@@ -1,7 +1,7 @@
 import type { Point } from '@tabletop/common'
 import { VictoryPointCellCenters } from './vpCells.js'
 
-// Art-space (2000 x 1481) positions on the v0.50 board.
+// Art-space (2000 x 1481) positions on the v8 board.
 
 // Weapon/tool grid, bottom-right of the board: tool 1-8 left to right, weapon 1-5 bottom to top.
 const GridFirstColumnX = 1608

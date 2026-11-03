@@ -1,5 +1,5 @@
 // Art-space (2000 x 1481) boxes of the development-card slots printed down the right edge of the
-// v0.50 board. Cards sit rotated 90 degrees clockwise (card top to the right), like the labels.
+// v8 board. Cards sit rotated 90 degrees clockwise (card top to the right), like the labels.
 export interface MarketSlotBox {
     x: number
     y: number
