@@ -1,4 +1,6 @@
 <script lang="ts">
+    import MatGems from '$lib/components/MatGems.svelte'
+    import { StartingPlayerCardId } from '@tabletop/rocky-ventures'
     import { DummyName } from '$lib/utils/dummyDisplay.js'
     import {
         DummyPlayerId,
@@ -270,6 +272,7 @@
                     >
                         {#if thumbUrl(cardId)}
                             <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[160px] w-auto max-sm:h-[112px]" draggable="false" />
+                            {#if cardId === StartingPlayerCardId && player}<MatGems gems={player.gems} />{/if}
                         {:else}
                             <div class="flex h-[160px] w-[106px] max-sm:h-[112px] max-sm:w-[74px] items-center justify-center bg-[#3d2c1a] font-bold">{cardLabel(cardId)}</div>
                         {/if}
@@ -687,6 +690,7 @@
                                 onclick={() => gameSession.zoomCard(cardId, thumbUrl(cardId))}
                             >
                                 <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[160px] w-auto max-sm:h-[112px]" draggable="false" />
+                                {#if cardId === StartingPlayerCardId && player}<MatGems gems={player.gems} />{/if}
                             </button>
                         </div>
                     </div>
