@@ -6,7 +6,9 @@ import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 // Running games Justin asked to move onto the two-sided agreements and the 2-gem start
 // (2026-11-03). Each switches the first time it loads after the change, as long as nobody holds
 // an agreement yet; the switched state is saved with the next action.
-export const TwoSidedAgreementGameIds: string[] = []
+export const TwoSidedAgreementGameIds: string[] = [
+    'Vfz4QAGhl4cfVpTXYAxw8' // Eye of the Tiger
+]
 
 export function migrateRunningGame(state: HydratedRockyVenturesGameState) {
     if (!TwoSidedAgreementGameIds.includes(state.gameId)) {
