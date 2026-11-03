@@ -18,6 +18,7 @@ import { HydratedSellVictoryPoints, isSellVictoryPoints } from '../actions/sellV
 import { HydratedResolveHunt, isResolveHunt } from '../actions/resolveHunt.js'
 import { HydratedSkipBonusInvest, isSkipBonusInvest } from '../actions/skipBonusInvest.js'
 import { HydratedEndTurn, isEndTurn } from '../actions/endTurn.js'
+import { migrateRunningGame } from '../operations/runningGameMigrations.js'
 
 export class RockyVenturesHydrator
     implements GameHydrator<RockyVenturesGameState, HydratedRockyVenturesGameState>
@@ -66,6 +67,8 @@ export class RockyVenturesHydrator
     }
 
     hydrateState(state: RockyVenturesGameState): HydratedRockyVenturesGameState {
-        return new HydratedRockyVenturesGameState(state)
+        const hydrated = new HydratedRockyVenturesGameState(state)
+        migrateRunningGame(hydrated)
+        return hydrated
     }
 }
