@@ -83,7 +83,7 @@
             (up to {OreCapacityByToolLevel[selectedPlayer.toolLevel].gold} gold, {OreCapacityByToolLevel[selectedPlayer.toolLevel].silver} silver ore)
         </span>
         {#if selectedPlayer.tuckedCardIds.length > 0}
-            <span>Tucked under I: {selectedPlayer.tuckedCardIds.length} (next tax {`$${taxIncomeFor(selectedPlayer.tuckedCardIds.length + 1)}`})</span>
+            <span>Tucked under your mat: {selectedPlayer.tuckedCardIds.length} (next tax {`$${taxIncomeFor(selectedPlayer.tuckedCardIds.length + 1)}`})</span>
         {/if}
     </div>
 
@@ -91,7 +91,7 @@
         {#each selectedPlayer.tableau as cardId, index (cardId)}
             {@const imageUrl = imageFor(cardId)}
             <div
-                class="relative shrink-0 w-[150px]"
+                class="relative shrink-0 {cardId === StartingPlayerCardId ? 'w-[350px]' : 'w-[150px]'}"
                 style="margin-left: {index === 0 ? selectedPlayer.tuckedCardIds.length * TUCK_STRIP : 0}px;"
             >
                 {#if index === 0}
