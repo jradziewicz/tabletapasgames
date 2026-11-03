@@ -182,7 +182,7 @@
                 <span class="ml-1 text-[10px] font-semibold uppercase tracking-wide" style="color: #7f88ad;">Agreements</span>
             {/if}
             {#each playerState.agreements as agreement, i (i)}
-                <span class="rounded border px-1.5 py-0.5" style="border-color: #2a3155;" title={agreementTooltip(agreement.cityId, agreement.letter)}>{agreement.cityId} {agreement.letter}</span>
+                <span class="rounded border px-1.5 py-0.5" style="border-color: #2a3155;" title={agreementTooltip(agreement.cityId, agreement.letter, agreement.flipped)}>{agreement.cityId} {agreement.letter}</span>
             {/each}
         </div>
     {/if}

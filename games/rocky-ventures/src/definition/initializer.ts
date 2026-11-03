@@ -34,7 +34,7 @@ import {
 } from '../data/mineTokens.js'
 import { ScourgeDefinitions } from '../data/scourges.js'
 import { StartingWeaponBag } from '../data/weaponBag.js'
-import { AgreementLetters } from '../data/agreements.js'
+import { type AgreementLetter, TwoSidedAgreementLetters } from '../data/agreements.js'
 import { EndOfEraCards, GameOverCard, PlayerCardIds, developmentCardIdsForDecade } from '../data/cards.js'
 import {
     DornochDurStartingMineLevel,
@@ -86,7 +86,7 @@ export class RockyVenturesGameInitializer
             removedScourges: [],
             weaponBag: { ...StartingWeaponBag },
             dragon: { trackerTokens: [], summoned: false, hits: 0, killed: false },
-            agreementStacks: this.initializeAgreementStacks(prng),
+            agreementStacks: this.initializeAgreementStacks(),
             gemsSpent: 0,
             era: 1,
             turnActionsTaken: [],
@@ -181,12 +181,10 @@ export class RockyVenturesGameInitializer
         return { goldA, goldB, silverA, silverB }
     }
 
-    private initializeAgreementStacks(prng: Prng): Record<string, typeof AgreementLetters> {
-        const stacks: Record<string, typeof AgreementLetters> = {}
+    private initializeAgreementStacks(): Record<string, AgreementLetter[]> {
+        const stacks: Record<string, AgreementLetter[]> = {}
         for (const cityId of [DeliveryCityId.Dornoch, DeliveryCityId.Manor]) {
-            const letters = [...AgreementLetters]
-            shuffle(letters, prng.random)
-            stacks[cityId] = letters
+            stacks[cityId] = [...TwoSidedAgreementLetters]
         }
         return stacks
     }

@@ -60,7 +60,11 @@ export const PendingShare = Type.Object({
 export type PendingAgreementBuy = Type.Static<typeof PendingAgreementBuy>
 export const PendingAgreementBuy = Type.Object({
     cityId: Type.Enum(DeliveryCityId),
-    income: Type.Number()
+    income: Type.Number(),
+    // Set for two-sided agreements; agreement D's offer leaves these out.
+    letter: Type.Optional(Type.Enum(AgreementLetter)),
+    cost: Type.Optional(Type.Number()),
+    victoryPoints: Type.Optional(Type.Number())
 })
 
 export type FreeTrackState = Type.Static<typeof FreeTrackState>

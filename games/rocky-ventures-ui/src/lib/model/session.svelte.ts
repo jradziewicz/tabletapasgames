@@ -30,6 +30,7 @@ import {
     CardKind,
     getCard,
     ChooseAgreementGemCost,
+    isTwoSidedAgreement,
     type ExtractionPlan,
     MachineState,
     buildableBoxes,
@@ -992,7 +993,8 @@ export class RockyVenturesGameSession extends GameSession<
             card?.kind === CardKind.Development &&
             card.bonus.kind === CardBonusKind.Agreement &&
             gems >= ChooseAgreementGemCost &&
-            (this.gameState.agreementStacks[card.bonus.cityId]?.length ?? 0) > 1
+            (this.gameState.agreementStacks[card.bonus.cityId]?.length ?? 0) > 1 &&
+            !isTwoSidedAgreement(this.gameState.agreementStacks[card.bonus.cityId]![0]!)
         ) {
             this.agreementPick = { slotIndex, cityId: card.bonus.cityId }
             return

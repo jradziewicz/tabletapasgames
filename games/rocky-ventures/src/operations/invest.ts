@@ -8,7 +8,7 @@ import { marketCardCost, removeFromMarket } from './market.js'
 import { startPointBuy } from './turn.js'
 import { recordActionStat, recordCash, recordGems, recordStat } from './stats.js'
 import { StatKind } from '../model/stats.js'
-import type { AgreementLetter } from '../data/agreements.js'
+import { type AgreementLetter, isTwoSidedAgreement } from '../data/agreements.js'
 
 // Spend this many gems to take any agreement from the city's pile instead of the top one.
 export const ChooseAgreementGemCost = 1
@@ -33,6 +33,9 @@ export function reasonChooseAgreementInvalid(
     if (!stack.includes(letter)) {
         return 'That agreement is not in the pile'
     }
+    if (isTwoSidedAgreement(letter) && stack[0] !== letter) {
+        return 'Two-sided agreements are taken in order from the top of the pile'
+    }
     if (stack[0] !== letter && state.getPlayerState(playerId).gems < ChooseAgreementGemCost) {
         return 'Choosing an agreement other than the top one costs a gem'
     }
@@ -51,13 +54,25 @@ export function awardAgreement(
     }
     const player = state.getPlayerState(playerId)
     let letter = stack[0]!
-    if (chosenLetter !== undefined && chosenLetter !== stack[0] && stack.includes(chosenLetter)) {
+    if (
+        chosenLetter !== undefined &&
+        chosenLetter !== stack[0] &&
+        stack.includes(chosenLetter) &&
+        !isTwoSidedAgreement(chosenLetter)
+    ) {
         player.spendGems(ChooseAgreementGemCost)
         state.gemsSpent += ChooseAgreementGemCost
         recordGems(state, playerId, ChooseAgreementGemCost, 'chooseAgreement', true)
         letter = chosenLetter
     }
     stack.splice(stack.indexOf(letter), 1)
+    if (isTwoSidedAgreement(letter)) {
+        for (const held of player.agreements) {
+            if (held.cityId === cityId && isTwoSidedAgreement(held.letter)) {
+                held.flipped = true
+            }
+        }
+    }
     player.agreements.push({ cityId, letter })
 }
 

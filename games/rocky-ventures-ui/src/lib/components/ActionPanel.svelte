@@ -189,7 +189,7 @@
                 onclick={() => gameSession.buyAgreementPoints(true)}
                 class="rv-btn text-sm"
             >
-                Buy 3 VP · {`$${6}`}
+                Buy {gameState.pendingAgreementBuy.victoryPoints ?? 3} VP · {`$${gameState.pendingAgreementBuy.cost ?? 6}`}
             </button>
             <button
                 type="button"

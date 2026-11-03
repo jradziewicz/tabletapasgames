@@ -17,7 +17,9 @@ export const OwnedShare = Type.Object({
 export type OwnedAgreement = Type.Static<typeof OwnedAgreement>
 export const OwnedAgreement = Type.Object({
     cityId: Type.Enum(DeliveryCityId),
-    letter: Type.Enum(AgreementLetter)
+    letter: Type.Enum(AgreementLetter),
+    // Two-sided agreements only: true once a later agreement from the same city flipped it.
+    flipped: Type.Optional(Type.Boolean())
 })
 
 export type RockyVenturesPlayerState = Type.Static<typeof RockyVenturesPlayerState>

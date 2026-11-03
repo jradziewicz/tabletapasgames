@@ -123,12 +123,12 @@
     {#if selectedPlayer.agreements.length > 0}
         <div class="flex flex-row gap-2 overflow-x-auto pb-4">
             {#each selectedPlayer.agreements as agreement (`${agreement.cityId}-${agreement.letter}`)}
-                {@const agreementUrl = agreementImageUrl(agreement.cityId, agreement.letter)}
+                {@const agreementUrl = agreementImageUrl(agreement.cityId, agreement.letter, agreement.flipped)}
                 {#if agreementUrl}
                     <button
                         type="button"
                         class="block w-[150px] shrink-0 overflow-hidden rounded-md border border-[#8a6d3b] shadow-md"
-                        title={agreementTooltip(agreement.cityId, agreement.letter)}
+                        title={agreementTooltip(agreement.cityId, agreement.letter, agreement.flipped)}
                         onclick={() => gameSession.zoomCard(`${agreement.cityId}-${agreement.letter}`, agreementUrl)}
                         onpointerenter={(event) => gameSession.previewCard(event, `${agreement.cityId}-${agreement.letter}`, agreementUrl)}
                         onpointerleave={() => gameSession.clearCardPreview()}

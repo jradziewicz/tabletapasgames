@@ -15,7 +15,7 @@
     <div class="mb-2 flex flex-wrap items-center gap-2 text-xs">
         {#if pick === undefined}
             {#each player.agreements as agreement (`${agreement.cityId}-${agreement.letter}`)}
-                {@const url = agreementImageUrl(agreement.cityId, agreement.letter)}
+                {@const url = agreementImageUrl(agreement.cityId, agreement.letter, agreement.flipped)}
                 <button
                     type="button"
                     onclick={() => {
@@ -25,7 +25,7 @@
                     onpointerenter={(event) => gameSession.previewCard(event, `${agreement.cityId}-${agreement.letter}`, url)}
                     onpointerleave={() => gameSession.clearCardPreview()}
                     class="block overflow-hidden rounded border-2 border-[#8a6d3b] hover:border-[#ffd166]"
-                    title="Discard for 2 free track — {agreementTooltip(agreement.cityId, agreement.letter)}"
+                    title="Discard for 2 free track — {agreementTooltip(agreement.cityId, agreement.letter, agreement.flipped)}"
                 >
                     {#if url}
                         <img src={url} alt="{agreement.cityId} {agreement.letter}" class="block h-[56px] w-auto" draggable="false" />
@@ -35,9 +35,10 @@
                 </button>
             {/each}
         {:else}
-            {@const url = agreementImageUrl(pick.cityId, pick.letter)}
+            {@const pickFlipped = player.agreements.find((held) => held.cityId === pick.cityId && held.letter === pick.letter)?.flipped}
+            {@const url = agreementImageUrl(pick.cityId, pick.letter, pickFlipped)}
             {#if url}
-                <img src={url} title={agreementTooltip(pick.cityId, pick.letter)} alt="{pick.cityId} {pick.letter}" class="block h-[56px] w-auto rounded border-2 border-[#ffd166]" draggable="false" />
+                <img src={url} title={agreementTooltip(pick.cityId, pick.letter, pickFlipped)} alt="{pick.cityId} {pick.letter}" class="block h-[56px] w-auto rounded border-2 border-[#ffd166]" draggable="false" />
             {/if}
             {#each CompanyIds as companyId (companyId)}
                 {@const options = buildableBoxes(gameState, companyId, true).length}
