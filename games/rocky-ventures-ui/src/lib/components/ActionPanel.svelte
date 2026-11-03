@@ -235,7 +235,7 @@
                 {#if player.pawnIndex === undefined}
                     First move: place the pawn on any card, free.
                 {:else}
-                    Left goes all the way back to card I. Moving right, pay {`$${PawnSkipCost}`} per skipped card or discard it.
+                    Left goes all the way back to your mat. Moving right, pay {`$${PawnSkipCost}`} per skipped card or discard it.
                 {/if}
             </span>
         </div>
@@ -704,7 +704,7 @@
                     type="button"
                     onclick={() => gameSession.tax()}
                     class="rv-btn rv-primary"
-                    title="Tuck the $1 market card under card I and collect {`$${taxIncome}`}"
+                    title="Tuck the $1 market card under your mat and collect {`$${taxIncome}`}"
                 >
                     Tax (+{`$${taxIncome}`})
                 </button>

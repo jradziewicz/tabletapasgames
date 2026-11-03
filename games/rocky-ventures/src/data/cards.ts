@@ -213,12 +213,14 @@ const development = (
     silverPrice
 })
 
+// The invest/tax card is printed as each player's mat (it can't be discarded), so the four
+// starting cards after it are numbered I-IV (2026-11-03).
 export const PlayerCards: PlayerCard[] = [
-    { id: 'p1', kind: CardKind.Player, numeral: 'I', actions: [invest, tax], exclusiveActions: true },
-    { id: 'p2', kind: CardKind.Player, numeral: 'II', actions: [claimMine(1, 1)], exclusiveActions: false },
-    { id: 'p3', kind: CardKind.Player, numeral: 'III', actions: [layTrack(2, 1)], exclusiveActions: false },
-    { id: 'p4', kind: CardKind.Player, numeral: 'IV', actions: [extract()], exclusiveActions: false },
-    { id: 'p5', kind: CardKind.Player, numeral: 'V', actions: [acquire(1)], exclusiveActions: false }
+    { id: 'p1', kind: CardKind.Player, numeral: 'Mat', actions: [invest, tax], exclusiveActions: true },
+    { id: 'p2', kind: CardKind.Player, numeral: 'I', actions: [claimMine(1, 1)], exclusiveActions: false },
+    { id: 'p3', kind: CardKind.Player, numeral: 'II', actions: [layTrack(2, 1)], exclusiveActions: false },
+    { id: 'p4', kind: CardKind.Player, numeral: 'III', actions: [extract()], exclusiveActions: false },
+    { id: 'p5', kind: CardKind.Player, numeral: 'IV', actions: [acquire(1)], exclusiveActions: false }
 ]
 
 export const PlayerCardIds: string[] = PlayerCards.map((card) => card.id)

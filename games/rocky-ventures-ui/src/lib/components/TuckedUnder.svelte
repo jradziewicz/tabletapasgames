@@ -16,7 +16,7 @@
         type="button"
         class="absolute top-0 block h-full w-full overflow-hidden rounded-md border border-[#8a6d3b] shadow-md"
         style="left: {-(index + 1) * strip}px; z-index: {Math.max(1, 9 - index)};"
-        title="Tucked under card I"
+        title="Tucked under your mat"
         onclick={() => gameSession.zoomCard(id, url)}
     >
         {#if url}

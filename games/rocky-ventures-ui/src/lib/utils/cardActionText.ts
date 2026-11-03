@@ -1,4 +1,4 @@
-import { AcquireMode, CardActionKind, CardKind, getCard, type CardAction } from '@tabletop/rocky-ventures'
+import { AcquireMode, CardActionKind, CardKind, getCard, StartingPlayerCardId, type CardAction } from '@tabletop/rocky-ventures'
 
 function plural(count: number, word: string) {
     return `${count} ${word}${count === 1 ? '' : 's'}`
@@ -43,7 +43,12 @@ export function cardActionsTooltip(cardId: string): string {
     const card = getCard(cardId)
     if (card.kind === CardKind.EndOfEra) return `End of Era ${card.era}`
     if (card.kind === CardKind.GameOver) return 'Game Over'
-    const title = card.kind === CardKind.Player ? `Card ${card.numeral}` : `Card ${card.number}`
+    const title =
+        card.kind !== CardKind.Player
+            ? `Card ${card.number}`
+            : card.id === StartingPlayerCardId
+              ? 'Player mat'
+              : `Card ${card.numeral}`
     const joiner = card.kind === CardKind.Player && card.exclusiveActions ? '\nor ' : '\n'
     return `${title}\n${card.actions.map(cardActionText).join(joiner)}`
 }
