@@ -3,7 +3,12 @@
     import { EyeSolid, EyeSlashSolid } from 'flowbite-svelte-icons'
     import { z } from 'zod'
     import { zfd } from 'zod-form-data'
-    import { ExternalAuthService, UserStatus } from '@tabletop/common'
+    import {
+        ExternalAuthService,
+        INAPPROPRIATE_USERNAME_ERROR,
+        isInappropriateUsername,
+        UserStatus
+    } from '@tabletop/common'
     import { InfoCircleSolid } from 'flowbite-svelte-icons'
     import { goto } from '$app/navigation'
     import googleLogo from '$lib/components/images/google.jpg'
@@ -107,6 +112,9 @@
 
         if (data.username === user?.username) {
             delete data.username
+        } else if (typeof data.username === 'string' && isInappropriateUsername(data.username)) {
+            errors.username = ['That username is not allowed. Please choose another.']
+            return
         }
 
         if (data.email === user?.email) {
@@ -138,6 +146,8 @@
             console.log(e)
             if (e instanceof Error && e.name === 'AuthenticationVerificationFailedError') {
                 errorMessage = 'Invalid password, could not update profile.'
+            } else if (e instanceof Error && e.name === INAPPROPRIATE_USERNAME_ERROR) {
+                errors.username = ['That username is not allowed. Please choose another.']
             } else if (e instanceof Error && e.name === 'AlreadyExistsError') {
                 if (e.message.includes('username')) {
                     errors.username = ['Username already exists']

@@ -6,6 +6,7 @@
     import PasswordInput from '$lib/components/PasswordInput.svelte'
     import AuthLink from '$lib/components/AuthLink.svelte'
     import { focusFirstInput } from '$lib/utils/focusFirstInput'
+    import { INAPPROPRIATE_USERNAME_ERROR, isInappropriateUsername } from '@tabletop/common'
 
     let { onsignin }: { onsignin?: () => void } = $props()
     const { authorizationService, api } = getAppContext()
@@ -33,13 +34,19 @@
             errors = result.error.flatten().fieldErrors
             return
         }
+        if (isInappropriateUsername(result.data.username)) {
+            errors.username = ['That username is not allowed. Please choose another.']
+            return
+        }
         submitting = true
         try {
             const newUser = await api.createUser(result.data)
             authorizationService.setSessionUser(newUser)
             await goto('/library')
         } catch (error) {
-            if (error instanceof Error && error.name === 'AlreadyExistsError') {
+            if (error instanceof Error && error.name === INAPPROPRIATE_USERNAME_ERROR) {
+                errors.username = ['That username is not allowed. Please choose another.']
+            } else if (error instanceof Error && error.name === 'AlreadyExistsError') {
                 if (error.message.includes('username')) {
                     errors.username = ['Username already exists']
                 } else if (error.message.includes('email')) {

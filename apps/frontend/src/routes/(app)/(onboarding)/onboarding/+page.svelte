@@ -1,7 +1,7 @@
 <script lang="ts">
     import { Card, Label, Input, Button, Helper, Alert, P, Hr } from 'flowbite-svelte'
     import { goto } from '$app/navigation'
-    import { UserStatus } from '@tabletop/common'
+    import { INAPPROPRIATE_USERNAME_ERROR, isInappropriateUsername, UserStatus } from '@tabletop/common'
     import { getAppContext } from '@tabletop/frontend-components'
 
     let { authorizationService, api } = getAppContext()
@@ -21,6 +21,11 @@
         username = username?.trim()
         email = email?.trim()
 
+        if (username && isInappropriateUsername(username)) {
+            errors.username = ['That username is not allowed. Please choose another.']
+            return
+        }
+
         let payload = {
             username,
             email
@@ -37,7 +42,9 @@
                 goto('/activeGamesCheck')
             }
         } catch (e) {
-            if (e instanceof Error && e.name === 'AlreadyExistsError') {
+            if (e instanceof Error && e.name === INAPPROPRIATE_USERNAME_ERROR) {
+                errors.username = ['That username is not allowed. Please choose another.']
+            } else if (e instanceof Error && e.name === 'AlreadyExistsError') {
                 if (e.message.includes('username')) {
                     errors.username = ['Username already exists']
                 } else if (e.message.includes('email')) {

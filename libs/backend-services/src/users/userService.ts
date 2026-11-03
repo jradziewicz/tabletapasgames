@@ -2,6 +2,8 @@ import { UserStore } from '../persistence/stores/userStore.js'
 import {
     type AdminAssignableRole,
     ExternalAuthService,
+    InappropriateUsernameError,
+    isInappropriateUsername,
     remove,
     Role,
     User,
@@ -119,6 +121,10 @@ export class UserService {
             throw new InvalidPasswordError()
         }
 
+        if (user.username && isInappropriateUsername(user.username)) {
+            throw new InappropriateUsernameError()
+        }
+
         const createdUser = await this.userStore.createUser(user, cleanPassword)
 
         if (createdUser.email && !createdUser.emailVerified) {
@@ -173,6 +179,10 @@ export class UserService {
         currentPassword?: string,
         token?: string
     ): Promise<User> {
+        if (fields.username && isInappropriateUsername(fields.username)) {
+            throw new InappropriateUsernameError()
+        }
+
         let verificationData: VerificationTokenData | undefined
         if (token) {
             verificationData = await this.tokenService.getData<VerificationTokenData>({
