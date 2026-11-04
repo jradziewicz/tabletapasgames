@@ -197,16 +197,19 @@
     .description p + p {
         margin-top: 12px;
     }
+    /* Sized to the widest button, with the others stretched to match. */
     .actions {
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
+        width: fit-content;
         gap: 12px;
         margin-top: 28px;
     }
     .rules-link {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 10px;
         min-height: 48px;
         padding: 0 22px;
@@ -226,6 +229,7 @@
     .start-game {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 18px;
         min-height: 48px;
         padding: 0 22px;
