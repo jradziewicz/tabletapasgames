@@ -129,7 +129,7 @@
                     onclick={() => gameSession.spendGems('movePawn', index)}
                     onpointerenter={(event) => gameSession.previewCard(event, cardId, tableauImage(cardId))}
                     onpointerleave={() => gameSession.clearCardPreview()}
-                    class="relative block overflow-hidden rounded border-2 border-[#3f7fb8] disabled:opacity-40"
+                    class="relative block shrink-0 overflow-hidden rounded border-2 border-[#3f7fb8] disabled:opacity-40"
                 >
                     <img src={tableauImage(cardId)} alt={cardId} class="block h-[160px] w-auto max-sm:h-[112px]" draggable="false" />
                     {#if cardId === StartingPlayerCardId && player}<MatGems gems={player.gems} />{/if}

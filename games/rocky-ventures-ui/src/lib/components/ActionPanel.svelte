@@ -253,8 +253,8 @@
                 {@const isSkipped = player.pawnIndex !== undefined && (skipped?.includes(index) ?? false)}
                 {@const discarded = gameSession.moveDiscardIndexes.includes(index)}
                 <div
-                    class="flex flex-col items-center gap-1 overflow-hidden"
-                    style="transition: max-width 1s ease-in-out 0.25s, opacity 0.6s ease-in, transform 0.9s ease-in, margin 1s ease-in-out 0.25s; max-width: {gameSession.discardAnimating && discarded ? 0 : 200}px; opacity: {gameSession.discardAnimating && discarded ? 0 : 1}; transform: {gameSession.discardAnimating && discarded ? 'scale(0.6) translateY(24px)' : 'none'}; margin-right: {gameSession.discardAnimating && discarded ? '-12px' : '0'}; pointer-events: {gameSession.discardAnimating ? 'none' : 'auto'};"
+                    class="flex shrink-0 flex-col items-center gap-1 overflow-hidden"
+                    style="transition: max-width 1s ease-in-out 0.25s, opacity 0.6s ease-in, transform 0.9s ease-in, margin 1s ease-in-out 0.25s; max-width: {gameSession.discardAnimating && discarded ? 0 : 320}px; opacity: {gameSession.discardAnimating && discarded ? 0 : 1}; transform: {gameSession.discardAnimating && discarded ? 'scale(0.6) translateY(24px)' : 'none'}; margin-right: {gameSession.discardAnimating && discarded ? '-12px' : '0'}; pointer-events: {gameSession.discardAnimating ? 'none' : 'auto'};"
                 >
                     <div class="relative">
                         {#if player.pawnIndex === index}
