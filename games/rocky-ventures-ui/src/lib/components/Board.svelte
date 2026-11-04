@@ -12,6 +12,8 @@
         DeliveryCityId,
         MineTier,
         MineTokensById,
+        RedRestrictedMineLevel,
+        BlueRestrictedMineLevel,
         NodeKind,
         OreKind,
         RegionIds,
@@ -178,6 +180,19 @@
 
     function mineSite(node: BoardNode): MineSite {
         return board.mines[node.id]
+    }
+
+    // Revealed gold 4s and 5s repaint the board's printed outer ring to match the token's own red
+    // or blue ring, so the whole mine reads as one colour. Unrevealed mines keep the printed ring.
+    const MineRingRadius = 32
+    const MineRingWidth = 5.5
+    const RestrictedMineRingColors: Record<number, string> = {
+        [RedRestrictedMineLevel]: '#f14b50',
+        [BlueRestrictedMineLevel]: '#5f6bb2'
+    }
+
+    function revealedMineRingColor(site: MineSite): string | undefined {
+        return site.token?.ore === OreKind.Gold ? RestrictedMineRingColors[site.token.level] : undefined
     }
 
     function mineImageUrl(node: BoardNode, site: MineSite): string | undefined {
@@ -487,7 +502,19 @@
         {@const flipAnimation = gameSession.extractAnimation}
         {@const flipping =
             flipAnimation !== undefined && flipAnimation.nodeId === node.id && flipAnimation.phase === 'flip'}
+        {@const ringColor = revealedMineRingColor(site)}
         <g>
+            {#if ringColor}
+                <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r={MineRingRadius}
+                    fill="none"
+                    stroke={ringColor}
+                    stroke-width={MineRingWidth}
+                    pointer-events="none"
+                />
+            {/if}
             {#if (claimable || extractable || newlyRevealed) && !extractSelected && !flipping}
                 <!-- SVG-native halo: iPhone Safari ignores CSS drop-shadow on SVG images, and on a
                      phone-sized map a few px of shadow vanishes, so draw a blurred ring in map units -->
