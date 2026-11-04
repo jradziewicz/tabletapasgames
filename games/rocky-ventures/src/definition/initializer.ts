@@ -87,6 +87,7 @@ export class RockyVenturesGameInitializer
             weaponBag: { ...StartingWeaponBag },
             dragon: { trackerTokens: [], summoned: false, hits: 0, killed: false },
             agreementStacks: this.initializeAgreementStacks(),
+            eraThreeEndsGame: true,
             gemsSpent: 0,
             era: 1,
             turnActionsTaken: [],
@@ -190,12 +191,12 @@ export class RockyVenturesGameInitializer
     }
 
     // Decade 1 on top, then Decade 2 with End of Era I shuffled in, Decade 3 with End of Era II,
-    // Decade 4, and the Game Over card face up at the bottom.
+    // Decade 4 with End of Era III, and the Game Over card face up at the bottom.
     private buildDrawPile(prng: Prng): string[] {
         const decade1 = developmentCardIdsForDecade(1)
         const decade2 = [...developmentCardIdsForDecade(2), EndOfEraCards[0]!.id]
         const decade3 = [...developmentCardIdsForDecade(3), EndOfEraCards[1]!.id]
-        const decade4 = developmentCardIdsForDecade(4)
+        const decade4 = [...developmentCardIdsForDecade(4), EndOfEraCards[2]!.id]
         for (const decade of [decade1, decade2, decade3, decade4]) {
             shuffle(decade, prng.random)
         }

@@ -104,6 +104,8 @@ export const RockyVenturesGameState = Type.Evaluate(
             weaponBag: Type.Record(Type.String(), Type.Number()),
             dragon: DragonState,
             agreementStacks: Type.Record(Type.String(), Type.Array(Type.Enum(AgreementLetter))),
+            eraThreeEndsGame: Type.Optional(Type.Boolean()),
+            eraThreeTriggered: Type.Optional(Type.Boolean()),
             gemsSpent: Type.Number(),
             era: Type.Number(),
             turnActionsTaken: Type.Array(Type.String()),
@@ -151,6 +153,9 @@ export class HydratedRockyVenturesGameState
     declare weaponBag: Record<string, number>
     declare dragon: DragonState
     declare agreementStacks: Record<string, AgreementLetter[]>
+    // Games set up from 2026-11-04 end when End of Era III is taken, not on two of the old triggers.
+    declare eraThreeEndsGame?: boolean
+    declare eraThreeTriggered?: boolean
     declare gemsSpent: number
     declare era: number
     declare turnActionsTaken: string[]

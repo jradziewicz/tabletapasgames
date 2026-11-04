@@ -29,16 +29,32 @@ export function drawIntoMarket(
         revealMine(state, card.cityNodeId, random)
     }
     resolveEndOfEraPair(state, random)
+    if (state.eraThreeEndsGame && nextId === ThirdEraCardId && isDrawPileAtGameOver(state)) {
+        state.eraThreeTriggered = true
+    }
     return nextId
 }
 
 export const FirstEraCardId = 'era1'
 export const SecondEraCardId = 'era2'
+export const ThirdEraCardId = 'era3'
 
 // If the first and second End of Era cards are ever in the market together, both leave it: the
 // first is discarded and the second's point buy triggers at once (2026-10-26). The market refills.
 function resolveEndOfEraPair(state: HydratedRockyVenturesGameState, random: RandomFunction) {
     const slots = state.market.slots
+    // End of Era III with either earlier card: both leave and its worse rate applies, ending the game.
+    if (
+        state.eraThreeEndsGame &&
+        slots.includes(ThirdEraCardId) &&
+        (slots.includes(FirstEraCardId) || slots.includes(SecondEraCardId))
+    ) {
+        state.market.slots = slots.filter(
+            (cardId) => cardId !== ThirdEraCardId && cardId !== FirstEraCardId && cardId !== SecondEraCardId
+        )
+        state.eraThreeTriggered = true
+        return
+    }
     if (!slots.includes(FirstEraCardId) || !slots.includes(SecondEraCardId)) {
         return
     }
@@ -65,6 +81,15 @@ export function removeFromMarket(
     }
     state.market.slots.splice(slotIndex, 1)
     drawIntoMarket(state, random)
+    // End of Era III left as the very last card also ends the game.
+    if (
+        state.eraThreeEndsGame &&
+        isDrawPileAtGameOver(state) &&
+        state.market.slots.length === 1 &&
+        state.market.slots[0] === ThirdEraCardId
+    ) {
+        state.eraThreeTriggered = true
+    }
     return cardId
 }
 

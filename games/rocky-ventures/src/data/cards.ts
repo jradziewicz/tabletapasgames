@@ -125,7 +125,7 @@ export interface DevelopmentCard {
 export interface EndOfEraCard {
     id: string
     kind: CardKind.EndOfEra
-    era: 1 | 2
+    era: 1 | 2 | 3
     baseCost: number
     pointBuyCost: number
     pointBuyVictoryPoints: number
@@ -262,7 +262,9 @@ export const DevelopmentCards: DevelopmentCard[] = [
 
 export const EndOfEraCards: EndOfEraCard[] = [
     { id: 'era1', kind: CardKind.EndOfEra, era: 1, baseCost: 0, pointBuyCost: 10, pointBuyVictoryPoints: 5, goldPrice: 6, silverPrice: 6 },
-    { id: 'era2', kind: CardKind.EndOfEra, era: 2, baseCost: 0, pointBuyCost: 15, pointBuyVictoryPoints: 5, goldPrice: 8, silverPrice: 8 }
+    { id: 'era2', kind: CardKind.EndOfEra, era: 2, baseCost: 0, pointBuyCost: 15, pointBuyVictoryPoints: 5, goldPrice: 8, silverPrice: 8 },
+    // Taking this card ends the game; its $5 for 1 VP rate is the final scoring (2026-11-04).
+    { id: 'era3', kind: CardKind.EndOfEra, era: 3, baseCost: 0, pointBuyCost: 5, pointBuyVictoryPoints: 1, goldPrice: 9, silverPrice: 9 }
 ]
 
 export const GameOverCard: GameOverCard = { id: 'gameOver', kind: CardKind.GameOver, cashPerVictoryPoint: 5 }

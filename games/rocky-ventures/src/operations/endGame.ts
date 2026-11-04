@@ -26,6 +26,9 @@ export function endTriggerCount(state: HydratedRockyVenturesGameState): number {
 }
 
 export function endGameTriggered(state: HydratedRockyVenturesGameState): boolean {
+    if (state.eraThreeEndsGame) {
+        return state.eraThreeTriggered === true
+    }
     return endTriggerCount(state) >= EndTriggersRequired
 }
 

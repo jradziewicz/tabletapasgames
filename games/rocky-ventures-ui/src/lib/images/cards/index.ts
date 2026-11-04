@@ -35,7 +35,8 @@ import image32 from './d29.png'
 import image33 from './d30.png'
 import image34 from './era1.png'
 import image35 from './era2.png'
-import image36 from './gameOver.png'
+import image36 from './era3.png'
+import image37 from './gameOver.png'
 
 // Image URL by file name (without .png)
 export const Images: Record<string, string> = {
@@ -75,5 +76,6 @@ export const Images: Record<string, string> = {
     'd30': image33,
     'era1': image34,
     'era2': image35,
-    'gameOver': image36,
+    'era3': image36,
+    'gameOver': image37,
 }

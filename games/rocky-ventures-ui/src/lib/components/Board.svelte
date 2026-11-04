@@ -678,7 +678,7 @@
     {/each}
 
     {#each GemTrackFillOrder as spot, index (index)}
-        {#if index < gameSession.gameState.gemsSpent}
+        {#if !gameSession.gameState.eraThreeEndsGame && index < gameSession.gameState.gemsSpent}
             <polygon
                 points={hexagonPoints(spot, GemHexRadius)}
                 fill="#b3122b"

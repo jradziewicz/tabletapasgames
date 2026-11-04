@@ -1,3 +1,4 @@
+import { ThirdEraCardId } from './market.js'
 import { AcquireMode, CardActionKind, CardKind, getCard } from '../data/cards.js'
 import { MachineState } from '../definition/states.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
@@ -97,6 +98,10 @@ export function stateAfterTurnEnd(state: HydratedRockyVenturesGameState): Machin
 }
 
 export function nextStateAfterResolution(state: HydratedRockyVenturesGameState): MachineState {
+    // End of Era III ends the game on the spot, whatever else was still to resolve.
+    if (state.eraThreeTriggered) {
+        return MachineState.EndOfGame
+    }
     if (state.pendingAgreementBuy) {
         return MachineState.AgreementPointBuy
     }
@@ -132,6 +137,10 @@ export function startPointBuy(
     cardId: string,
     startPlayerId: string = currentPlayerId(state)
 ) {
+    if (cardId === ThirdEraCardId) {
+        state.eraThreeTriggered = true
+        return
+    }
     const order = state.turnManager.turnOrder
     const start = Math.max(0, order.indexOf(startPlayerId))
     const queue = order.map((_, offset) => order[(start + offset) % order.length]!)
