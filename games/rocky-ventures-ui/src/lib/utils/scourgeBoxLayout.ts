@@ -21,4 +21,6 @@ export const ScourgeBoxes: Record<RegionId, ScourgeBox> = {
 
 export const ScourgeCardWidth = 106
 export const ScourgeCardHeight = 150
-export const ScourgeSplayStep = 30
+// Cards stack almost square on each other; hovering a stack fans them out at full size.
+export const ScourgeStackStep = 5
+export const ScourgeFanGap = 8
