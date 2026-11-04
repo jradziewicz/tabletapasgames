@@ -1,3 +1,4 @@
+import { StartingPlayerCardId } from '../data/cards.js'
 import { type HydratedAction, type MachineStateHandler, MachineContext } from '@tabletop/common'
 import { ActionType } from '../definition/actions.js'
 import { MachineState } from '../definition/states.js'
@@ -34,11 +35,18 @@ export class TakeActionsStateHandler
         if (!state.activePlayerIds.includes(playerId)) {
             return []
         }
-        const valid: string[] = [ActionType.EndTurn]
-        if (HydratedTax.canTax(state, playerId)) {
+        const valid: string[] = []
+        const canTax = HydratedTax.canTax(state, playerId)
+        const canInvest = HydratedInvest.canInvest(state, playerId)
+        // On the mat a player must tax or invest; passing is only for when neither is possible.
+        const mustUseMat = state.actionCardId(playerId) === StartingPlayerCardId && (canTax || canInvest)
+        if (!mustUseMat) {
+            valid.push(ActionType.EndTurn)
+        }
+        if (canTax) {
             valid.push(ActionType.Tax)
         }
-        if (HydratedInvest.canInvest(state, playerId)) {
+        if (canInvest) {
             valid.push(ActionType.Invest)
         }
         if (HydratedClaimMine.canClaimMine(state, playerId)) {

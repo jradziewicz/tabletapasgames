@@ -332,7 +332,7 @@
         {#if !gameSession.investPickerOpen}
         <div class="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span class="text-xs text-[#c9a961]">
-                Take any available action, or pass.
+                Take any available action{validTypes.includes(ActionType.EndTurn) ? ', or pass' : ''}.
                 {#if comingLater.length > 0}
                     Not playable yet: {comingLater.join(', ')}.
                 {/if}
