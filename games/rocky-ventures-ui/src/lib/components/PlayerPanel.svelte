@@ -30,7 +30,7 @@
 
     function tableauImageUrl(cardId: string): string | undefined {
         return getCard(cardId).kind === CardKind.Player
-            ? playerCardImageUrl(cardId, playerState.color)
+            ? playerCardImageUrl(cardId, gameSession.colors.getPlayerColor(player.id))
             : cardImageUrl(cardId)
     }
 

@@ -86,7 +86,7 @@
     function thumbUrl(cardId: string): string | undefined {
         const card = getCard(cardId)
         return card.kind === CardKind.Player
-            ? playerCardImageUrl(cardId, player?.color)
+            ? playerCardImageUrl(cardId, activeId ? gameSession.colors.getPlayerColor(activeId) : player?.color)
             : cardImageUrl(cardId)
     }
 
