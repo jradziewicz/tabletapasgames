@@ -99,4 +99,25 @@ describe('End of Era III ending', () => {
         expect(first.market.drawPile.filter((cardId) => cardId === ThirdEraCardId)).toHaveLength(1)
         expect(first.market.drawPile.at(-1)).toBe(GameOverCard.id)
     })
+
+    it('leaves the stored state untouched however often it loads', () => {
+        const stored = structuredClone(startedState('listed').dehydrate())
+        delete stored.eraThreeEndsGame
+        stored.market.drawPile = stored.market.drawPile.filter((cardId) => cardId !== ThirdEraCardId)
+        const before = structuredClone(stored)
+        EraThreeEndingGameIds.push('listed')
+        const loads = [1, 2, 3].map(() => Definition.runtime.hydrator.hydrateState(stored))
+        EraThreeEndingGameIds.pop()
+        expect(stored).toEqual(before)
+        expect(loads[2]!.market.drawPile).toEqual(loads[0]!.market.drawPile)
+    })
+
+    it('removes extra copies a listed game picked up', () => {
+        const stored = structuredClone(startedState('listed').dehydrate())
+        stored.market.drawPile = [ThirdEraCardId, ...stored.market.drawPile, ThirdEraCardId]
+        EraThreeEndingGameIds.push('listed')
+        const state = Definition.runtime.hydrator.hydrateState(stored)
+        EraThreeEndingGameIds.pop()
+        expect(state.market.drawPile.filter((cardId) => cardId === ThirdEraCardId)).toHaveLength(1)
+    })
 })

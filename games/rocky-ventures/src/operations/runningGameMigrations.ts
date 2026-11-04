@@ -27,21 +27,40 @@ function stablePick(text: string, choices: number): number {
     return hash % choices
 }
 
+// Hydrating shares nested objects with the stored state, and the same stored state is hydrated
+// over and over, so these switches build new objects and never change the shared ones.
 function migrateToEraThreeEnding(state: HydratedRockyVenturesGameState) {
-    if (!EraThreeEndingGameIds.includes(state.gameId) || state.eraThreeEndsGame) {
+    if (!EraThreeEndingGameIds.includes(state.gameId)) {
+        return
+    }
+    const inMarket = state.market.slots.includes(ThirdEraCardId)
+    const pile = state.market.drawPile
+    const copies = pile.filter((cardId) => cardId === ThirdEraCardId).length
+    if (state.eraThreeEndsGame) {
+        // Repairs a pile that picked up extra copies before this was fixed.
+        if (copies > (inMarket ? 0 : 1)) {
+            const first = pile.indexOf(ThirdEraCardId)
+            const drawPile = pile.filter(
+                (cardId, index) => cardId !== ThirdEraCardId || (!inMarket && index === first)
+            )
+            state.market = { ...state.market, drawPile }
+        }
         return
     }
     state.eraThreeEndsGame = true
-    const pile = state.market.drawPile
-    const isDecadeFour = (cardId: string) => {
-        const card = getCard(cardId)
-        return card.kind === CardKind.Development && card.decade === 4
+    const drawPile = pile.filter((cardId) => cardId !== ThirdEraCardId)
+    if (!inMarket) {
+        const isDecadeFour = (cardId: string) => {
+            const card = getCard(cardId)
+            return card.kind === CardKind.Development && card.decade === 4
+        }
+        const firstDecadeFour = drawPile.findIndex(isDecadeFour)
+        const bottom = drawPile.findIndex((cardId) => getCard(cardId).kind === CardKind.GameOver)
+        const end = bottom < 0 ? drawPile.length : bottom
+        const start = firstDecadeFour < 0 ? end : firstDecadeFour
+        drawPile.splice(start + stablePick(drawPile.join(), end - start + 1), 0, ThirdEraCardId)
     }
-    const firstDecadeFour = pile.findIndex(isDecadeFour)
-    const bottom = pile.findIndex((cardId) => getCard(cardId).kind === CardKind.GameOver)
-    const end = bottom < 0 ? pile.length : bottom
-    const start = firstDecadeFour < 0 ? end : firstDecadeFour
-    pile.splice(start + stablePick(pile.join(), end - start + 1), 0, ThirdEraCardId)
+    state.market = { ...state.market, drawPile }
 }
 
 export function migrateRunningGame(state: HydratedRockyVenturesGameState) {
@@ -56,9 +75,9 @@ export function migrateRunningGame(state: HydratedRockyVenturesGameState) {
     if (!stillOriginal || state.players.some((player) => player.agreements.length > 0)) {
         return
     }
-    for (const cityId of cities) {
-        state.agreementStacks[cityId] = [...TwoSidedAgreementLetters]
-    }
+    state.agreementStacks = Object.fromEntries(
+        cities.map((cityId) => [cityId, [...TwoSidedAgreementLetters]])
+    )
     for (const player of state.players) {
         player.gems = Math.min(MaxGems, player.gems + 1)
     }
