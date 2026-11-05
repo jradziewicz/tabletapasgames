@@ -92,7 +92,7 @@
         {#each selectedPlayer.tableau as cardId, index (cardId)}
             {@const imageUrl = imageFor(cardId)}
             <div
-                class="relative shrink-0 {cardId === StartingPlayerCardId ? 'w-[350px]' : 'w-[150px]'}"
+                class="relative shrink-0 {cardId === StartingPlayerCardId ? 'w-[302px]' : 'w-[150px]'}"
                 style="margin-left: {index === 0 ? selectedPlayer.tuckedCardIds.length * TUCK_STRIP : 0}px;"
             >
                 {#if index === 0}
