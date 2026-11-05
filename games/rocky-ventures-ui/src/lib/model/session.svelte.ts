@@ -523,6 +523,34 @@ export class RockyVenturesGameSession extends GameSession<
         })
     }
 
+    // The card's actions the player passed on this turn, so Pass moves to the next one instead of
+    // ending the whole turn.
+    private passedActions: { turn: number; types: string[] } | undefined = $state()
+
+    get passedActionTypes(): string[] {
+        const passed = this.passedActions
+        return passed?.turn === this.gameState.turnManager.series.length ? passed.types : []
+    }
+
+    async passAction(type: ActionType) {
+        const passed = [...this.passedActionTypes, type]
+        const others = this.validActionTypes.filter(
+            (other) =>
+                !passed.includes(other) &&
+                (other === ActionType.ClaimMine ||
+                    other === ActionType.LayTrack ||
+                    other === ActionType.ExtractAndSell ||
+                    other === ActionType.Hunt ||
+                    other === ActionType.Acquire)
+        )
+        if (others.length === 0) {
+            await this.endTurn()
+            return
+        }
+        this.passedActions = { turn: this.gameState.turnManager.series.length, types: passed }
+        this.clearLocalSelection()
+    }
+
     get autoActionKind(): ActionType | undefined {
         if (
             !this.isMyTurn ||
@@ -540,7 +568,7 @@ export class RockyVenturesGameSession extends GameSession<
                 type === ActionType.ExtractAndSell ||
                 type === ActionType.Hunt ||
                 type === ActionType.Acquire
-        )
+        ).filter((type) => !this.passedActionTypes.includes(type))
         return kinds.length === 1 ? kinds[0] : undefined
     }
 

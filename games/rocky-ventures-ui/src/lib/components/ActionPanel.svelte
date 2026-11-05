@@ -411,7 +411,7 @@
                     {#if gameSession.extractMode}
                         <button type="button" onclick={() => gameSession.clearLocalSelection()} class="rv-quiet">Back</button>
                     {/if}
-                    <button type="button" onclick={() => gameSession.endTurn()} class="rv-quiet">Pass</button>
+                    <button type="button" onclick={() => gameSession.passAction(ActionType.ExtractAndSell)} class="rv-quiet">Pass</button>
                 </div>
                 {#if extractNodeId && extractToken?.ore === OreKind.Silver && extractPlan}
                     <button
@@ -586,7 +586,7 @@
                 {/if}
                 <button
                     type="button"
-                    onclick={() => gameSession.endTurn()}
+                    onclick={() => gameSession.passAction(ActionType.Acquire)}
                     class="rv-quiet"
                 >
                     Pass
@@ -615,7 +615,7 @@
                 {/if}
                 <button
                     type="button"
-                    onclick={() => gameSession.endTurn()}
+                    onclick={() => gameSession.passAction(ActionType.Hunt)}
                     class="rv-quiet"
                 >
                     Pass
@@ -649,7 +649,7 @@
                 {#if gameSession.trackMode}
                     <button type="button" onclick={() => gameSession.clearLocalSelection()} class="rv-quiet">Back</button>
                 {/if}
-                <button type="button" onclick={() => gameSession.endTurn()} class="rv-quiet">Pass</button>
+                <button type="button" onclick={() => gameSession.passAction(ActionType.LayTrack)} class="rv-quiet">Pass</button>
             </div>
         {:else if !gameSession.investPickerOpen}
         <div class="mb-3 flex flex-wrap items-end gap-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1 max-sm:*:shrink-0">
