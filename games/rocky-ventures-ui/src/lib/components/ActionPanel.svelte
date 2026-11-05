@@ -1,5 +1,6 @@
 <script lang="ts">
     import MatGems from '$lib/components/MatGems.svelte'
+    import StackedUnder from '$lib/components/StackedUnder.svelte'
     import { StartingPlayerCardId } from '@tabletop/rocky-ventures'
     import { DummyName } from '$lib/utils/dummyDisplay.js'
     import {
@@ -81,6 +82,11 @@
         [CardActionKind.ExtractAndSell]: 'Extract & Sell',
         [CardActionKind.Acquire]: 'Acquire',
         [CardActionKind.Hunt]: 'Hunt'
+    }
+
+    function stackedUnderUrl(cardId: string): string | undefined {
+        const underId = player?.stackedCards?.[cardId]
+        return underId === undefined ? undefined : thumbUrl(underId)
     }
 
     function thumbUrl(cardId: string): string | undefined {
@@ -271,6 +277,7 @@
                         title={legal ? `Move to ${cardLabel(cardId)}` : 'Not a legal move'}
                     >
                         {#if thumbUrl(cardId)}
+                            <StackedUnder underUrl={stackedUnderUrl(cardId)} class="h-[76px] max-sm:h-[53px]" imageClass="h-[160px] w-auto max-sm:h-[112px]" />
                             <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[160px] w-auto max-sm:h-[112px]" draggable="false" />
                             {#if cardId === StartingPlayerCardId && player}<MatGems gems={player.gems} />{/if}
                         {:else}
@@ -689,6 +696,7 @@
                                 class="relative z-10 block overflow-hidden rounded border-2 border-[#4a3620]"
                                 onclick={() => gameSession.zoomCard(cardId, thumbUrl(cardId))}
                             >
+                                <StackedUnder underUrl={stackedUnderUrl(cardId)} class="h-[76px] max-sm:h-[53px]" imageClass="h-[160px] w-auto max-sm:h-[112px]" />
                                 <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[160px] w-auto max-sm:h-[112px]" draggable="false" />
                                 {#if cardId === StartingPlayerCardId && player}<MatGems gems={player.gems} />{/if}
                             </button>

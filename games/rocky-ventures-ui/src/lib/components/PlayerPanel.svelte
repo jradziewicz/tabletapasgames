@@ -38,9 +38,9 @@
         const card = getCard(cardId)
         switch (card.kind) {
             case CardKind.Player:
-                return card.numeral
+                return `${card.numeral}${playerState.stackedCards?.[cardId] ? '+' : ''}`
             case CardKind.Development:
-                return `${card.number}`
+                return `${card.number}${playerState.stackedCards?.[cardId] ? '+' : ''}`
             case CardKind.EndOfEra:
                 return `E${card.era}`
             case CardKind.GameOver:

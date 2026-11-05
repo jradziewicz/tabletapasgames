@@ -30,6 +30,8 @@ import {
     CardKind,
     getCard,
     ChooseAgreementGemCost,
+    StackCardGemCost,
+    stackableCardIds,
     isTwoSidedAgreement,
     type ExtractionPlan,
     MachineState,
@@ -74,6 +76,7 @@ export class RockyVenturesGameSession extends GameSession<
     zoomedImage: { url: string; alt: string } | undefined = $state()
     // Buying an agreement card while holding a gem: choose which agreement to take first.
     agreementPick: { slotIndex: number; cityId: DeliveryCityId } | undefined = $state()
+    stackPick: { slotIndex: number } | undefined = $state()
     gridZoomOpen = $state(false)
     hoveredCard: { url: string; alt: string } | undefined = $state()
     botSeats: Record<string, BotProfile> = $state({})
@@ -1019,6 +1022,15 @@ export class RockyVenturesGameSession extends GameSession<
         const gems = playerId ? this.gameState.getPlayerState(playerId).gems : 0
         if (
             card?.kind === CardKind.Development &&
+            playerId &&
+            gems >= StackCardGemCost &&
+            stackableCardIds(this.gameState, playerId).length > 0
+        ) {
+            this.stackPick = { slotIndex }
+            return
+        }
+        if (
+            card?.kind === CardKind.Development &&
             card.bonus.kind === CardBonusKind.Agreement &&
             gems >= ChooseAgreementGemCost &&
             (this.gameState.agreementStacks[card.bonus.cityId]?.length ?? 0) > 1 &&
@@ -1030,11 +1042,20 @@ export class RockyVenturesGameSession extends GameSession<
         await this.investWithAgreement(slotIndex, undefined)
     }
 
-    async investWithAgreement(slotIndex: number, agreementLetter: AgreementLetter | undefined) {
+    async investWithAgreement(
+        slotIndex: number,
+        agreementLetter: AgreementLetter | undefined,
+        stackOnCardId?: string
+    ) {
         this.agreementPick = undefined
+        this.stackPick = undefined
         await this.submit(ActionType.Invest, async () => {
             await this.applyAction(
-                this.createPlayerAction(Invest, agreementLetter ? { slotIndex, agreementLetter } : { slotIndex })
+                this.createPlayerAction(Invest, {
+                    slotIndex,
+                    ...(agreementLetter ? { agreementLetter } : {}),
+                    ...(stackOnCardId ? { stackOnCardId } : {})
+                })
             )
         })
     }

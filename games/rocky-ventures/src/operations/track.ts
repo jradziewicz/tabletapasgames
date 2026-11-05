@@ -121,12 +121,11 @@ export function layTrackLimits(state: HydratedRockyVenturesGameState): LayTrackL
         return { tracksLeft, allowedCompanyIds: [] }
     }
     const playerId = state.turnManager.currentTurn()?.playerId
-    let maxCompanies = 1
-    for (const action of playerId ? state.actionCardActions(playerId) : []) {
-        if (action.kind === CardActionKind.LayTrack) {
-            maxCompanies = action.maxCompanies
-        }
-    }
+    // A stack can hold two lay track actions, whose company limits add up.
+    const trackActions = (playerId ? state.actionCardActions(playerId) : []).filter(
+        (action) => action.kind === CardActionKind.LayTrack
+    )
+    const maxCompanies = trackActions.reduce((total, action) => total + action.maxCompanies, 0) || 1
     const used = state.turnTrackCompanies
     const allowedCompanyIds =
         used.length >= maxCompanies ? CompanyIds.filter((id) => used.includes(id)) : [...CompanyIds]

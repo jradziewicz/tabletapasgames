@@ -1,5 +1,6 @@
 <script lang="ts">
     import MatGems from '$lib/components/MatGems.svelte'
+    import StackedUnder from '$lib/components/StackedUnder.svelte'
     import { StartingPlayerCardId } from '@tabletop/rocky-ventures'
     import { PlayerName } from '@tabletop/frontend-components'
     import { CardKind, OreCapacityByToolLevel, getCard, taxIncomeFor } from '@tabletop/rocky-ventures'
@@ -108,6 +109,11 @@
                         class="relative z-10 block w-full overflow-hidden rounded-md border border-[#8a6d3b] shadow-md"
                         onclick={() => gameSession.zoomCard(cardId, imageUrl)}
                     >
+                        <StackedUnder
+                            underUrl={selectedPlayer.stackedCards?.[cardId] ? imageFor(selectedPlayer.stackedCards[cardId]!) : undefined}
+                            class="aspect-[414/305]"
+                            imageClass="h-auto w-full"
+                        />
                         <img src={imageUrl} alt={cardId} class="block h-auto w-full" draggable="false" />
                         {#if cardId === StartingPlayerCardId}<MatGems gems={selectedPlayer.gems} />{/if}
                     </button>

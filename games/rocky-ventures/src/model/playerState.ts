@@ -39,7 +39,9 @@ export const RockyVenturesPlayerState = Type.Evaluate(
             tuckedCardIds: Type.Array(Type.String()),
             pawnIndex: Type.Optional(Type.Number()),
             shares: Type.Array(OwnedShare),
-            agreements: Type.Array(OwnedAgreement)
+            agreements: Type.Array(OwnedAgreement),
+            // Stacked cards: the top card (in the tableau) mapped to the card under it.
+            stackedCards: Type.Optional(Type.Record(Type.String(), Type.String()))
         })
     ])
 )
@@ -65,6 +67,7 @@ export class HydratedRockyVenturesPlayerState
     declare pawnIndex?: number
     declare shares: OwnedShare[]
     declare agreements: OwnedAgreement[]
+    declare stackedCards?: Record<string, string>
 
     constructor(data: RockyVenturesPlayerState) {
         super(data, RockyVenturesPlayerStateValidator)

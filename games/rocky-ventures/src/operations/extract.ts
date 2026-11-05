@@ -62,9 +62,12 @@ export function currentExtractAction(
     state: HydratedRockyVenturesGameState,
     playerId: string
 ): ExtractAndSellCardAction | undefined {
-    return state.actionCardActions(playerId).find(
+    // A stack can hold two extract actions; each one is used in turn.
+    const actions = state.actionCardActions(playerId).filter(
         (action): action is ExtractAndSellCardAction => action.kind === CardActionKind.ExtractAndSell
     )
+    const used = state.turnActionsSinceImmediate.filter((kind) => kind === CardActionKind.ExtractAndSell).length
+    return actions[Math.min(used, actions.length - 1)]
 }
 
 function citySideOfRegion(regionId: string): DeliveryCityId {

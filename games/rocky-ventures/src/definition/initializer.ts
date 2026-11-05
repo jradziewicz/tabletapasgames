@@ -88,6 +88,7 @@ export class RockyVenturesGameInitializer
             dragon: { trackerTokens: [], summoned: false, hits: 0, killed: false },
             agreementStacks: this.initializeAgreementStacks(),
             eraThreeEndsGame: true,
+            cardStacking: true,
             gemsSpent: 0,
             era: 1,
             turnActionsTaken: [],

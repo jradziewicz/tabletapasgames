@@ -1,5 +1,5 @@
 import { Prng } from '@tabletop/common'
-import { CardActionKind, CardBonusKind, CardKind, getCard } from '../data/cards.js'
+import { CardActionKind, CardBonusKind, CardKind, StartingPlayerCardId, getCard } from '../data/cards.js'
 import { TaxSlotIndex, taxIncomeFor } from '../data/setup.js'
 import type { CompanyId } from '../data/companies.js'
 import type { DeliveryCityId } from '../data/board.js'
@@ -12,6 +12,7 @@ import { type AgreementLetter, isTwoSidedAgreement } from '../data/agreements.js
 
 // Spend this many gems to take any agreement from the city's pile instead of the top one.
 export const ChooseAgreementGemCost = 1
+export const StackCardGemCost = 3
 
 export function investCost(
     state: HydratedRockyVenturesGameState,
@@ -76,11 +77,46 @@ export function awardAgreement(
     player.agreements.push({ cityId, letter })
 }
 
+// Tableau cards a bought card may be stacked on: not the mat, not an existing stack (two cards at
+// most), and not the card the pawn is working from right now.
+export function stackableCardIds(state: HydratedRockyVenturesGameState, playerId: string): string[] {
+    if (!state.cardStacking) {
+        return []
+    }
+    const player = state.getPlayerState(playerId)
+    return player.tableau.filter(
+        (cardId) =>
+            cardId !== StartingPlayerCardId &&
+            player.stackedCards?.[cardId] === undefined &&
+            cardId !== player.pawnCardId
+    )
+}
+
+export function reasonStackInvalid(
+    state: HydratedRockyVenturesGameState,
+    playerId: string,
+    slotIndex: number,
+    stackOnCardId: string
+): string | undefined {
+    const cardId = state.market.slots[slotIndex]
+    if (cardId === undefined || getCard(cardId).kind !== CardKind.Development) {
+        return 'Only development cards can be stacked'
+    }
+    if (!stackableCardIds(state, playerId).includes(stackOnCardId)) {
+        return 'That card cannot be stacked on'
+    }
+    if (state.getPlayerState(playerId).gems < StackCardGemCost) {
+        return `Stacking a card costs ${StackCardGemCost} gems`
+    }
+    return undefined
+}
+
 export function investInMarketCard(
     state: HydratedRockyVenturesGameState,
     playerId: string,
     slotIndex: number,
-    agreementLetter?: AgreementLetter
+    agreementLetter?: AgreementLetter,
+    stackOnCardId?: string
 ) {
     const player = state.getPlayerState(playerId)
     const cardId = state.market.slots[slotIndex]
@@ -115,7 +151,15 @@ export function investInMarketCard(
     if (card.kind !== CardKind.Development) {
         return
     }
-    player.tableau.push(cardId)
+    if (stackOnCardId === undefined) {
+        player.tableau.push(cardId)
+    } else {
+        player.tableau[player.tableau.indexOf(stackOnCardId)] = cardId
+        player.stackedCards = { ...player.stackedCards, [cardId]: stackOnCardId }
+        player.spendGems(StackCardGemCost)
+        state.gemsSpent += StackCardGemCost
+        recordGems(state, playerId, StackCardGemCost, 'stackCard', true)
+    }
     switch (card.bonus.kind) {
         case CardBonusKind.Agreement:
             awardAgreement(state, playerId, card.bonus.cityId, agreementLetter)

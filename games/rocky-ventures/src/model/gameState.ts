@@ -105,6 +105,7 @@ export const RockyVenturesGameState = Type.Evaluate(
             dragon: DragonState,
             agreementStacks: Type.Record(Type.String(), Type.Array(Type.Enum(AgreementLetter))),
             eraThreeEndsGame: Type.Optional(Type.Boolean()),
+            cardStacking: Type.Optional(Type.Boolean()),
             eraThreeTriggered: Type.Optional(Type.Boolean()),
             gemsSpent: Type.Number(),
             era: Type.Number(),
@@ -155,6 +156,8 @@ export class HydratedRockyVenturesGameState
     declare agreementStacks: Record<string, AgreementLetter[]>
     // Games set up from 2026-11-04 end when End of Era III is taken, not on two of the old triggers.
     declare eraThreeEndsGame?: boolean
+    // Games set up from 2026-11-05 can stack a bought card on a tableau card for 3 gems.
+    declare cardStacking?: boolean
     declare eraThreeTriggered?: boolean
     declare gemsSpent: number
     declare era: number
@@ -199,7 +202,12 @@ export class HydratedRockyVenturesGameState
         if (card.kind !== CardKind.Player && card.kind !== CardKind.Development) {
             return []
         }
-        return card.actions
+        // A stack gives the top action of the card underneath plus all of the top card's actions.
+        const underId = this.getPlayerState(playerId).stackedCards?.[cardId]
+        const under = underId === undefined ? undefined : getCard(underId)
+        const underAction =
+            under?.kind === CardKind.Player || under?.kind === CardKind.Development ? under.actions[0] : undefined
+        return underAction ? [underAction, ...card.actions] : card.actions
     }
 
     get turnActionsSinceImmediate(): string[] {
