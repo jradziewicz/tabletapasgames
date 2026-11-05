@@ -653,9 +653,6 @@
                         {CompanyNames[companyId]} · {`$${company.treasury}`}
                     </button>
                 {/each}
-                {#if gameSession.trackMode}
-                    <button type="button" onclick={() => gameSession.clearLocalSelection()} class="rv-quiet">Back</button>
-                {/if}
                 <button type="button" onclick={() => gameSession.passAction(ActionType.LayTrack)} class="rv-quiet">Pass</button>
             </div>
         {:else if !gameSession.investPickerOpen}
