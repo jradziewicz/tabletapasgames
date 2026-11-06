@@ -14,6 +14,7 @@ function hydrate(state: RockyVenturesGameState) {
 
 export type RecentAction<T> = {
     action: GameAction & T
+    index: number
     playerId: string
     before: HydratedRockyVenturesGameState
     after: HydratedRockyVenturesGameState
@@ -38,7 +39,7 @@ export function recentOtherPlayerAction<T>(session: RockyVenturesGameSession, ty
         }
         const after = hydrate(state)
         const before = hydrate(engine.undoProcessedAction({ action, state }))
-        return { action: action as GameAction & T, playerId, before, after }
+        return { action: action as GameAction & T, index, playerId, before, after }
     } catch (error) {
         console.warn('Could not read the last move', error)
         return undefined

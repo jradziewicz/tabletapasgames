@@ -19,7 +19,21 @@
         const detail = Object.fromEntries((event.detail ?? '').split(';').map((pair) => pair.split('=') as [string, string]))
         const ore = event.source === 'gold' ? 'Gold' : event.source === 'silver' ? 'Silver' : undefined
         const creditCompanyId = recent.action.creditCompanyId
+
+        // A sale to a city where they hold an agreement offers a point buy straight after it.
+        const buy = recentOtherPlayerAction<{ buy: boolean }>(gameSession, ActionType.AgreementPointBuy)
+        const followUp = buy?.index === recent.index + 1 ? buy : undefined
+        const buyer = followUp?.before.getPlayerState(followUp.playerId)
+        const bought = followUp?.after.getPlayerState(followUp.playerId)
+        const pointBuy =
+            followUp && buyer && bought
+                ? followUp.action.buy
+                    ? `bought ${bought.victoryPoints - buyer.victoryPoints} VP for $${buyer.money - bought.money} from the agreement`
+                    : 'skipped the agreement point buy'
+                : undefined
+
         return {
+            pointBuy,
             playerId: recent.playerId,
             amount: `${detail['ore'] ?? ''} ${ore ?? 'ore'}`.trim(),
             mine: BoardNodesById[recent.action.nodeId]?.name,
@@ -33,6 +47,6 @@
 {#if result}
     <div class="mb-2 rounded border border-[#8a6d3b] bg-black/20 px-2 py-1.5 text-xs text-[#c9a961]">
         <strong class="capitalize text-[#f1e6cf]">{gameSession.getPlayerName(result.playerId)}</strong>
-        extracted <strong class="text-[#f1e6cf]">{result.amount}</strong>{#if result.mine}&nbsp;at {result.mine}{/if}{#if result.city}, sold to <strong class="text-[#f1e6cf]">{result.city}</strong>{/if}{#if result.railroad}&nbsp;via {result.railroad}{/if}{#if result.earned !== undefined}: <strong class="text-[#f1e6cf]">{result.earned < 0 ? `-$${-result.earned}` : `+$${result.earned}`}</strong>{/if}
+        extracted <strong class="text-[#f1e6cf]">{result.amount}</strong>{#if result.mine}&nbsp;at {result.mine}{/if}{#if result.city}, sold to <strong class="text-[#f1e6cf]">{result.city}</strong>{/if}{#if result.railroad}&nbsp;via {result.railroad}{/if}{#if result.earned !== undefined}: <strong class="text-[#f1e6cf]">{result.earned < 0 ? `-$${-result.earned}` : `+$${result.earned}`}</strong>{/if}{#if result.pointBuy}, then <strong class="text-[#f1e6cf]">{result.pointBuy}</strong>{/if}
     </div>
 {/if}
