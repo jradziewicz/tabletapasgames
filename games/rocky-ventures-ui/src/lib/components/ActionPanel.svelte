@@ -53,6 +53,7 @@
     import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.svelte.js'
     import { playerCardImageUrl } from '$lib/utils/playerCardImages.js'
     import Pawn from '$lib/components/Pawn.svelte'
+    import RecentHunt from '$lib/components/RecentHunt.svelte'
     import { gemGainBlockedReason, huntBonusWarnings } from '$lib/utils/gemWarnings.js'
     import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
     import { DragonTileImageUrl, weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
@@ -178,6 +179,8 @@
         </div>
     {/if}
 
+    <RecentHunt />
+
     {#if gameSession.gameState.result}
         {#if gameSession.gameCall}
             <!-- A called or conceded game ends on the players' agreement; the scores below are where it stood. -->
@@ -217,6 +220,20 @@
             </div>
         {:else}
             <div class="text-[#c9a961]">Waiting for the active player.</div>
+        {/if}
+        {#if gameState.machineState === MachineState.Hunt && gameState.pendingHunt}
+            {@const pending = gameState.pendingHunt}
+            <div class="mt-2 text-xs text-[#c9a961]">
+                Hunting {regionLabel(pending.region)}, applying up to {Math.min(pending.apply, pending.drawn.length)} of the {pending.drawn.length} drawn:
+            </div>
+            <div class="mt-1 flex flex-wrap items-center gap-2">
+                {#each pending.drawn as kind, index (index)}
+                    {@const url = weaponTokenImageUrl(kind)}
+                    {#if url}
+                        <img src={url} alt={kind} class="block h-12 w-12" draggable="false" />
+                    {/if}
+                {/each}
+            </div>
         {/if}
         {#if player}
             <!-- Watch the active player's row, pawn included, while it isn't your turn -->
