@@ -53,6 +53,7 @@
     import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.svelte.js'
     import { playerCardImageUrl } from '$lib/utils/playerCardImages.js'
     import Pawn from '$lib/components/Pawn.svelte'
+    import RecentExtract from '$lib/components/RecentExtract.svelte'
     import RecentHunt from '$lib/components/RecentHunt.svelte'
     import { gemGainBlockedReason, huntBonusWarnings } from '$lib/utils/gemWarnings.js'
     import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
@@ -180,6 +181,7 @@
     {/if}
 
     <RecentHunt />
+    <RecentExtract />
 
     {#if gameSession.gameState.result}
         {#if gameSession.gameCall}

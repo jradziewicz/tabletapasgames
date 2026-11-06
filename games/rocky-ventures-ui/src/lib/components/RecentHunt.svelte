@@ -1,23 +1,12 @@
 <script lang="ts">
-    import { GameEngine } from '@tabletop/common'
-    import {
-        ActionType,
-        Definition,
-        DragonHuntRegion,
-        RegionIds,
-        RegionNames,
-        WeaponTokenKind,
-        type HydratedRockyVenturesGameState,
-        type RockyVenturesGameState
-    } from '@tabletop/rocky-ventures'
+    import { ActionType, DragonHuntRegion, RegionIds, RegionNames, WeaponTokenKind } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { DragonTileImageUrl, weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
+    import { recentOtherPlayerAction } from '$lib/utils/recentAction.js'
     import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
 
-    // What another player's last hunt drew and did. It stays up through the rest of their
-    // turn and until the next player acts, so nobody misses it when the turn passes.
+    // What another player's last hunt drew, what they picked, and what it did.
     const gameSession = getGameSession()
-    const engine = new GameEngine(Definition.runtime)
 
     type HuntResult = {
         playerId: string
@@ -28,48 +17,29 @@
     }
 
     const result = $derived.by((): HuntResult | undefined => {
-        const gameState = gameSession.gameState
-        if (gameSession.isViewingHistory || gameState.pendingHunt) return undefined
-        const actions = gameSession.actions
-        const huntIndex = actions.findLastIndex((action) => action.type === ActionType.ResolveHunt)
-        const hunt = actions[huntIndex] as (typeof actions)[number] & { tokenIndexes: number[]; hitTargets: string[] }
-        if (!hunt?.playerId || hunt.playerId === gameSession.myPlayer?.id) return undefined
-        if (actions.slice(huntIndex + 1).some((action) => action.playerId && action.playerId !== hunt.playerId)) return undefined
-
-        try {
-            // The drawn tokens are cleared once a hunt resolves, so step back to read them.
-            let state = gameState.dehydrate() as RockyVenturesGameState
-            for (let index = actions.length - 1; index > huntIndex; index--) {
-                state = engine.undoProcessedAction({ action: actions[index]!, state })
-            }
-            const after = hydrate(state).getPlayerState(hunt.playerId)
-            const beforeState = hydrate(engine.undoProcessedAction({ action: hunt, state }))
-            const before = beforeState.getPlayerState(hunt.playerId)
-            const pending = beforeState.pendingHunt
-            if (!pending) return undefined
-
-            const gains = [
+        if (gameSession.gameState.pendingHunt) return undefined
+        const recent = recentOtherPlayerAction<{ tokenIndexes: number[]; hitTargets: string[] }>(
+            gameSession,
+            ActionType.ResolveHunt
+        )
+        // The drawn tokens are cleared once a hunt resolves, so they come from the state before it.
+        const pending = recent?.before.pendingHunt
+        if (!recent || !pending) return undefined
+        const before = recent.before.getPlayerState(recent.playerId)
+        const after = recent.after.getPlayerState(recent.playerId)
+        return {
+            playerId: recent.playerId,
+            region: pending.region,
+            tokens: pending.drawn.map((kind, index) => ({ kind, applied: recent.action.tokenIndexes.includes(index) })),
+            hitTargets: recent.action.hitTargets,
+            gains: [
                 gain(after.victoryPoints - before.victoryPoints, 'VP'),
                 gain(after.money - before.money, undefined, '$'),
                 gain(after.gems - before.gems, 'gem'),
                 gain(after.weaponLevel - before.weaponLevel, 'weapon level')
             ].filter((text) => text !== undefined)
-            return {
-                playerId: hunt.playerId,
-                region: pending.region,
-                tokens: pending.drawn.map((kind, index) => ({ kind, applied: hunt.tokenIndexes.includes(index) })),
-                hitTargets: hunt.hitTargets,
-                gains
-            }
-        } catch (error) {
-            console.warn('Could not read the last hunt', error)
-            return undefined
         }
     })
-
-    function hydrate(state: RockyVenturesGameState) {
-        return Definition.runtime.hydrator.hydrateState(structuredClone(state)) as HydratedRockyVenturesGameState
-    }
 
     function gain(amount: number, word?: string, prefix = '') {
         if (amount <= 0) return undefined
