@@ -1,7 +1,7 @@
 import { GameEngine, PlayerStatus, defaultGameConfig, normalizeGameConfig } from '@tabletop/common'
 import { describe, expect, it } from 'vitest'
 import { Definition } from '../definition/gameDefinition.js'
-import { CardKind, DevelopmentCards, cardActionsFor } from '../data/cards.js'
+import { getCard, type DevelopmentCard } from '../data/cards.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { currentPlayerId, remainingActionKinds } from './turn.js'
 
@@ -22,14 +22,8 @@ function startedState(): HydratedRockyVenturesGameState {
     return Definition.runtime.hydrator.hydrateState(engine.startGame(game).initialState) as HydratedRockyVenturesGameState
 }
 
-// A card with two different actions, each usable once.
-const card = DevelopmentCards.filter((candidate) => cardActionsFor(candidate, true) === candidate.actions).find(
-    (candidate) =>
-        candidate.kind === CardKind.Development &&
-        candidate.actions.length === 2 &&
-        candidate.actions[0]!.kind !== candidate.actions[1]!.kind &&
-        candidate.actions.every((action) => ['extractAndSell', 'acquire'].includes(action.kind) || (action.kind === 'hunt' && action.hunts === 1))
-)!
+// Glenmoriston: Extract & Sell, then Lay Track 2. Its actions are the same in every game.
+const card = getCard('d16') as DevelopmentCard
 const [top, bottom] = card.actions.map((action) => action.kind)
 
 function onCard(state: HydratedRockyVenturesGameState) {
@@ -46,19 +40,19 @@ describe('actions top to bottom', () => {
     it('still has the lower action after the top one', () => {
         const state = onCard(startedState())
         state.turnActionsTaken = [top!]
-        expect(remainingActionKinds(state)).toEqual([bottom])
+        expect(remainingActionKinds(state)).toEqual([bottom, bottom])
     })
 
     it('gives up the top action once the lower one is taken', () => {
         const state = onCard(startedState())
         state.turnActionsTaken = [bottom!]
-        expect(remainingActionKinds(state)).toEqual([])
+        expect(remainingActionKinds(state)).toEqual([bottom])
     })
 
     it('keeps any order in older games', () => {
         const state = onCard(startedState())
         delete state.actionsInOrder
         state.turnActionsTaken = [bottom!]
-        expect(remainingActionKinds(state)).toEqual([top])
+        expect(remainingActionKinds(state)).toEqual([top, bottom])
     })
 })

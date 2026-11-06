@@ -277,8 +277,10 @@ const claimWithFreeLevelThree = claimMine(1, 1, false, true)
 const bigExtract = extract({ bonusOre: 2, temporaryToolLevels: 2, addsScourge: true })
 const RevisedCardActions: Record<string, CardAction[]> = {
     d02: [layTrack(2, 2), hunt(1)],
-    d03: [extract()],
-    d04: [acquire(1)],
+    d03: [extract({ disregardScourges: 1 })],
+    d04: [acquire(1), layTrack(1, 1)],
+    d06: [layTrack(2, 2), hunt(1)],
+    d07: [extract({ disregardScourges: 1 })],
     d08: [hunt(1), acquire(1)],
     d10: [layTrack(3, 1), hunt(1)],
     d11: [layTrack(1, 1), extract({ disregardScourges: 1 })],
