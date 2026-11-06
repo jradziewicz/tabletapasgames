@@ -8,6 +8,7 @@
         type HydratedRockyVenturesPlayerState
     } from '@tabletop/rocky-ventures'
     import { agreementTooltip } from '$lib/utils/agreementImages.js'
+    import { cardChipBackground } from '$lib/utils/cardActionColors.js'
     import { BotProfileNames } from '$lib/bots/rockyBots.js'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.svelte.js'
@@ -140,7 +141,7 @@
             <button
                 type="button"
                 class="relative flex h-7 w-6 items-center justify-center rounded border text-[11px] font-bold"
-                style="background-color: #f3ead6; color: #111; border-color: #8a6d3b;"
+                style="background: {cardChipBackground(cardId, playerState.stackedCards?.[cardId])}; color: #111; border-color: #8a6d3b;"
                 title={cardActionsTooltip(cardId)}
                 onclick={() => gameSession.zoomCard(cardId, imageUrl)}
                 onpointerenter={(event) => gameSession.previewCard(event, cardId, imageUrl)}
