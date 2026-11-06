@@ -15,7 +15,7 @@ import { CompanyId } from '../data/companies.js'
 import { AgreementLetter } from '../data/agreements.js'
 import { WeaponTokenKind } from '../data/weaponBag.js'
 import { MachineState } from '../definition/states.js'
-import { type Card, type CardAction, CardBonusKind, CardKind, cardPrices, getCard } from '../data/cards.js'
+import { type Card, type CardAction, CardBonusKind, CardKind, cardActionsFor, cardPrices, getCard } from '../data/cards.js'
 import {
     DornochGoldPriceSlotIndex,
     EmptySlotDornochGoldPrice,
@@ -106,6 +106,8 @@ export const RockyVenturesGameState = Type.Evaluate(
             agreementStacks: Type.Record(Type.String(), Type.Array(Type.Enum(AgreementLetter))),
             eraThreeEndsGame: Type.Optional(Type.Boolean()),
             cardStacking: Type.Optional(Type.Boolean()),
+            actionsInOrder: Type.Optional(Type.Boolean()),
+            revisedCards: Type.Optional(Type.Boolean()),
             eraThreeTriggered: Type.Optional(Type.Boolean()),
             gemsSpent: Type.Number(),
             era: Type.Number(),
@@ -158,6 +160,10 @@ export class HydratedRockyVenturesGameState
     declare eraThreeEndsGame?: boolean
     // Games set up from 2026-11-05 can stack a bought card on a tableau card for 3 gems.
     declare cardStacking?: boolean
+    // A card's actions run top to bottom: taking one gives up any still unused above it.
+    declare actionsInOrder?: boolean
+    // Plays the revised card actions, and cards 25 to 30 perform their actions when bought.
+    declare revisedCards?: boolean
     declare eraThreeTriggered?: boolean
     declare gemsSpent: number
     declare era: number
@@ -195,9 +201,10 @@ export class HydratedRockyVenturesGameState
         }
         const card = getCard(cardId)
         if (this.immediateCardId !== undefined) {
-            return card.kind === CardKind.Development && card.bonus.kind === CardBonusKind.ImmediateAction
-                ? [card.bonus.action]
-                : []
+            if (card.kind !== CardKind.Development || card.bonus.kind !== CardBonusKind.ImmediateAction) {
+                return []
+            }
+            return this.revisedCards ? cardActionsFor(card, true) : [card.bonus.action]
         }
         if (card.kind !== CardKind.Player && card.kind !== CardKind.Development) {
             return []
@@ -206,8 +213,11 @@ export class HydratedRockyVenturesGameState
         const underId = this.getPlayerState(playerId).stackedCards?.[cardId]
         const under = underId === undefined ? undefined : getCard(underId)
         const underAction =
-            under?.kind === CardKind.Player || under?.kind === CardKind.Development ? under.actions[0] : undefined
-        return underAction ? [underAction, ...card.actions] : card.actions
+            under?.kind === CardKind.Player || under?.kind === CardKind.Development
+                ? cardActionsFor(under, this.revisedCards)[0]
+                : undefined
+        const actions = cardActionsFor(card, this.revisedCards)
+        return underAction ? [underAction, ...actions] : actions
     }
 
     get turnActionsSinceImmediate(): string[] {

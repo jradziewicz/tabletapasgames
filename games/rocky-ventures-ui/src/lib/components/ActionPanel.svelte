@@ -65,7 +65,7 @@
     const activeId = $derived(gameState.activePlayerIds[0])
     const player = $derived(activeId ? gameState.getPlayerState(activeId) : undefined)
     const canAct = $derived(gameSession.isMyTurn && !gameSession.isViewingHistory)
-    const validTypes = $derived(gameSession.validActionTypes)
+    const validTypes = $derived(gameSession.offeredActionTypes)
     const playerColor = $derived(activeId ? gameSession.colors.getPlayerBgColorValue(activeId) : '#888888')
 
     function regionLabel(region: string): string {
@@ -842,7 +842,7 @@
             {#if validTypes.includes(ActionType.EndTurn)}
                 <button
                     type="button"
-                    onclick={() => gameSession.endTurn()}
+                    onclick={() => (gameSession.autoActionKind ? gameSession.passAction(gameSession.autoActionKind) : gameSession.endTurn())}
                     class="rv-quiet"
                 >
                     Pass

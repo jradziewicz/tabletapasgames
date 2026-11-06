@@ -67,7 +67,8 @@ export function remainingActionKinds(state: HydratedRockyVenturesGameState): Car
     for (const takenKind of taken) {
         const index = remaining.findIndex((kind) => kind === takenKind)
         if (index >= 0) {
-            remaining.splice(index, 1)
+            // In order, anything above the action just taken has been passed on for good.
+            remaining.splice(state.actionsInOrder ? 0 : index, state.actionsInOrder ? index + 1 : 1)
         }
     }
     return remaining

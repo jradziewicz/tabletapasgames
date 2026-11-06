@@ -89,6 +89,8 @@ export class RockyVenturesGameInitializer
             agreementStacks: this.initializeAgreementStacks(),
             eraThreeEndsGame: true,
             cardStacking: true,
+            actionsInOrder: true,
+            revisedCards: true,
             gemsSpent: 0,
             era: 1,
             turnActionsTaken: [],

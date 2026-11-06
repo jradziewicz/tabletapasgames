@@ -12,10 +12,12 @@ export const RedMineLevel = 4
 export const BlueMineLevel = 5
 export const FreeMineLevel = 2
 
-function levelTwoMinesFree(state: HydratedRockyVenturesGameState, playerId: string): boolean {
-    return state.actionCardActions(playerId).some(
-        (action) => action.kind === CardActionKind.ClaimMine && action.levelTwoMinesFree
-    )
+function highestFreeMineLevel(state: HydratedRockyVenturesGameState, playerId: string): number {
+    const claims = state.actionCardActions(playerId).filter((action) => action.kind === CardActionKind.ClaimMine)
+    if (claims.some((action) => action.levelThreeMinesFree)) {
+        return FreeMineLevel + 1
+    }
+    return claims.some((action) => action.levelTwoMinesFree) ? FreeMineLevel : 0
 }
 
 export function claimCost(
@@ -27,7 +29,7 @@ export function claimCost(
     if (!token) {
         return undefined
     }
-    if (token.level === FreeMineLevel && levelTwoMinesFree(state, playerId)) {
+    if (token.level >= FreeMineLevel && token.level <= highestFreeMineLevel(state, playerId)) {
         return 0
     }
     return token.level

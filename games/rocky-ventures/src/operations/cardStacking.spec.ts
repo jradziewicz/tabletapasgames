@@ -2,7 +2,7 @@ import { GameEngine, PlayerStatus, defaultGameConfig, normalizeGameConfig } from
 import { describe, expect, it } from 'vitest'
 import { Definition } from '../definition/gameDefinition.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
-import { getCard, CardActionKind, StartingPlayerCardId } from '../data/cards.js'
+import { getCard, CardActionKind, StartingPlayerCardId, cardActionsFor, type DevelopmentCard } from '../data/cards.js'
 import { investInMarketCard, reasonStackInvalid, stackableCardIds, StackCardGemCost } from './invest.js'
 
 const engine = new GameEngine(Definition.runtime)
@@ -70,7 +70,7 @@ describe('stacking a bought card', () => {
         const kinds = state.actionCardActions(player.playerId).map((action) => action.kind)
         expect(kinds).toEqual([
             CardActionKind.LayTrack,
-            ...(getCard('d03') as { actions: { kind: CardActionKind }[] }).actions.map((action) => action.kind)
+            ...cardActionsFor(getCard('d03') as DevelopmentCard, true).map((action) => action.kind)
         ])
     })
 })

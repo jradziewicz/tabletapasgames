@@ -141,8 +141,8 @@
             <button
                 type="button"
                 class="relative flex h-7 w-6 items-center justify-center rounded border text-[11px] font-bold"
-                style="background: {cardChipBackground(cardId, playerState.stackedCards?.[cardId])}; color: #111; border-color: #8a6d3b;"
-                title={cardActionsTooltip(cardId)}
+                style="background: {cardChipBackground(cardId, playerState.stackedCards?.[cardId], gameSession.gameState.revisedCards)}; color: #111; border-color: #8a6d3b;"
+                title={cardActionsTooltip(cardId, gameSession.gameState.revisedCards)}
                 onclick={() => gameSession.zoomCard(cardId, imageUrl)}
                 onpointerenter={(event) => gameSession.previewCard(event, cardId, imageUrl)}
                 onpointerleave={() => gameSession.clearCardPreview()}

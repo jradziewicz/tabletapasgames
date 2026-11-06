@@ -28,6 +28,8 @@ export interface ClaimMineCardAction {
     mines: number
     regionalHunts: number
     levelTwoMinesFree: boolean
+    // Level 2 and level 3 mines cost nothing.
+    levelThreeMinesFree?: boolean
 }
 
 export interface LayTrackCardAction {
@@ -103,7 +105,8 @@ export interface PlayerCard {
     id: string
     kind: CardKind.Player
     numeral: string
-    // Either/or on card I; every other card performs all of its actions in any order.
+    // Either/or on the mat; every other card performs all of its actions, top to bottom in new
+    // games and in any order in older ones.
     actions: CardAction[]
     exclusiveActions: boolean
 }
@@ -146,8 +149,15 @@ const tax: TaxCardAction = { kind: CardActionKind.Tax }
 const claimMine = (
     mines: number,
     regionalHunts: number,
-    levelTwoMinesFree = false
-): ClaimMineCardAction => ({ kind: CardActionKind.ClaimMine, mines, regionalHunts, levelTwoMinesFree })
+    levelTwoMinesFree = false,
+    levelThreeMinesFree = false
+): ClaimMineCardAction => ({
+    kind: CardActionKind.ClaimMine,
+    mines,
+    regionalHunts,
+    levelTwoMinesFree,
+    ...(levelThreeMinesFree ? { levelThreeMinesFree } : {})
+})
 const layTrack = (maxTracks: number, maxCompanies: number): LayTrackCardAction => ({
     kind: CardActionKind.LayTrack,
     maxTracks,
@@ -259,6 +269,32 @@ export const DevelopmentCards: DevelopmentCard[] = [
     // Card 30 has no city printed on the v0.50 sheet (docs/rules-questions.md item 31).
     development(30, DornochDurNodeId, RegionId.TheSpine, 4, immediate(extract()), [acquire(2), hunt(2)], 8, 4)
 ]
+
+// New games play these actions in place of the ones above (Justin's spreadsheet, 2026-11-06). On
+// cards 25 to 30 the buyer also performs all of the card's actions straight away instead of the
+// single immediate action printed above.
+const claimWithFreeLevelThree = claimMine(1, 1, false, true)
+const bigExtract = extract({ bonusOre: 2, temporaryToolLevels: 2, addsScourge: true })
+const RevisedCardActions: Record<string, CardAction[]> = {
+    d02: [layTrack(2, 2), hunt(1)],
+    d03: [extract()],
+    d04: [acquire(1)],
+    d08: [hunt(1), acquire(1)],
+    d10: [layTrack(3, 1), hunt(1)],
+    d11: [layTrack(1, 1), extract({ disregardScourges: 1 })],
+    d13: [claimWithFreeLevelThree],
+    d22: [acquire(1), claimWithFreeLevelThree],
+    d25: [acquire(2), extract({ disregardScourges: 1 })],
+    d26: [claimMine(1, 1), bigExtract],
+    d27: [layTrack(4, 2), hunt(2)],
+    d28: [claimMine(1, 1), bigExtract],
+    d29: [layTrack(4, 2), hunt(2)],
+    d30: [acquire(2), extract({ disregardScourges: 1 })]
+}
+
+export function cardActionsFor(card: PlayerCard | DevelopmentCard, revised?: boolean): CardAction[] {
+    return (revised ? RevisedCardActions[card.id] : undefined) ?? card.actions
+}
 
 export const EndOfEraCards: EndOfEraCard[] = [
     { id: 'era1', kind: CardKind.EndOfEra, era: 1, baseCost: 0, pointBuyCost: 10, pointBuyVictoryPoints: 5, goldPrice: 6, silverPrice: 6 },

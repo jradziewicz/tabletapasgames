@@ -27,8 +27,10 @@ import {
     planExtraction,
     DeliveryCityId,
     CardBonusKind,
+    CardActionKind,
     CardKind,
     getCard,
+    remainingActionKinds,
     ChooseAgreementGemCost,
     StackCardGemCost,
     stackableCardIds,
@@ -66,6 +68,16 @@ export type ExtractAnimation = {
 }
 
 export type ConvertShareSelection = { companyId: CompanyId; shareIndex: number }
+
+const ActionTypeByCardAction: Record<CardActionKind, ActionType> = {
+    [CardActionKind.Tax]: ActionType.Tax,
+    [CardActionKind.Invest]: ActionType.Invest,
+    [CardActionKind.ClaimMine]: ActionType.ClaimMine,
+    [CardActionKind.LayTrack]: ActionType.LayTrack,
+    [CardActionKind.ExtractAndSell]: ActionType.ExtractAndSell,
+    [CardActionKind.Hunt]: ActionType.Hunt,
+    [CardActionKind.Acquire]: ActionType.Acquire
+}
 
 export class RockyVenturesGameSession extends GameSession<
     RockyVenturesGameState,
@@ -239,7 +251,7 @@ export class RockyVenturesGameSession extends GameSession<
             this.huntActive ||
             this.acquireActive ||
             this.investPickerOpen ||
-            !this.validActionTypes.includes(ActionType.ClaimMine)
+            !this.offeredActionTypes.includes(ActionType.ClaimMine)
         ) {
             return []
         }
@@ -535,12 +547,37 @@ export class RockyVenturesGameSession extends GameSession<
         return passed?.turn === this.gameState.turnManager.series.length ? passed.types : []
     }
 
+    // What the player is offered now. In games played top to bottom that's only the next action on
+    // the card; Pass moves on to the one below it.
+    get offeredActionTypes(): string[] {
+        const valid = this.validActionTypes
+        const state = this.gameState
+        const playerId = state.activePlayerIds[0]
+        const cardId = playerId === undefined ? undefined : state.actionCardId(playerId)
+        const card = cardId === undefined ? undefined : getCard(cardId)
+        if (
+            !state.actionsInOrder ||
+            state.machineState !== MachineState.TakeActions ||
+            !card ||
+            (card.kind === CardKind.Player && card.exclusiveActions)
+        ) {
+            return valid
+        }
+        const cardTypes: string[] = Object.values(ActionTypeByCardAction)
+        const next = remainingActionKinds(state)
+            .map((kind) => ActionTypeByCardAction[kind])
+            .find((type) => valid.includes(type) && !this.passedActionTypes.includes(type))
+        return valid.filter((type) => !cardTypes.includes(type) || type === next)
+    }
+
     async passAction(type: ActionType) {
         const passed = [...this.passedActionTypes, type]
         const others = this.validActionTypes.filter(
             (other) =>
                 !passed.includes(other) &&
-                (other === ActionType.ClaimMine ||
+                (other === ActionType.Tax ||
+                    other === ActionType.Invest ||
+                    other === ActionType.ClaimMine ||
                     other === ActionType.LayTrack ||
                     other === ActionType.ExtractAndSell ||
                     other === ActionType.Hunt ||
@@ -562,7 +599,7 @@ export class RockyVenturesGameSession extends GameSession<
         ) {
             return undefined
         }
-        const kinds = this.validActionTypes.filter(
+        const kinds = this.offeredActionTypes.filter(
             (type) =>
                 type === ActionType.Tax ||
                 type === ActionType.Invest ||
@@ -869,7 +906,7 @@ export class RockyVenturesGameSession extends GameSession<
         })
         if (
             this.gameState.machineState === MachineState.TakeActions &&
-            this.validActionTypes.includes(ActionType.LayTrack)
+            this.offeredActionTypes.includes(ActionType.LayTrack)
         ) {
             this.trackMode = true
             this.trackCompanyId = companyId
@@ -972,7 +1009,7 @@ export class RockyVenturesGameSession extends GameSession<
             return canSwap(slotIndex) || canSwap(slotIndex - 1) ? 'swap' : undefined
         }
         const canInvest =
-            this.gameState.machineState === MachineState.BonusInvest || this.validActionTypes.includes(ActionType.Invest)
+            this.gameState.machineState === MachineState.BonusInvest || this.offeredActionTypes.includes(ActionType.Invest)
         const cost = investCost(this.gameState, slotIndex)
         if (canInvest && cost !== undefined && cost <= this.gameState.getPlayerState(playerId).money) {
             return 'buy'
