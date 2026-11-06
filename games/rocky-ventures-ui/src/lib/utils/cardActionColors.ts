@@ -28,5 +28,5 @@ export function cardChipBackground(cardId: string, underCardId?: string): string
     }
     const share = 100 / colors.length
     const stops = colors.map((color, index) => `${color} ${index * share}% ${(index + 1) * share}%`)
-    return `linear-gradient(90deg, ${stops.join(', ')})`
+    return `linear-gradient(180deg, ${stops.join(', ')})`
 }
