@@ -4,39 +4,53 @@ import image1 from './back-decade2.png'
 import image2 from './back-decade3.png'
 import image3 from './back-decade4.png'
 import image4 from './d01.png'
-import image5 from './d02.png'
-import image6 from './d03.png'
-import image7 from './d04.png'
-import image8 from './d05.png'
-import image9 from './d06.png'
-import image10 from './d07.png'
-import image11 from './d08.png'
-import image12 from './d09.png'
-import image13 from './d10.png'
-import image14 from './d11.png'
-import image15 from './d12.png'
-import image16 from './d13.png'
-import image17 from './d14.png'
-import image18 from './d15.png'
-import image19 from './d16.png'
-import image20 from './d17.png'
-import image21 from './d18.png'
-import image22 from './d19.png'
-import image23 from './d20.png'
-import image24 from './d21.png'
-import image25 from './d22.png'
-import image26 from './d23.png'
-import image27 from './d24.png'
-import image28 from './d25.png'
-import image29 from './d26.png'
-import image30 from './d27.png'
-import image31 from './d28.png'
-import image32 from './d29.png'
-import image33 from './d30.png'
-import image34 from './era1.png'
-import image35 from './era2.png'
-import image36 from './era3.png'
-import image37 from './gameOver.png'
+import image5 from './d02-revised.png'
+import image6 from './d02.png'
+import image7 from './d03-revised.png'
+import image8 from './d03.png'
+import image9 from './d04-revised.png'
+import image10 from './d04.png'
+import image11 from './d05.png'
+import image12 from './d06.png'
+import image13 from './d07.png'
+import image14 from './d08-revised.png'
+import image15 from './d08.png'
+import image16 from './d09.png'
+import image17 from './d10-revised.png'
+import image18 from './d10.png'
+import image19 from './d11-revised.png'
+import image20 from './d11.png'
+import image21 from './d12.png'
+import image22 from './d13-revised.png'
+import image23 from './d13.png'
+import image24 from './d14.png'
+import image25 from './d15.png'
+import image26 from './d16.png'
+import image27 from './d17.png'
+import image28 from './d18.png'
+import image29 from './d19.png'
+import image30 from './d20.png'
+import image31 from './d21.png'
+import image32 from './d22-revised.png'
+import image33 from './d22.png'
+import image34 from './d23.png'
+import image35 from './d24.png'
+import image36 from './d25-revised.png'
+import image37 from './d25.png'
+import image38 from './d26-revised.png'
+import image39 from './d26.png'
+import image40 from './d27-revised.png'
+import image41 from './d27.png'
+import image42 from './d28-revised.png'
+import image43 from './d28.png'
+import image44 from './d29-revised.png'
+import image45 from './d29.png'
+import image46 from './d30-revised.png'
+import image47 from './d30.png'
+import image48 from './era1.png'
+import image49 from './era2.png'
+import image50 from './era3.png'
+import image51 from './gameOver.png'
 
 // Image URL by file name (without .png)
 export const Images: Record<string, string> = {
@@ -45,37 +59,51 @@ export const Images: Record<string, string> = {
     'back-decade3': image2,
     'back-decade4': image3,
     'd01': image4,
-    'd02': image5,
-    'd03': image6,
-    'd04': image7,
-    'd05': image8,
-    'd06': image9,
-    'd07': image10,
-    'd08': image11,
-    'd09': image12,
-    'd10': image13,
-    'd11': image14,
-    'd12': image15,
-    'd13': image16,
-    'd14': image17,
-    'd15': image18,
-    'd16': image19,
-    'd17': image20,
-    'd18': image21,
-    'd19': image22,
-    'd20': image23,
-    'd21': image24,
-    'd22': image25,
-    'd23': image26,
-    'd24': image27,
-    'd25': image28,
-    'd26': image29,
-    'd27': image30,
-    'd28': image31,
-    'd29': image32,
-    'd30': image33,
-    'era1': image34,
-    'era2': image35,
-    'era3': image36,
-    'gameOver': image37,
+    'd02-revised': image5,
+    'd02': image6,
+    'd03-revised': image7,
+    'd03': image8,
+    'd04-revised': image9,
+    'd04': image10,
+    'd05': image11,
+    'd06': image12,
+    'd07': image13,
+    'd08-revised': image14,
+    'd08': image15,
+    'd09': image16,
+    'd10-revised': image17,
+    'd10': image18,
+    'd11-revised': image19,
+    'd11': image20,
+    'd12': image21,
+    'd13-revised': image22,
+    'd13': image23,
+    'd14': image24,
+    'd15': image25,
+    'd16': image26,
+    'd17': image27,
+    'd18': image28,
+    'd19': image29,
+    'd20': image30,
+    'd21': image31,
+    'd22-revised': image32,
+    'd22': image33,
+    'd23': image34,
+    'd24': image35,
+    'd25-revised': image36,
+    'd25': image37,
+    'd26-revised': image38,
+    'd26': image39,
+    'd27-revised': image40,
+    'd27': image41,
+    'd28-revised': image42,
+    'd28': image43,
+    'd29-revised': image44,
+    'd29': image45,
+    'd30-revised': image46,
+    'd30': image47,
+    'era1': image48,
+    'era2': image49,
+    'era3': image50,
+    'gameOver': image51,
 }

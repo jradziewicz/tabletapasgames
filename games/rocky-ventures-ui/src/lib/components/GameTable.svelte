@@ -26,6 +26,7 @@
     import StackChoice from '$lib/components/StackChoice.svelte'
     import CardHoverPreview from '$lib/components/CardHoverPreview.svelte'
     import GameOverOverlay from '$lib/components/GameOverOverlay.svelte'
+    import { setRevisedCardArt } from '$lib/utils/cardImages.js'
     import DragonOverlay from '$lib/components/DragonOverlay.svelte'
     import DragonBonusOverlay from '$lib/components/DragonBonusOverlay.svelte'
     import ScourgeOverlay from '$lib/components/ScourgeOverlay.svelte'
@@ -44,6 +45,7 @@
         $props()
     const session = gameSession as RockyVenturesGameSession
     setGameSession(session)
+    setRevisedCardArt(session.gameState.revisedCards === true)
 
     // Railroad colours follow the viewer's colour-blind palette preference.
     $effect(() => {
