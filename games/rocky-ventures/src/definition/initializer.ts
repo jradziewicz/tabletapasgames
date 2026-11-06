@@ -35,7 +35,7 @@ import {
 import { ScourgeDefinitions } from '../data/scourges.js'
 import { StartingWeaponBag } from '../data/weaponBag.js'
 import { type AgreementLetter, TwoSidedAgreementLetters } from '../data/agreements.js'
-import { EndOfEraCards, GameOverCard, PlayerCardIds, developmentCardIdsForDecade } from '../data/cards.js'
+import { EndOfEraCards, PlayerCardIds, developmentCardIdsForDecade } from '../data/cards.js'
 import {
     DornochDurStartingMineLevel,
     MarketSize,
@@ -192,7 +192,8 @@ export class RockyVenturesGameInitializer
     }
 
     // Decade 1 on top, then Decade 2 with End of Era I shuffled in, Decade 3 with End of Era II,
-    // Decade 4 with End of Era III, and the Game Over card face up at the bottom.
+    // and Decade 4 with End of Era III. No card sits at the bottom: the game ends when
+    // End of Era III is bought, or when it meets End of Era II in the market.
     private buildDrawPile(prng: Prng): string[] {
         const decade1 = developmentCardIdsForDecade(1)
         const decade2 = [...developmentCardIdsForDecade(2), EndOfEraCards[0]!.id]
@@ -201,7 +202,7 @@ export class RockyVenturesGameInitializer
         for (const decade of [decade1, decade2, decade3, decade4]) {
             shuffle(decade, prng.random)
         }
-        return [...decade1, ...decade2, ...decade3, ...decade4, GameOverCard.id]
+        return [...decade1, ...decade2, ...decade3, ...decade4]
     }
 
     private placeDornochDurMine(state: HydratedRockyVenturesGameState) {

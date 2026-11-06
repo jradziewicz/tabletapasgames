@@ -33,7 +33,7 @@ describe('End of Era III ending', () => {
         const pile = state.market.drawPile
         expect(state.eraThreeEndsGame).toBe(true)
         expect(pile.indexOf(ThirdEraCardId)).toBeGreaterThanOrEqual(pile.length - 8)
-        expect(pile.at(-1)).toBe(GameOverCard.id)
+        expect(pile).not.toContain(GameOverCard.id)
     })
 
     it('ends the game at once when the card is taken, with no point buy step', () => {
@@ -62,7 +62,7 @@ describe('End of Era III ending', () => {
         expect(endGameTriggered(state)).toBe(true)
     })
 
-    it('ends the game when End of Era III is the last card drawn', () => {
+    it('in older games with a Game Over card, ends when End of Era III is the last card drawn', () => {
         const state = startedState()
         state.market.slots = ['d01', 'd02']
         state.market.drawPile = [ThirdEraCardId, GameOverCard.id]
@@ -70,12 +70,38 @@ describe('End of Era III ending', () => {
         expect(endGameTriggered(state)).toBe(true)
     })
 
-    it('ends the game when End of Era III is the only card left', () => {
+    it('in older games with a Game Over card, ends when End of Era III is the only card left', () => {
         const state = startedState()
         state.market.slots = ['d01', ThirdEraCardId]
         state.market.drawPile = [GameOverCard.id]
         removeFromMarket(state, 0, random)
         expect(endGameTriggered(state)).toBe(true)
+    })
+
+    it('carries on when End of Era III is the last card drawn with no card beneath it', () => {
+        const state = startedState()
+        state.market.slots = ['d01', 'd02']
+        state.market.drawPile = [ThirdEraCardId]
+        drawIntoMarket(state, random)
+        expect(state.market.slots).toContain(ThirdEraCardId)
+        expect(endGameTriggered(state)).toBe(false)
+    })
+
+    it('carries on when End of Era III is the only card left with no card beneath it', () => {
+        const state = startedState()
+        state.market.slots = ['d01', ThirdEraCardId]
+        state.market.drawPile = []
+        removeFromMarket(state, 0, random)
+        expect(state.market.slots).toEqual([ThirdEraCardId])
+        expect(endGameTriggered(state)).toBe(false)
+    })
+
+    it('does not end when the deck runs out', () => {
+        const state = startedState()
+        state.market.slots = ['d01']
+        state.market.drawPile = []
+        expect(drawIntoMarket(state, random)).toBeUndefined()
+        expect(endGameTriggered(state)).toBe(false)
     })
 
     it('keeps the old triggers in games set up before the change', () => {
@@ -89,7 +115,7 @@ describe('End of Era III ending', () => {
     it('adds the card to a listed running game the same way on every load', () => {
         const stored = structuredClone(startedState('listed').dehydrate())
         delete stored.eraThreeEndsGame
-        stored.market.drawPile = stored.market.drawPile.filter((cardId) => cardId !== ThirdEraCardId)
+        stored.market.drawPile = [...stored.market.drawPile.filter((cardId) => cardId !== ThirdEraCardId), GameOverCard.id]
         EraThreeEndingGameIds.push('listed')
         const first = Definition.runtime.hydrator.hydrateState(structuredClone(stored))
         const second = Definition.runtime.hydrator.hydrateState(structuredClone(stored))

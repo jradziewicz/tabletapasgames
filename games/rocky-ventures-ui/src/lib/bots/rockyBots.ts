@@ -423,7 +423,7 @@ export function chooseBotMoves(
                 add(cardValue(state, player, cardId, weights) * 1.3 + 1, { type: ActionType.GemAction, kind: 'market', target: slot })
             })
         }
-        if (validTypes.includes(ActionType.GemAction) && player.gems > 0 && isDrawPileAtGameOver(state)) {
+        if (validTypes.includes(ActionType.GemAction) && player.gems > 0 && (isDrawPileAtGameOver(state) || state.market.drawPile.length === 0)) {
             if (!reasonGemActionInvalid(state, playerId, 'swap', 0)) {
                 add(40, { type: ActionType.GemAction, kind: 'swap', target: 0 })
             }

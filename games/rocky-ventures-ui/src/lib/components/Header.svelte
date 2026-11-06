@@ -5,7 +5,9 @@
         BonusTokensToSummonDragon,
         DragonLevel,
         MachineState,
+        CardKind,
         endTriggers,
+        getCard,
         gemTriggerThreshold
     } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -16,9 +18,9 @@
     // Games that end on End of Era III show the deck and dragon as information only, and no gems.
     const eraThreeEnding = $derived(gameSession.gameState.eraThreeEndsGame === true)
     const gemThreshold = $derived(gemTriggerThreshold(gameSession.gameState.players.length))
-    // Cards still to come before the face-up Game Over card at the bottom of the draw pile.
+    // Cards still to come. Older games keep a face-up Game Over card at the bottom, which doesn't count.
     const deckCardsLeft = $derived(
-        Math.max(0, gameSession.gameState.market.drawPile.length - (triggers.deckExhausted ? gameSession.gameState.market.drawPile.length : 1))
+        gameSession.gameState.market.drawPile.filter((cardId) => getCard(cardId).kind !== CardKind.GameOver).length
     )
     const dragon = $derived(gameSession.gameState.dragon)
     const dragonActive = $derived(dragon.summoned && !dragon.killed)
