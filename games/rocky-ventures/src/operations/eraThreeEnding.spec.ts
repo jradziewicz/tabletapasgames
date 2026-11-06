@@ -7,7 +7,6 @@ import { GameOverCard } from '../data/cards.js'
 import { drawIntoMarket, removeFromMarket, ThirdEraCardId } from './market.js'
 import { endGameTriggered } from './endGame.js'
 import { nextStateAfterResolution, startPointBuy } from './turn.js'
-import { EraThreeEndingGameIds } from './runningGameMigrations.js'
 
 const engine = new GameEngine(Definition.runtime)
 const random = () => 0
@@ -112,18 +111,16 @@ describe('End of Era III ending', () => {
         expect(endGameTriggered(state)).toBe(true)
     })
 
-    it('adds the card to a listed running game the same way on every load', () => {
+    it('adds the card to an open game the same way on every load', () => {
         const stored = structuredClone(startedState('listed').dehydrate())
         delete stored.eraThreeEndsGame
         stored.market.drawPile = [...stored.market.drawPile.filter((cardId) => cardId !== ThirdEraCardId), GameOverCard.id]
-        EraThreeEndingGameIds.push('listed')
         const first = Definition.runtime.hydrator.hydrateState(structuredClone(stored))
         const second = Definition.runtime.hydrator.hydrateState(structuredClone(stored))
-        EraThreeEndingGameIds.pop()
         expect(first.eraThreeEndsGame).toBe(true)
         expect(first.market.drawPile).toEqual(second.market.drawPile)
         expect(first.market.drawPile.filter((cardId) => cardId === ThirdEraCardId)).toHaveLength(1)
-        expect(first.market.drawPile.at(-1)).toBe(GameOverCard.id)
+        expect(first.market.drawPile).not.toContain(GameOverCard.id)
     })
 
     it('leaves the stored state untouched however often it loads', () => {
@@ -131,19 +128,37 @@ describe('End of Era III ending', () => {
         delete stored.eraThreeEndsGame
         stored.market.drawPile = stored.market.drawPile.filter((cardId) => cardId !== ThirdEraCardId)
         const before = structuredClone(stored)
-        EraThreeEndingGameIds.push('listed')
         const loads = [1, 2, 3].map(() => Definition.runtime.hydrator.hydrateState(stored))
-        EraThreeEndingGameIds.pop()
         expect(stored).toEqual(before)
         expect(loads[2]!.market.drawPile).toEqual(loads[0]!.market.drawPile)
     })
 
-    it('removes extra copies a listed game picked up', () => {
+    it('takes the Game Over card out of an open game without touching the stored state', () => {
+        const stored = structuredClone(startedState('listed').dehydrate())
+        stored.market.slots = ['d01']
+        stored.market.drawPile = [ThirdEraCardId, GameOverCard.id]
+        const before = structuredClone(stored)
+        const loads = [1, 2].map(() => Definition.runtime.hydrator.hydrateState(stored))
+        expect(stored).toEqual(before)
+        expect(loads[1]!.market.drawPile).toEqual([ThirdEraCardId])
+        drawIntoMarket(loads[1]!, random)
+        expect(endGameTriggered(loads[1]!)).toBe(false)
+    })
+
+    it('leaves finished games as they ended', () => {
+        const stored = structuredClone(startedState('finished').dehydrate())
+        delete stored.eraThreeEndsGame
+        stored.market.drawPile = [GameOverCard.id]
+        stored.result = 'Win' as typeof stored.result
+        const state = Definition.runtime.hydrator.hydrateState(stored)
+        expect(state.market.drawPile).toEqual([GameOverCard.id])
+        expect(state.eraThreeEndsGame).toBeUndefined()
+    })
+
+    it('removes extra copies an open game picked up', () => {
         const stored = structuredClone(startedState('listed').dehydrate())
         stored.market.drawPile = [ThirdEraCardId, ...stored.market.drawPile, ThirdEraCardId]
-        EraThreeEndingGameIds.push('listed')
         const state = Definition.runtime.hydrator.hydrateState(stored)
-        EraThreeEndingGameIds.pop()
         expect(state.market.drawPile.filter((cardId) => cardId === ThirdEraCardId)).toHaveLength(1)
     })
 })

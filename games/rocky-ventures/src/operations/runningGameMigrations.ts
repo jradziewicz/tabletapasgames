@@ -12,11 +12,6 @@ export const TwoSidedAgreementGameIds: string[] = [
     'Vfz4QAGhl4cfVpTXYAxw8' // Eye of the Tiger
 ]
 
-// Running games Justin asked to move onto the End of Era III ending (2026-11-04).
-export const EraThreeEndingGameIds: string[] = [
-    'Vfz4QAGhl4cfVpTXYAxw8' // Eye of the Tiger
-]
-
 // Same on every load until it's saved, so the spot comes from the pile itself, not the game's
 // random numbers.
 function stablePick(text: string, choices: number): number {
@@ -30,9 +25,6 @@ function stablePick(text: string, choices: number): number {
 // Hydrating shares nested objects with the stored state, and the same stored state is hydrated
 // over and over, so these switches build new objects and never change the shared ones.
 function migrateToEraThreeEnding(state: HydratedRockyVenturesGameState) {
-    if (!EraThreeEndingGameIds.includes(state.gameId)) {
-        return
-    }
     const inMarket = state.market.slots.includes(ThirdEraCardId)
     const pile = state.market.drawPile
     const copies = pile.filter((cardId) => cardId === ThirdEraCardId).length
@@ -63,8 +55,20 @@ function migrateToEraThreeEnding(state: HydratedRockyVenturesGameState) {
     state.market = { ...state.market, drawPile }
 }
 
+function migrateToNoGameOverCard(state: HydratedRockyVenturesGameState) {
+    const drawPile = state.market.drawPile.filter((cardId) => getCard(cardId).kind !== CardKind.GameOver)
+    if (drawPile.length !== state.market.drawPile.length) {
+        state.market = { ...state.market, drawPile }
+    }
+}
+
+// Every open game moves onto the End of Era III ending with no Game Over card (Justin, 2026-11-06).
+// Finished games are left as they ended.
 export function migrateRunningGame(state: HydratedRockyVenturesGameState) {
-    migrateToEraThreeEnding(state)
+    if (!state.result) {
+        migrateToEraThreeEnding(state)
+        migrateToNoGameOverCard(state)
+    }
     if (!TwoSidedAgreementGameIds.includes(state.gameId)) {
         return
     }
