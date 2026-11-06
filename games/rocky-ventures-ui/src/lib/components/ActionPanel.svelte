@@ -84,6 +84,29 @@
         [CardActionKind.Hunt]: 'Hunt'
     }
 
+    const MoveVerbs: Partial<Record<ActionType, string>> = {
+        [ActionType.MovePawn]: 'moved their pawn',
+        [ActionType.Tax]: 'taxed',
+        [ActionType.Invest]: 'bought a card',
+        [ActionType.ChooseShare]: 'took a share',
+        [ActionType.PointBuy]: 'made a point buy',
+        [ActionType.ClaimMine]: 'claimed a mine',
+        [ActionType.LayTrack]: 'laid track',
+        [ActionType.LayFreeTrack]: 'laid free track',
+        [ActionType.ExtractAndSell]: 'extracted and sold',
+        [ActionType.Hunt]: 'is hunting',
+        [ActionType.ResolveHunt]: 'finished a hunt',
+        [ActionType.Acquire]: 'acquired',
+        [ActionType.GemAction]: 'spent gems',
+        [ActionType.DiscardAgreement]: 'discarded an agreement'
+    }
+
+    // The active player's latest move, shown to everyone watching their turn.
+    const latestMove = $derived.by(() => {
+        const action = gameSession.actions.at(-1)
+        return action?.playerId === activeId ? MoveVerbs[action?.type as ActionType] : undefined
+    })
+
     function stackedUnderUrl(cardId: string): string | undefined {
         const underId = player?.stackedCards?.[cardId]
         return underId === undefined ? undefined : thumbUrl(underId)
@@ -188,7 +211,36 @@
             </tbody>
         </table>
     {:else if !canAct || !player}
-        <div class="text-[#c9a961]">Waiting for the active player.</div>
+        {#if player && activeId}
+            <div class="text-[#c9a961]">
+                Watching <strong class="capitalize text-[#f1e6cf]">{gameSession.getPlayerName(activeId)}</strong>{#if latestMove}: {latestMove}{/if}
+            </div>
+        {:else}
+            <div class="text-[#c9a961]">Waiting for the active player.</div>
+        {/if}
+        {#if player}
+            <!-- Watch the active player's row, pawn included, while it isn't your turn -->
+            <div class="mt-2 flex items-end gap-2 overflow-x-auto pb-1">
+                {#each player.tableau as cardId, index (cardId)}
+                    <div class="relative shrink-0">
+                        {#if player.pawnIndex === index}
+                            <div class="pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2">
+                                <Pawn fill={playerColor} height={52} />
+                            </div>
+                        {/if}
+                        <button
+                            type="button"
+                            class="relative block overflow-hidden rounded border-2 {player.pawnIndex === index ? 'border-[#ffd166]' : 'border-[#4a3620]'}"
+                            onclick={() => gameSession.zoomCard(cardId, thumbUrl(cardId))}
+                        >
+                            <StackedUnder underUrl={stackedUnderUrl(cardId)} class="h-[53px]" imageClass="h-[112px] w-auto" />
+                            <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[112px] w-auto max-w-none" draggable="false" />
+                            {#if cardId === StartingPlayerCardId}<MatGems gems={player.gems} />{/if}
+                        </button>
+                    </div>
+                {/each}
+            </div>
+        {/if}
     {:else if gameState.machineState === MachineState.AgreementPointBuy && gameState.pendingAgreementBuy}
         <div class="flex flex-wrap items-center gap-3">
             <span class="font-semibold">Sale earned {`$${gameState.pendingAgreementBuy.income}`}.</span>

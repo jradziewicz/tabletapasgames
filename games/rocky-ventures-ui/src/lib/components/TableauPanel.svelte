@@ -27,6 +27,12 @@
             gameSession.gameState.players[0]
     )
 
+    // Follow whoever is playing while it isn't your turn, then come back to your own.
+    $effect(() => {
+        const activeId = gameSession.gameState.activePlayerIds[0]
+        selectedPlayerId = gameSession.isMyTurn ? (gameSession.myPlayer?.id ?? activeId) : activeId
+    })
+
     function cycle(direction: 1 | -1) {
         const index = playerIds.indexOf(selectedPlayer.playerId)
         selectedPlayerId = playerIds[(index + direction + playerIds.length) % playerIds.length]
