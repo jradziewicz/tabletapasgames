@@ -69,6 +69,20 @@ export type ExtractAnimation = {
 
 export type ConvertShareSelection = { companyId: CompanyId; shareIndex: number }
 
+export type LiveSelection = {
+    actionCount: number
+    moveTargetIndex?: number
+    moveDiscardIndexes: number[]
+    movePaidIndexes: number[]
+    step?: string
+    huntSelected: number[]
+    huntHitTargets: string[]
+    trackCompanyId?: string
+    extractNodeId?: string
+    extractCityId?: string
+    extractCreditCompanyId?: string
+}
+
 const ActionTypeByCardAction: Record<CardActionKind, ActionType> = {
     [CardActionKind.Tax]: ActionType.Tax,
     [CardActionKind.Invest]: ActionType.Invest,
@@ -84,6 +98,9 @@ export class RockyVenturesGameSession extends GameSession<
     HydratedRockyVenturesGameState
 > {
     lastActionError: string | undefined = $state()
+
+    // Live play: what the current player has selected but not confirmed yet.
+    private remoteSelection: LiveSelection | undefined = $state()
 
     zoomedImage: { url: string; alt: string } | undefined = $state()
     // Buying an agreement card while holding a gem: choose which agreement to take first.
@@ -568,6 +585,52 @@ export class RockyVenturesGameSession extends GameSession<
             .map((kind) => ActionTypeByCardAction[kind])
             .find((type) => valid.includes(type) && !this.passedActionTypes.includes(type))
         return valid.filter((type) => !cardTypes.includes(type) || type === next)
+    }
+
+    get livePlay(): boolean {
+        return (this.primaryGame.config as { livePlay?: boolean } | undefined)?.livePlay === true && !this.primaryGame.hotseat
+    }
+
+    // Selections are only good for the position they were made in.
+    get watchedSelection(): LiveSelection | undefined {
+        const selection = this.remoteSelection
+        return selection?.actionCount === this.gameState.actionCount ? selection : undefined
+    }
+
+    get mySelection(): LiveSelection {
+        return {
+            actionCount: this.gameState.actionCount,
+            moveTargetIndex: this.moveTargetIndex,
+            moveDiscardIndexes: [...this.moveDiscardIndexes],
+            movePaidIndexes: [...this.movePaidIndexes],
+            step: this.investPickerOpen
+                ? 'Invest'
+                : this.trackMode
+                  ? 'Lay Track'
+                  : this.extractMode
+                    ? 'Extract & Sell'
+                    : this.huntMode
+                      ? 'Hunt'
+                      : this.acquireMode
+                        ? 'Acquire'
+                        : this.gemMode,
+            huntSelected: [...this.huntSelected],
+            huntHitTargets: Object.values(this.huntHitTargets),
+            trackCompanyId: this.trackCompanyId,
+            extractNodeId: this.extractNodeId,
+            extractCityId: this.extractCityId,
+            extractCreditCompanyId: this.extractCreditCompanyId
+        }
+    }
+
+    shareMySelection() {
+        if (this.livePlay && this.isMyTurn && !this.isViewingHistory) {
+            this.sendLiveSelection({ ...this.mySelection })
+        }
+    }
+
+    protected override onLiveSelection(_playerId: string, selection: Record<string, unknown>) {
+        this.remoteSelection = selection as LiveSelection
     }
 
     async passAction(type: ActionType) {

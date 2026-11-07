@@ -286,6 +286,8 @@ export class DummyRemoteApiService implements RemoteApiService {
         return this.fail('getGameChat')
     }
 
+    async sendLiveSelection(): Promise<void> {}
+
     async sendGameChatMessage(
         _gameChatMessage: GameChatMessage,
         _gameId: string,

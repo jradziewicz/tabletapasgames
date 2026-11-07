@@ -47,6 +47,15 @@
     setGameSession(session)
     setRevisedCardArt(session.gameState.revisedCards === true)
 
+    // Live play: pass each change of selection on, gathering quick clicks into one message.
+    let liveSelectionTimer: ReturnType<typeof setTimeout> | undefined
+    $effect(() => {
+        JSON.stringify(session.mySelection)
+        clearTimeout(liveSelectionTimer)
+        liveSelectionTimer = setTimeout(() => session.shareMySelection(), 120)
+        return () => clearTimeout(liveSelectionTimer)
+    })
+
     // Railroad colours follow the viewer's colour-blind palette preference.
     $effect(() => {
         setCompanyColorBlind(session.colors.colorBlind)

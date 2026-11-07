@@ -153,7 +153,11 @@ type UndoPlan = {
     actions: GameAction[]
 }
 
+const LiveSelectionGameCacheMs = 30_000
+
 export class GameService {
+    private readonly liveSelectionGames = new Map<string, { game: Game; loadedAt: number }>()
+
     constructor(
         private readonly gameStore: GameStore,
         private readonly userService: UserService,
@@ -2299,6 +2303,43 @@ export class GameService {
             user = await this.userService.getUserByUsername(player.name)
         }
         return user
+    }
+
+    // Only the game's players, in a game started with Live play on. Clicks can arrive several times
+    // a second, so the game is looked up once and remembered briefly rather than read every time.
+    async relayLiveSelection({
+        user,
+        gameId,
+        selection
+    }: {
+        user: User
+        gameId: string
+        selection: Record<string, unknown>
+    }): Promise<void> {
+        const now = Date.now()
+        const cached = this.liveSelectionGames.get(gameId)
+        const game =
+            cached && now - cached.loadedAt < LiveSelectionGameCacheMs
+                ? cached.game
+                : await this.getGame({ gameId })
+        if (!game) {
+            throw new GameNotFoundError({ id: gameId })
+        }
+        this.liveSelectionGames.set(gameId, { game, loadedAt: cached?.game === game ? cached.loadedAt : now })
+        if ((game.config as { livePlay?: boolean } | undefined)?.livePlay !== true) {
+            return
+        }
+        const player = this.findValidPlayerForUser({ user, game })
+        await this.notificationService.sendNotification({
+            notification: {
+                id: nanoid(),
+                type: NotificationCategory.Game,
+                action: GameNotificationAction.LiveSelection,
+                data: { game: { id: gameId }, playerId: player.id, selection }
+            },
+            topics: [`game-${gameId}`],
+            channels: [NotificationDistributionMethod.Topical]
+        })
     }
 
     async notifyGameInstance(

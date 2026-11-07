@@ -773,6 +773,14 @@ export class TabletopApi {
         return chat
     }
 
+    async sendLiveSelection(gameId: string, selection: Record<string, unknown>): Promise<void> {
+        await this.wretch
+            .post({ gameId, selection }, '/game/liveSelection')
+            .unauthorized(this.on401)
+            .badRequest(this.handleError)
+            .res()
+    }
+
     async sendGameChatMessage(
         gameChatMessage: GameChatMessage,
         gameId: string,

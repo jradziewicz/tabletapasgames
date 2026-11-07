@@ -53,6 +53,7 @@
     import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.svelte.js'
     import { playerCardImageUrl } from '$lib/utils/playerCardImages.js'
     import Pawn from '$lib/components/Pawn.svelte'
+    import LiveSelectionLine from '$lib/components/LiveSelectionLine.svelte'
     import RecentExtract from '$lib/components/RecentExtract.svelte'
     import RecentHunt from '$lib/components/RecentHunt.svelte'
     import { gemGainBlockedReason, huntBonusWarnings } from '$lib/utils/gemWarnings.js'
@@ -223,6 +224,7 @@
         {:else}
             <div class="text-[#c9a961]">Waiting for the active player.</div>
         {/if}
+        <LiveSelectionLine {player} />
         {#if gameState.machineState === MachineState.Hunt && gameState.pendingHunt}
             {@const pending = gameState.pendingHunt}
             <div class="mt-2 text-xs text-[#c9a961]">
@@ -232,7 +234,12 @@
                 {#each pending.drawn as kind, index (index)}
                     {@const url = weaponTokenImageUrl(kind)}
                     {#if url}
-                        <img src={url} alt={kind} class="block h-12 w-12" draggable="false" />
+                        <img
+                            src={url}
+                            alt={kind}
+                            class="block h-12 w-12 rounded-full {gameSession.watchedSelection?.huntSelected.includes(index) ? 'ring-4 ring-[#ffd166]' : ''}"
+                            draggable="false"
+                        />
                     {/if}
                 {/each}
             </div>
