@@ -181,8 +181,10 @@
         </div>
     {/if}
 
-    <RecentHunt />
-    <RecentExtract />
+    {#if gameSession.livePlay}
+        <RecentHunt />
+        <RecentExtract />
+    {/if}
 
     {#if gameSession.gameState.result}
         {#if gameSession.gameCall}
@@ -216,6 +218,10 @@
                 {/each}
             </tbody>
         </table>
+    {:else if (!canAct || !player) && !gameSession.livePlay}
+        <div class="text-[#c9a961]">
+            {#if activeId}Waiting for <strong class="capitalize text-[#f1e6cf]">{gameSession.getPlayerName(activeId)}</strong>.{:else}Waiting for the active player.{/if}
+        </div>
     {:else if !canAct || !player}
         {#if player && activeId}
             <div class="text-[#c9a961]">

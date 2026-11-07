@@ -27,8 +27,9 @@
             gameSession.gameState.players[0]
     )
 
-    // Follow whoever is playing while it isn't your turn, then come back to your own.
+    // In Live play, follow whoever is playing while it isn't your turn, then come back to your own.
     $effect(() => {
+        if (!gameSession.livePlay) return
         const activeId = gameSession.gameState.activePlayerIds[0]
         selectedPlayerId = gameSession.isMyTurn ? (gameSession.myPlayer?.id ?? activeId) : activeId
     })
