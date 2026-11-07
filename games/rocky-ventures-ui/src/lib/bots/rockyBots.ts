@@ -3,6 +3,7 @@ import {
     BoardBoxLocations,
     CardBonusKind,
     CardKind,
+    remainingActionKinds,
     MachineState,
     WeaponTokenKind,
     acquireChoices,
@@ -329,7 +330,33 @@ function taxBotMoves(state: HydratedRockyVenturesGameState, playerId: string, va
     return moves
 }
 
+// In games played top to bottom a bot works down its card, moving past an action only when it
+// can't take it. The mat stays a free choice.
+function inCardOrder(state: HydratedRockyVenturesGameState, playerId: string, moves: BotMove[]): BotMove[] {
+    const cardId = state.actionCardId(playerId)
+    const card = cardId === undefined ? undefined : getCard(cardId)
+    if (
+        !state.actionsInOrder ||
+        state.machineState !== MachineState.TakeActions ||
+        (card?.kind === CardKind.Player && card.exclusiveActions)
+    ) {
+        return moves
+    }
+    const order: string[] = remainingActionKinds(state).map((kind) => kind[0]!.toUpperCase() + kind.slice(1))
+    const rank = (move: BotMove) => (order.includes(move.type) ? order.indexOf(move.type) : order.length)
+    return [...moves].sort((left, right) => rank(left) - rank(right))
+}
+
 export function chooseBotMoves(
+    state: HydratedRockyVenturesGameState,
+    playerId: string,
+    profile: BotProfile,
+    validTypes: string[]
+): BotMove[] {
+    return inCardOrder(state, playerId, scoredBotMoves(state, playerId, profile, validTypes))
+}
+
+function scoredBotMoves(
     state: HydratedRockyVenturesGameState,
     playerId: string,
     profile: BotProfile,
