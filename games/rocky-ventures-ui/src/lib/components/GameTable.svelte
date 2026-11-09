@@ -27,6 +27,7 @@
     import CardHoverPreview from '$lib/components/CardHoverPreview.svelte'
     import GameOverOverlay from '$lib/components/GameOverOverlay.svelte'
     import { setRevisedCardArt } from '$lib/utils/cardImages.js'
+    import { setAgreementDeliveryScoring } from '$lib/utils/agreementImages.js'
     import DragonOverlay from '$lib/components/DragonOverlay.svelte'
     import DragonBonusOverlay from '$lib/components/DragonBonusOverlay.svelte'
     import ScourgeOverlay from '$lib/components/ScourgeOverlay.svelte'
@@ -46,6 +47,7 @@
     const session = gameSession as RockyVenturesGameSession
     setGameSession(session)
     setRevisedCardArt(session.gameState.revisedCards === true)
+    setAgreementDeliveryScoring(session.gameState.agreementsScoreOnDelivery === true)
 
     // Live play: pass each change of selection on, gathering quick clicks into one message.
     let liveSelectionTimer: ReturnType<typeof setTimeout> | undefined

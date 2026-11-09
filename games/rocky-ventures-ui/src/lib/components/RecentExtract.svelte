@@ -32,8 +32,12 @@
                     : 'skipped the agreement point buy'
                 : undefined
 
+        const scored =
+            recent.after.getPlayerState(recent.playerId).victoryPoints -
+            recent.before.getPlayerState(recent.playerId).victoryPoints
+
         return {
-            pointBuy,
+            pointBuy: scored > 0 ? `scored ${scored} VP from the agreement` : pointBuy,
             playerId: recent.playerId,
             amount: `${detail['ore'] ?? ''} ${ore ?? 'ore'}`.trim(),
             mine: BoardNodesById[recent.action.nodeId]?.name,

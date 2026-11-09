@@ -91,6 +91,7 @@ export class RockyVenturesGameInitializer
             cardStacking: true,
             actionsInOrder: true,
             revisedCards: true,
+            agreementsScoreOnDelivery: true,
             gemsSpent: 0,
             era: 1,
             turnActionsTaken: [],

@@ -39,6 +39,14 @@ export const TwoSidedAgreementPointBuys: Partial<
     [AgreementLetter.Four]: { cost: 9, victoryPoints: 6 }
 }
 
+// In games from 2026-11-09 the front scores outright: a gold sale into its city gains this many VP.
+export const TwoSidedAgreementDeliveryPoints: Partial<Record<AgreementLetter, number>> = {
+    [AgreementLetter.One]: 2,
+    [AgreementLetter.Two]: 3,
+    [AgreementLetter.Three]: 4,
+    [AgreementLetter.Four]: 5
+}
+
 // Taking a second agreement from a city flips the player's earlier one to its back, so only the
 // newest front (point buy) is ever active per city.
 export enum AgreementBackEffect {

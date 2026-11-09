@@ -108,6 +108,7 @@ export const RockyVenturesGameState = Type.Evaluate(
             cardStacking: Type.Optional(Type.Boolean()),
             actionsInOrder: Type.Optional(Type.Boolean()),
             revisedCards: Type.Optional(Type.Boolean()),
+            agreementsScoreOnDelivery: Type.Optional(Type.Boolean()),
             eraThreeTriggered: Type.Optional(Type.Boolean()),
             gemsSpent: Type.Number(),
             era: Type.Number(),
@@ -164,6 +165,8 @@ export class HydratedRockyVenturesGameState
     declare actionsInOrder?: boolean
     // Plays the revised card actions, and cards 25 to 30 perform their actions when bought.
     declare revisedCards?: boolean
+    // An agreement's front scores VP on a gold sale into its city instead of offering a point buy.
+    declare agreementsScoreOnDelivery?: boolean
     declare eraThreeTriggered?: boolean
     declare gemsSpent: number
     declare era: number

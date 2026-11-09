@@ -16,6 +16,7 @@ import {
     AgreementBackEffect,
     isTwoSidedAgreement,
     TwoSidedAgreementBacks,
+    TwoSidedAgreementDeliveryPoints,
     TwoSidedAgreementPointBuys
 } from '../data/agreements.js'
 import { CardActionKind, type ExtractAndSellCardAction } from '../data/cards.js'
@@ -25,7 +26,7 @@ import { DragonSecurityCost } from '../data/scourges.js'
 import { NorthernRegionIds, RegionIds } from '../data/regions.js'
 import { OreCapacityByToolLevel } from '../data/toolWeaponGrid.js'
 import { StatKind } from '../model/stats.js'
-import { recordActionStat, recordCash, recordStat } from './stats.js'
+import { recordActionStat, recordCash, recordStat, recordVictoryPoints } from './stats.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { drawMineToken, mineTierForNode } from './mines.js'
 import { addScourgeToRegion } from './scourges.js'
@@ -483,6 +484,7 @@ export function planExtraction(
     const pointBuy =
         plan.ore === OreKind.Gold ? goldSaleAgreements(state, playerId, plan.saleCityId).pointBuy : undefined
     plan.canBuyVictoryPoints =
+        !state.agreementsScoreOnDelivery &&
         pointBuy !== undefined &&
         (pointBuy.fromIncome
             ? plan.net >= pointBuy.cost
@@ -559,6 +561,17 @@ export function extractAndSellAt(
         agreement: `${plan.saleCityId}-${twoSided ? AgreementLetter.Two : AgreementLetter.C}`,
         nodeId: request.nodeId
     })
+    const scoringFront =
+        state.agreementsScoreOnDelivery && plan.ore === OreKind.Gold
+            ? goldSaleAgreements(state, playerId, plan.saleCityId).pointBuy
+            : undefined
+    const deliveryPoints = scoringFront ? (TwoSidedAgreementDeliveryPoints[scoringFront.letter] ?? 0) : 0
+    if (deliveryPoints > 0) {
+        state.getPlayerState(playerId).addVictoryPoints(deliveryPoints)
+        recordVictoryPoints(state, playerId, deliveryPoints, 'agreement', {
+            agreement: `${plan.saleCityId}-${scoringFront!.letter}`
+        })
+    }
     if (plan.canBuyVictoryPoints) {
         const pointBuy = goldSaleAgreements(state, playerId, plan.saleCityId).pointBuy!
         state.pendingAgreementBuy =

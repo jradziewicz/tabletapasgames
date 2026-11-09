@@ -4,6 +4,7 @@ import {
     AgreementLetter,
     isTwoSidedAgreement,
     TwoSidedAgreementBacks,
+    TwoSidedAgreementDeliveryPoints,
     TwoSidedAgreementPointBuys,
     type DeliveryCityId
 } from '@tabletop/rocky-ventures'
@@ -11,13 +12,21 @@ import {
 // Explicit image list (scripts/generate-image-index.mjs): the Rollup game bundle can't use import.meta.glob
 const agreementImagesByName: Record<string, string> = Images
 
+// Games where an agreement's front scores on delivery show the matching front art.
+let deliveryScoring = false
+
+export function setAgreementDeliveryScoring(on: boolean) {
+    deliveryScoring = on
+}
+
 // Two-sided agreements show their back once a later agreement from the same city flipped them.
 export function agreementImageUrl(
     cityId: DeliveryCityId,
     letter: AgreementLetter,
     flipped: boolean = false
 ): string | undefined {
-    return agreementImagesByName[`${cityId}-${letter}${flipped && isTwoSidedAgreement(letter) ? '-back' : ''}`]
+    const name = `${cityId}-${letter}${flipped && isTwoSidedAgreement(letter) ? '-back' : ''}`
+    return (deliveryScoring ? agreementImagesByName[`${name}-scoring`] : undefined) ?? agreementImagesByName[name]
 }
 
 export function agreementBackImageUrl(cityId: DeliveryCityId): string | undefined {
@@ -37,6 +46,10 @@ export function agreementTooltip(cityId: DeliveryCityId, letter: AgreementLetter
         if (flipped) {
             const back = AgreementBackDescriptions[TwoSidedAgreementBacks[letter]!].replace('this city', city)
             return `${city} Agreement ${letter} (flipped): ${back}. ${discard}`
+        }
+        if (deliveryScoring) {
+            const points = TwoSidedAgreementDeliveryPoints[letter]!
+            return `${city} Agreement ${letter}: score ${points} VP each time you sell gold to ${city}. Taking another ${city} agreement flips this one. ${discard}`
         }
         const buy = TwoSidedAgreementPointBuys[letter]!
         return `${city} Agreement ${letter}: after a gold sale to ${city}, you may buy ${buy.victoryPoints} VP for $${buy.cost}. Taking another ${city} agreement flips this one. ${discard}`
