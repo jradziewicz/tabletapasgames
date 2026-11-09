@@ -5,6 +5,8 @@ import { AgreementLetter } from '../data/agreements.js'
 import { DeliveryCityId } from '../data/board.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { goldSaleAgreements } from './extract.js'
+import { unlockEarnsGem } from './grid.js'
+import { RedGemCells } from '../data/toolWeaponGrid.js'
 import { HydratedDiscardAgreement } from '../actions/discardAgreement.js'
 
 const engine = new GameEngine(Definition.runtime)
@@ -48,6 +50,7 @@ describe('Paulies Robot', () => {
         expect(state.actionsInOrder).toBe(true)
         expect(state.agreementsScoreOnDelivery).toBe(true)
         expect(state.noAgreementDiscard).toBe(true)
+        expect(state.gemOnlyOnCircle).toBe(true)
     })
 })
 
@@ -60,5 +63,16 @@ describe('discarding agreements', () => {
         expect(HydratedDiscardAgreement.canDiscardAgreement(state, player.playerId)).toBe(false)
         delete state.noAgreementDiscard
         expect(HydratedDiscardAgreement.canDiscardAgreement(state, player.playerId)).toBe(true)
+    })
+})
+
+describe('grid unlock gems', () => {
+    it('only come from landing on the circle in new games', () => {
+        const state = startedState()
+        const red = RedGemCells[0]!
+        expect(unlockEarnsGem(state, red, 'red')).toBe(true)
+        expect(unlockEarnsGem(state, { weapon: red.weapon + 1, tool: red.tool }, 'red')).toBe(false)
+        delete state.gemOnlyOnCircle
+        expect(unlockEarnsGem(state, { weapon: red.weapon + 1, tool: red.tool }, 'red')).toBe(true)
     })
 })

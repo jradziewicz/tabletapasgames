@@ -110,6 +110,7 @@ export const RockyVenturesGameState = Type.Evaluate(
             revisedCards: Type.Optional(Type.Boolean()),
             agreementsScoreOnDelivery: Type.Optional(Type.Boolean()),
             noAgreementDiscard: Type.Optional(Type.Boolean()),
+            gemOnlyOnCircle: Type.Optional(Type.Boolean()),
             eraThreeTriggered: Type.Optional(Type.Boolean()),
             gemsSpent: Type.Number(),
             era: Type.Number(),
@@ -170,6 +171,8 @@ export class HydratedRockyVenturesGameState
     declare agreementsScoreOnDelivery?: boolean
     // Agreements can't be discarded for free track (2026-11-09).
     declare noAgreementDiscard?: boolean
+    // Passing above a red or blue circle unlocks its mines, but the gem needs a landing on the circle.
+    declare gemOnlyOnCircle?: boolean
     declare eraThreeTriggered?: boolean
     declare gemsSpent: number
     declare era: number

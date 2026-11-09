@@ -5,6 +5,8 @@ import {
     canMoveUp,
     hasBlueUnlockAt,
     hasRedUnlockAt,
+    isBlueGemCell,
+    isRedGemCell,
     type GridCell
 } from '../data/toolWeaponGrid.js'
 import { gainGems } from './gems.js'
@@ -36,6 +38,18 @@ export function stepOnGrid(cell: GridCell, direction: GridDirection): GridStepRe
     }
 }
 
+// Whether reaching this cell earns the gem for a new red or blue unlock.
+export function unlockEarnsGem(
+    state: Pick<HydratedRockyVenturesGameState, 'gemOnlyOnCircle'>,
+    cell: GridCell,
+    color: 'red' | 'blue'
+): boolean {
+    if (!state.gemOnlyOnCircle) {
+        return true
+    }
+    return color === 'red' ? isRedGemCell(cell) : isBlueGemCell(cell)
+}
+
 export function moveOnGrid(
     state: HydratedRockyVenturesGameState,
     playerId: string,
@@ -54,11 +68,15 @@ export function moveOnGrid(
     player.toolLevel = result.cell.tool
     if (hasRedUnlockAt(result.cell) && !player.redMinesUnlocked) {
         player.redMinesUnlocked = true
-        recordGems(state, playerId, gainGems(state, playerId, 1), 'grid')
+        if (unlockEarnsGem(state, result.cell, 'red')) {
+            recordGems(state, playerId, gainGems(state, playerId, 1), 'grid')
+        }
     }
     if (hasBlueUnlockAt(result.cell) && !player.blueMinesUnlocked) {
         player.blueMinesUnlocked = true
-        recordGems(state, playerId, gainGems(state, playerId, 1), 'grid')
+        if (unlockEarnsGem(state, result.cell, 'blue')) {
+            recordGems(state, playerId, gainGems(state, playerId, 1), 'grid')
+        }
     }
 }
 

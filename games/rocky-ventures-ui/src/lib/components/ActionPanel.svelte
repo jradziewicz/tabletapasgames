@@ -18,6 +18,7 @@
         HuntDrawRuleByWeaponLevel,
         hasRedUnlockAt,
         hasBlueUnlockAt,
+        unlockEarnsGem,
         MaxGems,
         RegionIds,
         RegionNames,
@@ -602,6 +603,9 @@
                     {@const accent = isWeapon ? '#e0574a' : '#4fa3e0'}
                     {@const unlocksRed = hasRedUnlockAt(plan.destination) && !player?.redMinesUnlocked}
                     {@const unlocksBlue = hasBlueUnlockAt(plan.destination) && !player?.blueMinesUnlocked}
+                    {@const earnsGem =
+                        (unlocksRed && unlockEarnsGem(gameState, plan.destination, 'red')) ||
+                        (unlocksBlue && unlockEarnsGem(gameState, plan.destination, 'blue'))}
                     {@const hunt = HuntDrawRuleByWeaponLevel[plan.destination.weapon]}
                     {@const ore = OreCapacityByToolLevel[plan.destination.tool]}
                     <button
@@ -640,7 +644,7 @@
                         {/if}
                         {#if unlocksRed || unlocksBlue || plan.victoryPoints > 0}
                             <span class="flex flex-wrap items-center gap-1">
-                                {#if unlocksRed || unlocksBlue}
+                                {#if earnsGem}
                                     {@const gemBlocked = player ? gemGainBlockedReason(gameState, player.playerId) : undefined}
                                     {#if gemBlocked}
                                         <span class="rounded-full border border-[#e0b02a] px-1.5 text-[10px] font-semibold text-[#ffd166]" title="No gem: {gemBlocked}">

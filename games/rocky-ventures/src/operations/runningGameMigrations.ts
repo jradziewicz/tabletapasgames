@@ -78,6 +78,7 @@ export function migrateRunningGame(state: HydratedRockyVenturesGameState) {
             state.actionsInOrder = true
             state.agreementsScoreOnDelivery = true
             state.noAgreementDiscard = true
+            state.gemOnlyOnCircle = true
         }
     }
     if (!TwoSidedAgreementGameIds.includes(state.gameId)) {

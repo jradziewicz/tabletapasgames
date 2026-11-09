@@ -93,6 +93,7 @@ export class RockyVenturesGameInitializer
             revisedCards: true,
             agreementsScoreOnDelivery: true,
             noAgreementDiscard: true,
+            gemOnlyOnCircle: true,
             gemsSpent: 0,
             era: 1,
             turnActionsTaken: [],
