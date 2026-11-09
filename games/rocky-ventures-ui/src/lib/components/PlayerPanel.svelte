@@ -43,7 +43,7 @@
             case CardKind.Development:
                 return `${card.number}${playerState.stackedCards?.[cardId] ? '+' : ''}`
             case CardKind.EndOfEra:
-                return `E${card.era}`
+                return `F${card.era}`
             case CardKind.GameOver:
                 return 'GO'
         }

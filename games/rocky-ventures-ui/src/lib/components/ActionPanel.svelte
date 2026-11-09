@@ -57,6 +57,7 @@
     import LiveSelectionLine from '$lib/components/LiveSelectionLine.svelte'
     import RecentExtract from '$lib/components/RecentExtract.svelte'
     import RecentHunt from '$lib/components/RecentHunt.svelte'
+    import { feastName } from '$lib/utils/feastNames.js'
     import { gemGainBlockedReason, huntBonusWarnings } from '$lib/utils/gemWarnings.js'
     import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
     import { DragonTileImageUrl, weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
@@ -131,7 +132,7 @@
             case CardKind.Development:
                 return `#${card.number}`
             case CardKind.EndOfEra:
-                return `Era ${card.era}`
+                return feastName(card.era)
             case CardKind.GameOver:
                 return 'Game Over'
         }
@@ -1049,7 +1050,7 @@
         </div>
     {:else if gameState.machineState === MachineState.PointBuy && pointBuyCard}
         <div class="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span class="font-semibold">End of Era {pointBuyCard.era}: buy victory points.</span>
+            <span class="font-semibold">{feastName(pointBuyCard.era)}: buy victory points.</span>
             <span class="text-xs text-[#c9a961]">
                 {`$${pointBuyCard.pointBuyCost}`} for {pointBuyCard.pointBuyVictoryPoints} VP, any number of times. You may first cash in one share (it leaves the game).
             </span>

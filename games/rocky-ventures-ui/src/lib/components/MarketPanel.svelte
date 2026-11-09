@@ -69,7 +69,7 @@
                         {#if cost !== undefined}
                             Buy for <span class="font-bold">{`$${cost}`}</span>
                         {:else}
-                            End of Era card
+                            Feast card
                         {/if}
                     </div>
                 {:else}
