@@ -109,6 +109,7 @@ export const RockyVenturesGameState = Type.Evaluate(
             actionsInOrder: Type.Optional(Type.Boolean()),
             revisedCards: Type.Optional(Type.Boolean()),
             agreementsScoreOnDelivery: Type.Optional(Type.Boolean()),
+            noAgreementDiscard: Type.Optional(Type.Boolean()),
             eraThreeTriggered: Type.Optional(Type.Boolean()),
             gemsSpent: Type.Number(),
             era: Type.Number(),
@@ -167,6 +168,8 @@ export class HydratedRockyVenturesGameState
     declare revisedCards?: boolean
     // An agreement's front scores VP on a gold sale into its city instead of offering a point buy.
     declare agreementsScoreOnDelivery?: boolean
+    // Agreements can't be discarded for free track (2026-11-09).
+    declare noAgreementDiscard?: boolean
     declare eraThreeTriggered?: boolean
     declare gemsSpent: number
     declare era: number

@@ -11,7 +11,7 @@
     const pick = $derived(gameSession.discardPick)
 </script>
 
-{#if player && player.agreements.length > 0}
+{#if player && player.agreements.length > 0 && !gameState.noAgreementDiscard}
     <div class="mb-2 flex flex-wrap items-center gap-2 text-xs">
         {#if pick === undefined}
             {#each player.agreements as agreement (`${agreement.cityId}-${agreement.letter}`)}

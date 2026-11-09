@@ -58,6 +58,7 @@ export class HydratedDiscardAgreement
 
     static canDiscardAgreement(state: HydratedRockyVenturesGameState, playerId: string): boolean {
         return (
+            !state.noAgreementDiscard &&
             state.activePlayerIds.includes(playerId) &&
             state.getPlayerState(playerId).agreements.length > 0
         )

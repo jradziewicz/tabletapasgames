@@ -14,6 +14,9 @@ export function reasonDiscardAgreementInvalid(
     letter: AgreementLetter,
     companyId: CompanyId
 ): string | undefined {
+    if (state.noAgreementDiscard) {
+        return 'Agreements cannot be discarded in this game'
+    }
     if (!state.activePlayerIds.includes(playerId)) {
         return 'It is not your turn'
     }

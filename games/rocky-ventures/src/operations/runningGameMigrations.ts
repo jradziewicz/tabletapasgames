@@ -77,6 +77,7 @@ export function migrateRunningGame(state: HydratedRockyVenturesGameState) {
         if (InOrderAndDeliveryScoringGameIds.includes(state.gameId)) {
             state.actionsInOrder = true
             state.agreementsScoreOnDelivery = true
+            state.noAgreementDiscard = true
         }
     }
     if (!TwoSidedAgreementGameIds.includes(state.gameId)) {
