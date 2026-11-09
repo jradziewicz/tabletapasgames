@@ -1,4 +1,3 @@
-import { trackMetaEvent } from './metaPixel'
 import {
     GameSession,
     validateLocalGameState,
@@ -285,11 +284,6 @@ export class GameService implements GameServiceInterface {
             }
         }
 
-        trackMetaEvent('GameCreated', {
-            content_name: newGame.typeId,
-            storage: newGame.storage
-        })
-
         return newGame
     }
 
@@ -374,14 +368,12 @@ export class GameService implements GameServiceInterface {
     async startGame(game: Game): Promise<Game> {
         const startedGame = await this.api.startGame(game)
         this.upsertCachedGame(startedGame)
-        trackMetaEvent('GameStarted', { content_name: startedGame.typeId })
         return startedGame
     }
 
     async joinGame(gameId: string): Promise<Game> {
         const game = await this.api.joinGame(gameId)
         this.upsertCachedGame(game)
-        trackMetaEvent('GameJoined', { content_name: game.typeId })
         return game
     }
 
