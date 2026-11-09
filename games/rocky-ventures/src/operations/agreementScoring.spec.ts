@@ -36,3 +36,15 @@ describe('agreements that score on delivery', () => {
         expect(goldSaleAgreements(state, player.playerId, DeliveryCityId.Manor).pointBuy).toBeUndefined()
     })
 })
+
+describe('Paulies Robot', () => {
+    it('moves onto top-to-bottom actions and delivery scoring when it loads', () => {
+        const stored = structuredClone(startedState().dehydrate())
+        delete stored.actionsInOrder
+        delete stored.agreementsScoreOnDelivery
+        stored.gameId = 'oQaV2siAfrrbFOfbLkgvv'
+        const state = Definition.runtime.hydrator.hydrateState(stored) as HydratedRockyVenturesGameState
+        expect(state.actionsInOrder).toBe(true)
+        expect(state.agreementsScoreOnDelivery).toBe(true)
+    })
+})

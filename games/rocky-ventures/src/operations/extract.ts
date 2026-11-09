@@ -484,7 +484,7 @@ export function planExtraction(
     const pointBuy =
         plan.ore === OreKind.Gold ? goldSaleAgreements(state, playerId, plan.saleCityId).pointBuy : undefined
     plan.canBuyVictoryPoints =
-        !state.agreementsScoreOnDelivery &&
+        !(state.agreementsScoreOnDelivery && pointBuy !== undefined && isTwoSidedAgreement(pointBuy.letter)) &&
         pointBuy !== undefined &&
         (pointBuy.fromIncome
             ? plan.net >= pointBuy.cost

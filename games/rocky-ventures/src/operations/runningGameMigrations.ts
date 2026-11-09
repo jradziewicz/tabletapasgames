@@ -12,6 +12,12 @@ export const TwoSidedAgreementGameIds: string[] = [
     'Vfz4QAGhl4cfVpTXYAxw8' // Eye of the Tiger
 ]
 
+// Running games Justin asked to move onto top-to-bottom actions and agreements that score on
+// delivery (2026-11-09).
+export const InOrderAndDeliveryScoringGameIds: string[] = [
+    'oQaV2siAfrrbFOfbLkgvv' // Paulies Robot
+]
+
 // Same on every load until it's saved, so the spot comes from the pile itself, not the game's
 // random numbers.
 function stablePick(text: string, choices: number): number {
@@ -68,6 +74,10 @@ export function migrateRunningGame(state: HydratedRockyVenturesGameState) {
     if (!state.result) {
         migrateToEraThreeEnding(state)
         migrateToNoGameOverCard(state)
+        if (InOrderAndDeliveryScoringGameIds.includes(state.gameId)) {
+            state.actionsInOrder = true
+            state.agreementsScoreOnDelivery = true
+        }
     }
     if (!TwoSidedAgreementGameIds.includes(state.gameId)) {
         return
