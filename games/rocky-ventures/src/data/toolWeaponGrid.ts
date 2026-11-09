@@ -47,7 +47,7 @@ export const PrintedBlockedRightFrom: GridCell[] = [
 ]
 
 // Printed walls taken out of the game (2026-10-20): the wall to the right of weapon 4 / tool 7,
-// and the wall above weapon 2 / tool 7. The UI paints over them on the board art.
+// and the wall above weapon 2 / tool 7. The v8 board art no longer prints them.
 export const RemovedBlockedUpFrom: GridCell[] = [{ weapon: 2, tool: 7 }]
 export const RemovedBlockedRightFrom: GridCell[] = [{ weapon: 4, tool: 7 }]
 

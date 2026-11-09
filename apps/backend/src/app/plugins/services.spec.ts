@@ -41,6 +41,7 @@ vi.mock('@tabletop/backend-services', async () => {
                 'TokenService',
                 'TournamentService',
                 'UserService',
+                'UsernameReviewService',
                 'DiscordTransport',
                 'DiscordWebhookTransport',
                 'EmailTransport'

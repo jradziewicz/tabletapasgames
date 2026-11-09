@@ -15,7 +15,7 @@ import { CompanyId } from '../data/companies.js'
 import { AgreementLetter } from '../data/agreements.js'
 import { WeaponTokenKind } from '../data/weaponBag.js'
 import { MachineState } from '../definition/states.js'
-import { type Card, type CardAction, CardBonusKind, CardKind, cardPrices, getCard } from '../data/cards.js'
+import { type Card, type CardAction, CardBonusKind, CardKind, cardActionsFor, cardPrices, getCard } from '../data/cards.js'
 import {
     DornochGoldPriceSlotIndex,
     EmptySlotDornochGoldPrice,
@@ -60,7 +60,11 @@ export const PendingShare = Type.Object({
 export type PendingAgreementBuy = Type.Static<typeof PendingAgreementBuy>
 export const PendingAgreementBuy = Type.Object({
     cityId: Type.Enum(DeliveryCityId),
-    income: Type.Number()
+    income: Type.Number(),
+    // Set for two-sided agreements; agreement D's offer leaves these out.
+    letter: Type.Optional(Type.Enum(AgreementLetter)),
+    cost: Type.Optional(Type.Number()),
+    victoryPoints: Type.Optional(Type.Number())
 })
 
 export type FreeTrackState = Type.Static<typeof FreeTrackState>
@@ -100,6 +104,12 @@ export const RockyVenturesGameState = Type.Evaluate(
             weaponBag: Type.Record(Type.String(), Type.Number()),
             dragon: DragonState,
             agreementStacks: Type.Record(Type.String(), Type.Array(Type.Enum(AgreementLetter))),
+            eraThreeEndsGame: Type.Optional(Type.Boolean()),
+            cardStacking: Type.Optional(Type.Boolean()),
+            actionsInOrder: Type.Optional(Type.Boolean()),
+            revisedCards: Type.Optional(Type.Boolean()),
+            agreementsScoreOnDelivery: Type.Optional(Type.Boolean()),
+            eraThreeTriggered: Type.Optional(Type.Boolean()),
             gemsSpent: Type.Number(),
             era: Type.Number(),
             turnActionsTaken: Type.Array(Type.String()),
@@ -147,6 +157,17 @@ export class HydratedRockyVenturesGameState
     declare weaponBag: Record<string, number>
     declare dragon: DragonState
     declare agreementStacks: Record<string, AgreementLetter[]>
+    // Games set up from 2026-11-04 end when End of Era III is taken, not on two of the old triggers.
+    declare eraThreeEndsGame?: boolean
+    // Games set up from 2026-11-05 can stack a bought card on a tableau card for 3 gems.
+    declare cardStacking?: boolean
+    // A card's actions run top to bottom: taking one gives up any still unused above it.
+    declare actionsInOrder?: boolean
+    // Plays the revised card actions, and cards 25 to 30 perform their actions when bought.
+    declare revisedCards?: boolean
+    // An agreement's front scores VP on a gold sale into its city instead of offering a point buy.
+    declare agreementsScoreOnDelivery?: boolean
+    declare eraThreeTriggered?: boolean
     declare gemsSpent: number
     declare era: number
     declare turnActionsTaken: string[]
@@ -183,14 +204,23 @@ export class HydratedRockyVenturesGameState
         }
         const card = getCard(cardId)
         if (this.immediateCardId !== undefined) {
-            return card.kind === CardKind.Development && card.bonus.kind === CardBonusKind.ImmediateAction
-                ? [card.bonus.action]
-                : []
+            if (card.kind !== CardKind.Development || card.bonus.kind !== CardBonusKind.ImmediateAction) {
+                return []
+            }
+            return this.revisedCards ? cardActionsFor(card, true) : [card.bonus.action]
         }
         if (card.kind !== CardKind.Player && card.kind !== CardKind.Development) {
             return []
         }
-        return card.actions
+        // A stack gives the top action of the card underneath plus all of the top card's actions.
+        const underId = this.getPlayerState(playerId).stackedCards?.[cardId]
+        const under = underId === undefined ? undefined : getCard(underId)
+        const underAction =
+            under?.kind === CardKind.Player || under?.kind === CardKind.Development
+                ? cardActionsFor(under, this.revisedCards)[0]
+                : undefined
+        const actions = cardActionsFor(card, this.revisedCards)
+        return underAction ? [underAction, ...actions] : actions
     }
 
     get turnActionsSinceImmediate(): string[] {

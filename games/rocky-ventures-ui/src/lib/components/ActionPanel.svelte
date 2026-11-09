@@ -1,4 +1,7 @@
 <script lang="ts">
+    import MatGems from '$lib/components/MatGems.svelte'
+    import StackedUnder from '$lib/components/StackedUnder.svelte'
+    import { StartingPlayerCardId } from '@tabletop/rocky-ventures'
     import { DummyName } from '$lib/utils/dummyDisplay.js'
     import {
         DummyPlayerId,
@@ -50,6 +53,9 @@
     import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.svelte.js'
     import { playerCardImageUrl } from '$lib/utils/playerCardImages.js'
     import Pawn from '$lib/components/Pawn.svelte'
+    import LiveSelectionLine from '$lib/components/LiveSelectionLine.svelte'
+    import RecentExtract from '$lib/components/RecentExtract.svelte'
+    import RecentHunt from '$lib/components/RecentHunt.svelte'
     import { gemGainBlockedReason, huntBonusWarnings } from '$lib/utils/gemWarnings.js'
     import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
     import { DragonTileImageUrl, weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
@@ -60,7 +66,7 @@
     const activeId = $derived(gameState.activePlayerIds[0])
     const player = $derived(activeId ? gameState.getPlayerState(activeId) : undefined)
     const canAct = $derived(gameSession.isMyTurn && !gameSession.isViewingHistory)
-    const validTypes = $derived(gameSession.validActionTypes)
+    const validTypes = $derived(gameSession.offeredActionTypes)
     const playerColor = $derived(activeId ? gameSession.colors.getPlayerBgColorValue(activeId) : '#888888')
 
     function regionLabel(region: string): string {
@@ -81,10 +87,38 @@
         [CardActionKind.Hunt]: 'Hunt'
     }
 
+    const MoveVerbs: Partial<Record<ActionType, string>> = {
+        [ActionType.MovePawn]: 'moved their pawn',
+        [ActionType.Tax]: 'taxed',
+        [ActionType.Invest]: 'bought a card',
+        [ActionType.ChooseShare]: 'took a share',
+        [ActionType.PointBuy]: 'made a point buy',
+        [ActionType.ClaimMine]: 'claimed a mine',
+        [ActionType.LayTrack]: 'laid track',
+        [ActionType.LayFreeTrack]: 'laid free track',
+        [ActionType.ExtractAndSell]: 'extracted and sold',
+        [ActionType.Hunt]: 'is hunting',
+        [ActionType.ResolveHunt]: 'finished a hunt',
+        [ActionType.Acquire]: 'acquired',
+        [ActionType.GemAction]: 'spent gems',
+        [ActionType.DiscardAgreement]: 'discarded an agreement'
+    }
+
+    // The active player's latest move, shown to everyone watching their turn.
+    const latestMove = $derived.by(() => {
+        const action = gameSession.actions.at(-1)
+        return action?.playerId === activeId ? MoveVerbs[action?.type as ActionType] : undefined
+    })
+
+    function stackedUnderUrl(cardId: string): string | undefined {
+        const underId = player?.stackedCards?.[cardId]
+        return underId === undefined ? undefined : thumbUrl(underId)
+    }
+
     function thumbUrl(cardId: string): string | undefined {
         const card = getCard(cardId)
         return card.kind === CardKind.Player
-            ? playerCardImageUrl(cardId, player?.color)
+            ? playerCardImageUrl(cardId, activeId ? gameSession.colors.getPlayerColor(activeId) : player?.color)
             : cardImageUrl(cardId)
     }
 
@@ -147,6 +181,11 @@
         </div>
     {/if}
 
+    {#if gameSession.livePlay}
+        <RecentHunt />
+        <RecentExtract />
+    {/if}
+
     {#if gameSession.gameState.result}
         {#if gameSession.gameCall}
             <!-- A called or conceded game ends on the players' agreement; the scores below are where it stood. -->
@@ -179,8 +218,61 @@
                 {/each}
             </tbody>
         </table>
+    {:else if (!canAct || !player) && !gameSession.livePlay}
+        <div class="text-[#c9a961]">
+            {#if activeId}Waiting for <strong class="capitalize text-[#f1e6cf]">{gameSession.getPlayerName(activeId)}</strong>.{:else}Waiting for the active player.{/if}
+        </div>
     {:else if !canAct || !player}
-        <div class="text-[#c9a961]">Waiting for the active player.</div>
+        {#if player && activeId}
+            <div class="text-[#c9a961]">
+                Watching <strong class="capitalize text-[#f1e6cf]">{gameSession.getPlayerName(activeId)}</strong>{#if latestMove}: {latestMove}{/if}
+            </div>
+        {:else}
+            <div class="text-[#c9a961]">Waiting for the active player.</div>
+        {/if}
+        <LiveSelectionLine {player} />
+        {#if gameState.machineState === MachineState.Hunt && gameState.pendingHunt}
+            {@const pending = gameState.pendingHunt}
+            <div class="mt-2 text-xs text-[#c9a961]">
+                Hunting {regionLabel(pending.region)}, applying up to {Math.min(pending.apply, pending.drawn.length)} of the {pending.drawn.length} drawn:
+            </div>
+            <div class="mt-1 flex flex-wrap items-center gap-2">
+                {#each pending.drawn as kind, index (index)}
+                    {@const url = weaponTokenImageUrl(kind)}
+                    {#if url}
+                        <img
+                            src={url}
+                            alt={kind}
+                            class="block h-12 w-12 rounded-full {gameSession.watchedSelection?.huntSelected.includes(index) ? 'ring-4 ring-[#ffd166]' : ''}"
+                            draggable="false"
+                        />
+                    {/if}
+                {/each}
+            </div>
+        {/if}
+        {#if player}
+            <!-- Watch the active player's row, pawn included, while it isn't your turn -->
+            <div class="mt-2 flex items-end gap-2 overflow-x-auto pb-1">
+                {#each player.tableau as cardId, index (cardId)}
+                    <div class="relative shrink-0">
+                        {#if player.pawnIndex === index}
+                            <div class="pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2">
+                                <Pawn fill={playerColor} height={52} />
+                            </div>
+                        {/if}
+                        <button
+                            type="button"
+                            class="relative block overflow-hidden rounded border-2 {player.pawnIndex === index ? 'border-[#ffd166]' : 'border-[#4a3620]'}"
+                            onclick={() => gameSession.zoomCard(cardId, thumbUrl(cardId))}
+                        >
+                            <StackedUnder underUrl={stackedUnderUrl(cardId)} class="h-[53px]" imageClass="h-[112px] w-auto" />
+                            <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[112px] w-auto max-w-none" draggable="false" />
+                            {#if cardId === StartingPlayerCardId}<MatGems gems={player.gems} />{/if}
+                        </button>
+                    </div>
+                {/each}
+            </div>
+        {/if}
     {:else if gameState.machineState === MachineState.AgreementPointBuy && gameState.pendingAgreementBuy}
         <div class="flex flex-wrap items-center gap-3">
             <span class="font-semibold">Sale earned {`$${gameState.pendingAgreementBuy.income}`}.</span>
@@ -189,7 +281,7 @@
                 onclick={() => gameSession.buyAgreementPoints(true)}
                 class="rv-btn text-sm"
             >
-                Buy 3 VP · {`$${6}`}
+                Buy {gameState.pendingAgreementBuy.victoryPoints ?? 3} VP · {`$${gameState.pendingAgreementBuy.cost ?? 6}`}
             </button>
             <button
                 type="button"
@@ -235,7 +327,7 @@
                 {#if player.pawnIndex === undefined}
                     First move: place the pawn on any card, free.
                 {:else}
-                    Left goes all the way back to card I. Moving right, pay {`$${PawnSkipCost}`} per skipped card or discard it.
+                    Left goes all the way back to your mat. Moving right, pay {`$${PawnSkipCost}`} per skipped card or discard it.
                 {/if}
             </span>
         </div>
@@ -251,8 +343,8 @@
                 {@const isSkipped = player.pawnIndex !== undefined && (skipped?.includes(index) ?? false)}
                 {@const discarded = gameSession.moveDiscardIndexes.includes(index)}
                 <div
-                    class="flex flex-col items-center gap-1 overflow-hidden"
-                    style="transition: max-width 1s ease-in-out 0.25s, opacity 0.6s ease-in, transform 0.9s ease-in, margin 1s ease-in-out 0.25s; max-width: {gameSession.discardAnimating && discarded ? 0 : 200}px; opacity: {gameSession.discardAnimating && discarded ? 0 : 1}; transform: {gameSession.discardAnimating && discarded ? 'scale(0.6) translateY(24px)' : 'none'}; margin-right: {gameSession.discardAnimating && discarded ? '-12px' : '0'}; pointer-events: {gameSession.discardAnimating ? 'none' : 'auto'};"
+                    class="flex shrink-0 flex-col items-center gap-1 overflow-hidden"
+                    style="transition: max-width 1s ease-in-out 0.25s, opacity 0.6s ease-in, transform 0.9s ease-in, margin 1s ease-in-out 0.25s; max-width: {gameSession.discardAnimating && discarded ? 0 : 320}px; opacity: {gameSession.discardAnimating && discarded ? 0 : 1}; transform: {gameSession.discardAnimating && discarded ? 'scale(0.6) translateY(24px)' : 'none'}; margin-right: {gameSession.discardAnimating && discarded ? '-12px' : '0'}; pointer-events: {gameSession.discardAnimating ? 'none' : 'auto'};"
                 >
                     <div class="relative">
                         {#if player.pawnIndex === index}
@@ -264,12 +356,14 @@
                         type="button"
                         disabled={!legal}
                         onclick={() => gameSession.selectMoveTarget(index)}
-                        class="relative z-10 block overflow-hidden rounded border-2 bg-white transition"
+                        class="relative z-10 block overflow-hidden rounded border-2 transition {cardId === StartingPlayerCardId ? '' : 'bg-white'}"
                         style="border-color: {isTarget ? '#ffd166' : isSkipped ? (discarded ? '#c9302c' : '#b8700a') : '#4a3620'}; filter: {legal ? 'none' : 'brightness(0.55)'};"
                         title={legal ? `Move to ${cardLabel(cardId)}` : 'Not a legal move'}
                     >
                         {#if thumbUrl(cardId)}
+                            <StackedUnder underUrl={stackedUnderUrl(cardId)} class="h-[76px] max-sm:h-[53px]" imageClass="h-[160px] w-auto max-sm:h-[112px]" />
                             <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[160px] w-auto max-sm:h-[112px]" draggable="false" />
+                            {#if cardId === StartingPlayerCardId && player}<MatGems gems={player.gems} />{/if}
                         {:else}
                             <div class="flex h-[160px] w-[106px] max-sm:h-[112px] max-sm:w-[74px] items-center justify-center bg-[#3d2c1a] font-bold">{cardLabel(cardId)}</div>
                         {/if}
@@ -329,7 +423,7 @@
         {#if !gameSession.investPickerOpen}
         <div class="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
             <span class="text-xs text-[#c9a961]">
-                Take any available action, or pass.
+                Take any available action{validTypes.includes(ActionType.EndTurn) ? ', or pass' : ''}.
                 {#if comingLater.length > 0}
                     Not playable yet: {comingLater.join(', ')}.
                 {/if}
@@ -408,7 +502,7 @@
                     {#if gameSession.extractMode}
                         <button type="button" onclick={() => gameSession.clearLocalSelection()} class="rv-quiet">Back</button>
                     {/if}
-                    <button type="button" onclick={() => gameSession.endTurn()} class="rv-quiet">Pass</button>
+                    <button type="button" onclick={() => gameSession.passAction(ActionType.ExtractAndSell)} class="rv-quiet">Pass</button>
                 </div>
                 {#if extractNodeId && extractToken?.ore === OreKind.Silver && extractPlan}
                     <button
@@ -583,7 +677,7 @@
                 {/if}
                 <button
                     type="button"
-                    onclick={() => gameSession.endTurn()}
+                    onclick={() => gameSession.passAction(ActionType.Acquire)}
                     class="rv-quiet"
                 >
                     Pass
@@ -612,7 +706,7 @@
                 {/if}
                 <button
                     type="button"
-                    onclick={() => gameSession.endTurn()}
+                    onclick={() => gameSession.passAction(ActionType.Hunt)}
                     class="rv-quiet"
                 >
                     Pass
@@ -643,10 +737,7 @@
                         {CompanyNames[companyId]} · {`$${company.treasury}`}
                     </button>
                 {/each}
-                {#if gameSession.trackMode}
-                    <button type="button" onclick={() => gameSession.clearLocalSelection()} class="rv-quiet">Back</button>
-                {/if}
-                <button type="button" onclick={() => gameSession.endTurn()} class="rv-quiet">Pass</button>
+                <button type="button" onclick={() => gameSession.passAction(ActionType.LayTrack)} class="rv-quiet">Pass</button>
             </div>
         {:else if !gameSession.investPickerOpen}
         <div class="mb-3 flex flex-wrap items-end gap-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1 max-sm:*:shrink-0">
@@ -686,7 +777,9 @@
                                 class="relative z-10 block overflow-hidden rounded border-2 border-[#4a3620]"
                                 onclick={() => gameSession.zoomCard(cardId, thumbUrl(cardId))}
                             >
+                                <StackedUnder underUrl={stackedUnderUrl(cardId)} class="h-[76px] max-sm:h-[53px]" imageClass="h-[160px] w-auto max-sm:h-[112px]" />
                                 <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[160px] w-auto max-sm:h-[112px]" draggable="false" />
+                                {#if cardId === StartingPlayerCardId && player}<MatGems gems={player.gems} />{/if}
                             </button>
                         </div>
                     </div>
@@ -704,7 +797,7 @@
                     type="button"
                     onclick={() => gameSession.tax()}
                     class="rv-btn rv-primary"
-                    title="Tuck the $1 market card under card I and collect {`$${taxIncome}`}"
+                    title="Tuck the $1 market card under your mat and collect {`$${taxIncome}`}"
                 >
                     Tax (+{`$${taxIncome}`})
                 </button>
@@ -762,7 +855,7 @@
             {#if validTypes.includes(ActionType.EndTurn)}
                 <button
                     type="button"
-                    onclick={() => gameSession.endTurn()}
+                    onclick={() => (gameSession.autoActionKind ? gameSession.passAction(gameSession.autoActionKind) : gameSession.endTurn())}
                     class="rv-quiet"
                 >
                     Pass

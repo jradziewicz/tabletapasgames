@@ -27,9 +27,14 @@ import {
     planExtraction,
     DeliveryCityId,
     CardBonusKind,
+    CardActionKind,
     CardKind,
     getCard,
+    remainingActionKinds,
     ChooseAgreementGemCost,
+    StackCardGemCost,
+    stackableCardIds,
+    isTwoSidedAgreement,
     type ExtractionPlan,
     MachineState,
     buildableBoxes,
@@ -64,15 +69,43 @@ export type ExtractAnimation = {
 
 export type ConvertShareSelection = { companyId: CompanyId; shareIndex: number }
 
+export type LiveSelection = {
+    actionCount: number
+    moveTargetIndex?: number
+    moveDiscardIndexes: number[]
+    movePaidIndexes: number[]
+    step?: string
+    huntSelected: number[]
+    huntHitTargets: string[]
+    trackCompanyId?: string
+    extractNodeId?: string
+    extractCityId?: string
+    extractCreditCompanyId?: string
+}
+
+const ActionTypeByCardAction: Record<CardActionKind, ActionType> = {
+    [CardActionKind.Tax]: ActionType.Tax,
+    [CardActionKind.Invest]: ActionType.Invest,
+    [CardActionKind.ClaimMine]: ActionType.ClaimMine,
+    [CardActionKind.LayTrack]: ActionType.LayTrack,
+    [CardActionKind.ExtractAndSell]: ActionType.ExtractAndSell,
+    [CardActionKind.Hunt]: ActionType.Hunt,
+    [CardActionKind.Acquire]: ActionType.Acquire
+}
+
 export class RockyVenturesGameSession extends GameSession<
     RockyVenturesGameState,
     HydratedRockyVenturesGameState
 > {
     lastActionError: string | undefined = $state()
 
+    // Live play: what the current player has selected but not confirmed yet.
+    private remoteSelection: LiveSelection | undefined = $state()
+
     zoomedImage: { url: string; alt: string } | undefined = $state()
     // Buying an agreement card while holding a gem: choose which agreement to take first.
     agreementPick: { slotIndex: number; cityId: DeliveryCityId } | undefined = $state()
+    stackPick: { slotIndex: number } | undefined = $state()
     gridZoomOpen = $state(false)
     hoveredCard: { url: string; alt: string } | undefined = $state()
     botSeats: Record<string, BotProfile> = $state({})
@@ -235,7 +268,7 @@ export class RockyVenturesGameSession extends GameSession<
             this.huntActive ||
             this.acquireActive ||
             this.investPickerOpen ||
-            !this.validActionTypes.includes(ActionType.ClaimMine)
+            !this.offeredActionTypes.includes(ActionType.ClaimMine)
         ) {
             return []
         }
@@ -522,6 +555,105 @@ export class RockyVenturesGameSession extends GameSession<
         })
     }
 
+    // The card's actions the player passed on this turn, so Pass moves to the next one instead of
+    // ending the whole turn.
+    private passedActions: { turn: number; types: string[] } | undefined = $state()
+
+    get passedActionTypes(): string[] {
+        const passed = this.passedActions
+        return passed?.turn === this.gameState.turnManager.series.length ? passed.types : []
+    }
+
+    // What the player is offered now. In games played top to bottom that's only the next action on
+    // the card; Pass moves on to the one below it.
+    get offeredActionTypes(): string[] {
+        const valid = this.validActionTypes
+        const state = this.gameState
+        const playerId = state.activePlayerIds[0]
+        const cardId = playerId === undefined ? undefined : state.actionCardId(playerId)
+        const card = cardId === undefined ? undefined : getCard(cardId)
+        if (
+            !state.actionsInOrder ||
+            state.machineState !== MachineState.TakeActions ||
+            !card ||
+            (card.kind === CardKind.Player && card.exclusiveActions)
+        ) {
+            return valid
+        }
+        const cardTypes: string[] = Object.values(ActionTypeByCardAction)
+        const next = remainingActionKinds(state)
+            .map((kind) => ActionTypeByCardAction[kind])
+            .find((type) => valid.includes(type) && !this.passedActionTypes.includes(type))
+        return valid.filter((type) => !cardTypes.includes(type) || type === next)
+    }
+
+    get livePlay(): boolean {
+        return (this.primaryGame.config as { livePlay?: boolean } | undefined)?.livePlay === true && !this.primaryGame.hotseat
+    }
+
+    // Selections are only good for the position they were made in.
+    get watchedSelection(): LiveSelection | undefined {
+        const selection = this.remoteSelection
+        return selection?.actionCount === this.gameState.actionCount ? selection : undefined
+    }
+
+    get mySelection(): LiveSelection {
+        return {
+            actionCount: this.gameState.actionCount,
+            moveTargetIndex: this.moveTargetIndex,
+            moveDiscardIndexes: [...this.moveDiscardIndexes],
+            movePaidIndexes: [...this.movePaidIndexes],
+            step: this.investPickerOpen
+                ? 'Invest'
+                : this.trackMode
+                  ? 'Lay Track'
+                  : this.extractMode
+                    ? 'Extract & Sell'
+                    : this.huntMode
+                      ? 'Hunt'
+                      : this.acquireMode
+                        ? 'Acquire'
+                        : this.gemMode,
+            huntSelected: [...this.huntSelected],
+            huntHitTargets: Object.values(this.huntHitTargets),
+            trackCompanyId: this.trackCompanyId,
+            extractNodeId: this.extractNodeId,
+            extractCityId: this.extractCityId,
+            extractCreditCompanyId: this.extractCreditCompanyId
+        }
+    }
+
+    shareMySelection() {
+        if (this.livePlay && this.isMyTurn && !this.isViewingHistory) {
+            this.sendLiveSelection({ ...this.mySelection })
+        }
+    }
+
+    protected override onLiveSelection(_playerId: string, selection: Record<string, unknown>) {
+        this.remoteSelection = selection as LiveSelection
+    }
+
+    async passAction(type: ActionType) {
+        const passed = [...this.passedActionTypes, type]
+        const others = this.validActionTypes.filter(
+            (other) =>
+                !passed.includes(other) &&
+                (other === ActionType.Tax ||
+                    other === ActionType.Invest ||
+                    other === ActionType.ClaimMine ||
+                    other === ActionType.LayTrack ||
+                    other === ActionType.ExtractAndSell ||
+                    other === ActionType.Hunt ||
+                    other === ActionType.Acquire)
+        )
+        if (others.length === 0) {
+            await this.endTurn()
+            return
+        }
+        this.passedActions = { turn: this.gameState.turnManager.series.length, types: passed }
+        this.clearLocalSelection()
+    }
+
     get autoActionKind(): ActionType | undefined {
         if (
             !this.isMyTurn ||
@@ -530,7 +662,7 @@ export class RockyVenturesGameSession extends GameSession<
         ) {
             return undefined
         }
-        const kinds = this.validActionTypes.filter(
+        const kinds = this.offeredActionTypes.filter(
             (type) =>
                 type === ActionType.Tax ||
                 type === ActionType.Invest ||
@@ -539,7 +671,7 @@ export class RockyVenturesGameSession extends GameSession<
                 type === ActionType.ExtractAndSell ||
                 type === ActionType.Hunt ||
                 type === ActionType.Acquire
-        )
+        ).filter((type) => !this.passedActionTypes.includes(type))
         return kinds.length === 1 ? kinds[0] : undefined
     }
 
@@ -837,7 +969,7 @@ export class RockyVenturesGameSession extends GameSession<
         })
         if (
             this.gameState.machineState === MachineState.TakeActions &&
-            this.validActionTypes.includes(ActionType.LayTrack)
+            this.offeredActionTypes.includes(ActionType.LayTrack)
         ) {
             this.trackMode = true
             this.trackCompanyId = companyId
@@ -940,7 +1072,7 @@ export class RockyVenturesGameSession extends GameSession<
             return canSwap(slotIndex) || canSwap(slotIndex - 1) ? 'swap' : undefined
         }
         const canInvest =
-            this.gameState.machineState === MachineState.BonusInvest || this.validActionTypes.includes(ActionType.Invest)
+            this.gameState.machineState === MachineState.BonusInvest || this.offeredActionTypes.includes(ActionType.Invest)
         const cost = investCost(this.gameState, slotIndex)
         if (canInvest && cost !== undefined && cost <= this.gameState.getPlayerState(playerId).money) {
             return 'buy'
@@ -990,9 +1122,19 @@ export class RockyVenturesGameSession extends GameSession<
         const gems = playerId ? this.gameState.getPlayerState(playerId).gems : 0
         if (
             card?.kind === CardKind.Development &&
+            playerId &&
+            gems >= StackCardGemCost &&
+            stackableCardIds(this.gameState, playerId).length > 0
+        ) {
+            this.stackPick = { slotIndex }
+            return
+        }
+        if (
+            card?.kind === CardKind.Development &&
             card.bonus.kind === CardBonusKind.Agreement &&
             gems >= ChooseAgreementGemCost &&
-            (this.gameState.agreementStacks[card.bonus.cityId]?.length ?? 0) > 1
+            (this.gameState.agreementStacks[card.bonus.cityId]?.length ?? 0) > 1 &&
+            !isTwoSidedAgreement(this.gameState.agreementStacks[card.bonus.cityId]![0]!)
         ) {
             this.agreementPick = { slotIndex, cityId: card.bonus.cityId }
             return
@@ -1000,11 +1142,20 @@ export class RockyVenturesGameSession extends GameSession<
         await this.investWithAgreement(slotIndex, undefined)
     }
 
-    async investWithAgreement(slotIndex: number, agreementLetter: AgreementLetter | undefined) {
+    async investWithAgreement(
+        slotIndex: number,
+        agreementLetter: AgreementLetter | undefined,
+        stackOnCardId?: string
+    ) {
         this.agreementPick = undefined
+        this.stackPick = undefined
         await this.submit(ActionType.Invest, async () => {
             await this.applyAction(
-                this.createPlayerAction(Invest, agreementLetter ? { slotIndex, agreementLetter } : { slotIndex })
+                this.createPlayerAction(Invest, {
+                    slotIndex,
+                    ...(agreementLetter ? { agreementLetter } : {}),
+                    ...(stackOnCardId ? { stackOnCardId } : {})
+                })
             )
         })
     }

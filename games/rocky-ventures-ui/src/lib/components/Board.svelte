@@ -12,6 +12,8 @@
         DeliveryCityId,
         MineTier,
         MineTokensById,
+        RedRestrictedMineLevel,
+        BlueRestrictedMineLevel,
         NodeKind,
         OreKind,
         RegionIds,
@@ -19,6 +21,7 @@
         ScourgeDefinitionsById,
         huntTargets,
         huntableRegions,
+        type PlacedScourge,
         type RegionId,
         SharesPerCompany,
         TrackValueByCubeCount,
@@ -44,10 +47,10 @@
         ScourgeBoxes,
         ScourgeCardHeight,
         ScourgeCardWidth,
-        ScourgeSplayStep
+        ScourgeFanGap,
+        ScourgeStackStep
     } from '$lib/utils/scourgeBoxLayout.js'
     import boardArt from '$lib/images/board.jpg'
-    import GridArtOverrides from '$lib/components/GridArtOverrides.svelte'
     import { DragonTileImageUrl } from '$lib/utils/dragonImages.js'
     import { RegionMapBounds, RegionRuns, regionAt, regionLabelPoint } from '$lib/utils/regionMap.js'
 
@@ -181,6 +184,19 @@
         return board.mines[node.id]
     }
 
+    // Revealed gold 4s and 5s repaint the board's printed outer ring to match the token's own red
+    // or blue ring, so the whole mine reads as one colour. Unrevealed mines keep the printed ring.
+    const MineRingRadius = 32
+    const MineRingWidth = 5.5
+    const RestrictedMineRingColors: Record<number, string> = {
+        [RedRestrictedMineLevel]: '#f14b50',
+        [BlueRestrictedMineLevel]: '#5f6bb2'
+    }
+
+    function revealedMineRingColor(site: MineSite): string | undefined {
+        return site.token?.ore === OreKind.Gold ? RestrictedMineRingColors[site.token.level] : undefined
+    }
+
     function mineImageUrl(node: BoardNode, site: MineSite): string | undefined {
         if (site.empty) {
             return undefined
@@ -248,7 +264,13 @@
 
     // While the dragon is out its tile sits on the map in the open mountains just south-east of
     // Leuchars, below the gemstone track and clear of the Leuchars-Dornoch road, outlined in red.
-    const DragonTileSpot = { x: 1460, y: 335, width: 70, height: Math.round((70 * 633) / 550) }
+    let fannedScourgeRegion: RegionId | undefined = $state()
+
+    function scourgeTotal(scourges: PlacedScourge[]): number {
+        return scourges.reduce((sum, scourge) => sum + scourge.level, 0)
+    }
+
+    const DragonTileSpot = { x: 1482, y: 345, width: 70, height: Math.round((70 * 633) / 550) }
     // Shown from the moment the dragon is summoned; once killed it stays, crossed out.
     const dragonOnBoard = $derived(gameSession.gameState.dragon.summoned || gameSession.gameState.dragon.killed)
     const dragonKilled = $derived(gameSession.gameState.dragon.killed)
@@ -282,7 +304,6 @@
         </filter>
     </defs>
     <image href={boardArt} x="0" y="0" width={BoardArtSize.width} height={BoardArtSize.height} />
-    <GridArtOverrides artUrl={boardArt} idPrefix="board" />
 
     <!-- Company boards: share stacks, value-track cubes, delivered mines -->
     {#each CompanyIds as companyId (companyId)}
@@ -406,7 +427,7 @@
     {#each gameSession.buildableTrackBoxes as buildable (buildable.boxId)}
         {@const location = BoardBoxLocations.find((candidate) => candidate.box.id === buildable.boxId)}
         {#if location}
-            {@const glow = gameSession.trackGlowCompanyId === CompanyId.GoblinCentral ? '#000000' : CompanyColors[gameSession.trackGlowCompanyId ?? CompanyIds[0]]}
+            {@const glow = CompanyColors[gameSession.trackGlowCompanyId ?? CompanyIds[0]]}
             <g
                 class="buildable-box"
                 role="button"
@@ -489,7 +510,19 @@
         {@const flipAnimation = gameSession.extractAnimation}
         {@const flipping =
             flipAnimation !== undefined && flipAnimation.nodeId === node.id && flipAnimation.phase === 'flip'}
+        {@const ringColor = revealedMineRingColor(site)}
         <g>
+            {#if ringColor}
+                <circle
+                    cx={node.x}
+                    cy={node.y}
+                    r={MineRingRadius}
+                    fill="none"
+                    stroke={ringColor}
+                    stroke-width={MineRingWidth}
+                    pointer-events="none"
+                />
+            {/if}
             {#if (claimable || extractable || newlyRevealed) && !extractSelected && !flipping}
                 <!-- SVG-native halo: iPhone Safari ignores CSS drop-shadow on SVG images, and on a
                      phone-sized map a few px of shadow vanishes, so draw a blurred ring in map units -->
@@ -645,7 +678,7 @@
     {/each}
 
     {#each GemTrackFillOrder as spot, index (index)}
-        {#if index < gameSession.gameState.gemsSpent}
+        {#if !gameSession.gameState.eraThreeEndsGame && index < gameSession.gameState.gemsSpent}
             <polygon
                 points={hexagonPoints(spot, GemHexRadius)}
                 fill="#b3122b"
@@ -849,14 +882,22 @@
     {#each RegionIds as region (region)}
         {@const box = ScourgeBoxes[region]}
         {@const scourges = board.scourgesByRegion[region] ?? []}
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <g
+            onpointerenter={(event) => {
+                if (event.pointerType === 'mouse' && scourges.length > 1) {
+                    fannedScourgeRegion = region
+                }
+            }}
+        >
         {#each scourges as scourge, index (scourge.scourgeId)}
             {@const imageUrl = scourgeImageUrl(scourge.scourgeId)}
             {@const definition = ScourgeDefinitionsById[scourge.scourgeId]}
             {@const cx = box.landscape
                 ? box.x + ScourgeCardHeight / 2 + 4
-                : box.x + ScourgeCardWidth / 2 + 5 + (scourges.length - 1 - index) * ScourgeSplayStep}
+                : box.x + ScourgeCardWidth / 2 + 5 + (scourges.length - 1 - index) * ScourgeStackStep}
             {@const cy = box.landscape
-                ? box.y + ScourgeCardWidth / 2 + 6 + (scourges.length - 1 - index) * ScourgeSplayStep
+                ? box.y + ScourgeCardWidth / 2 + 6 + (scourges.length - 1 - index) * ScourgeStackStep
                 : box.y + ScourgeCardHeight / 2 + 9}
             {#if imageUrl}
                 <image
@@ -882,13 +923,22 @@
                     <title>{definition?.name ?? scourge.scourgeId} - level {scourge.level}, {scourge.hits} hit{scourge.hits === 1 ? '' : 's'}</title>
                 </image>
             {/if}
-            {#if scourge.hits > 0}
+            {#if scourge.hits > 0 && index === scourges.length - 1}
                 <g transform="translate({cx + (box.landscape ? 55 : 38)}, {cy - (box.landscape ? 38 : 58)})">
                     <circle r="13" fill="#d3342f" stroke="#111" stroke-width="2" />
                     <text y="5" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">{scourge.hits}</text>
                 </g>
             {/if}
         {/each}
+        {#if scourges.length > 0}
+            <!-- The region's total monster level -->
+            <g transform="translate({box.x + box.width - 4}, {box.y + box.height - 8})" pointer-events="none">
+                <title>Total level {scourgeTotal(scourges)} in {RegionNames[region]}</title>
+                <circle r="19" fill="#1a2433" stroke="#e0776a" stroke-width="3" />
+                <text y="8" text-anchor="middle" font-size="23" font-weight="700" fill="#fff">{scourgeTotal(scourges)}</text>
+            </g>
+        {/if}
+        </g>
     {/each}
     <!-- Fanned-out share stack (click the stack again, or anywhere on the fan, to close) -->
     {#if gameSession.splayedShareCompanyId}
@@ -1058,6 +1108,44 @@
             }}
             onkeydown={() => undefined}
         />
+    {/if}
+    <!-- Hovering a stack fans its cards out at full size, above everything else on the board -->
+    {#if fannedScourgeRegion}
+        {@const region = fannedScourgeRegion}
+        {@const box = ScourgeBoxes[region]}
+        {@const scourges = board.scourgesByRegion[region] ?? []}
+        {@const fanStep = ScourgeCardWidth + ScourgeFanGap}
+        {@const fanX = Math.max(8, Math.min(box.x, BoardArtSize.width - scourges.length * fanStep - 8))}
+        {@const fanY = Math.max(8, Math.min(box.y, BoardArtSize.height - ScourgeCardHeight - 24))}
+        <!-- svelte-ignore a11y_click_events_have_key_events -->
+        <!-- svelte-ignore a11y_no_static_element_interactions -->
+        <g
+            onpointerleave={() => (fannedScourgeRegion = undefined)}
+            onclick={() => {
+                fannedScourgeRegion = undefined
+                gameSession.scourgeOverlayRegion = region
+            }}
+        >
+            <rect
+                x={fanX - ScourgeFanGap}
+                y={fanY - ScourgeFanGap}
+                width={scourges.length * fanStep + ScourgeFanGap}
+                height={ScourgeCardHeight + ScourgeFanGap * 2}
+                rx="6"
+                fill="#1a2433"
+                fill-opacity="0.92"
+            />
+            {#each scourges as scourge, index (scourge.scourgeId)}
+                {@const x = fanX + index * fanStep}
+                <image href={scourgeImageUrl(scourge.scourgeId)} {x} y={fanY} width={ScourgeCardWidth} height={ScourgeCardHeight} />
+                {#if scourge.hits > 0}
+                    <g transform="translate({x + ScourgeCardWidth - 12}, {fanY + 12})">
+                        <circle r="13" fill="#d3342f" stroke="#111" stroke-width="2" />
+                        <text y="5" text-anchor="middle" font-size="14" font-weight="700" fill="#fff">{scourge.hits}</text>
+                    </g>
+                {/if}
+            {/each}
+        </g>
     {/if}
 </svg>
 

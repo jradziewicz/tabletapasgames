@@ -1,11 +1,32 @@
 import { Images } from '$lib/images/agreements/index.js'
-import type { AgreementLetter, DeliveryCityId } from '@tabletop/rocky-ventures'
+import {
+    AgreementBackDescriptions,
+    AgreementLetter,
+    isTwoSidedAgreement,
+    TwoSidedAgreementBacks,
+    TwoSidedAgreementDeliveryPoints,
+    TwoSidedAgreementPointBuys,
+    type DeliveryCityId
+} from '@tabletop/rocky-ventures'
 
 // Explicit image list (scripts/generate-image-index.mjs): the Rollup game bundle can't use import.meta.glob
 const agreementImagesByName: Record<string, string> = Images
 
-export function agreementImageUrl(cityId: DeliveryCityId, letter: AgreementLetter): string | undefined {
-    return agreementImagesByName[`${cityId}-${letter}`]
+// Games where an agreement's front scores on delivery show the matching front art.
+let deliveryScoring = false
+
+export function setAgreementDeliveryScoring(on: boolean) {
+    deliveryScoring = on
+}
+
+// Two-sided agreements show their back once a later agreement from the same city flipped them.
+export function agreementImageUrl(
+    cityId: DeliveryCityId,
+    letter: AgreementLetter,
+    flipped: boolean = false
+): string | undefined {
+    const name = `${cityId}-${letter}${flipped && isTwoSidedAgreement(letter) ? '-back' : ''}`
+    return (deliveryScoring ? agreementImagesByName[`${name}-scoring`] : undefined) ?? agreementImagesByName[name]
 }
 
 export function agreementBackImageUrl(cityId: DeliveryCityId): string | undefined {
@@ -18,9 +39,22 @@ const SilverHalves: Record<DeliveryCityId, string> = {
     manor: "Southport, Riverwood or Manor's Gate"
 }
 
-export function agreementTooltip(cityId: DeliveryCityId, letter: AgreementLetter): string {
+export function agreementTooltip(cityId: DeliveryCityId, letter: AgreementLetter, flipped: boolean = false): string {
     const city = CityNames[cityId]
-    const ability: Record<AgreementLetter, string> = {
+    if (isTwoSidedAgreement(letter)) {
+        const discard = 'Or discard it to lay 2 free track for one railroad.'
+        if (flipped) {
+            const back = AgreementBackDescriptions[TwoSidedAgreementBacks[letter]!].replace('this city', city)
+            return `${city} Agreement ${letter} (flipped): ${back}. ${discard}`
+        }
+        if (deliveryScoring) {
+            const points = TwoSidedAgreementDeliveryPoints[letter]!
+            return `${city} Agreement ${letter}: score ${points} VP each time you sell gold to ${city}. Taking another ${city} agreement flips this one. ${discard}`
+        }
+        const buy = TwoSidedAgreementPointBuys[letter]!
+        return `${city} Agreement ${letter}: after a gold sale to ${city}, you may buy ${buy.victoryPoints} VP for $${buy.cost}. Taking another ${city} agreement flips this one. ${discard}`
+    }
+    const ability: Record<string, string> = {
         A: `+$2 per gold ore you sell to ${city}`,
         B: `+$2 per silver ore extracted from mines in ${SilverHalves[cityId]}`,
         C: `-$3 off transport and security costs when you sell gold to ${city}`,

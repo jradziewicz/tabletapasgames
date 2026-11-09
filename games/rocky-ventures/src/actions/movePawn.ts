@@ -49,7 +49,11 @@ export class HydratedMovePawn extends HydratableAction<typeof MovePawn> implemen
         player.spendMoney(pawnMoveCost(player, skipped.length, this.discardIndexes.length))
         const removed = [...this.discardIndexes].sort((a, b) => b - a)
         for (const index of removed) {
-            player.tableau.splice(index, 1)
+            const [discarded] = player.tableau.splice(index, 1)
+            if (discarded !== undefined && player.stackedCards?.[discarded] !== undefined) {
+                const { [discarded]: _under, ...rest } = player.stackedCards
+                player.stackedCards = rest
+            }
         }
         player.pawnIndex = this.targetIndex - removed.length
         state.turnActionsTaken = []

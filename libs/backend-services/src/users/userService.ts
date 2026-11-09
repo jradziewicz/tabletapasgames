@@ -6,6 +6,8 @@ import {
     ExternalAuthService,
     normalizeEmailAddress,
     type PendingEmailChange,
+    InappropriateUsernameError,
+    isInappropriateUsername,
     remove,
     Role,
     sessionGenerationOf,
@@ -136,11 +138,27 @@ export class UserService {
         return this.userStore.findByUsernameAndPassword(username, password)
     }
 
+    // Names an admin approved from a "Think this is a mistake?" review (UsernameReviewService),
+    // which get past the username filter. Set by the backend once both services exist.
+    isUsernameApproved: (username: string) => Promise<boolean> = async () => false
+
+    private async assertUsernameAllowed(username: string | undefined) {
+        if (
+            username &&
+            isInappropriateUsername(username) &&
+            !(await this.isUsernameApproved(username))
+        ) {
+            throw new InappropriateUsernameError()
+        }
+    }
+
     async createUser(user: User, password: string): Promise<User> {
         const cleanPassword = password.trim()
         if (cleanPassword.length < 12) {
             throw new InvalidPasswordError()
         }
+
+        await this.assertUsernameAllowed(user.username)
 
         const createdUser = await this.userStore.createUser(user, cleanPassword)
 
@@ -195,6 +213,8 @@ export class UserService {
         password?: string
     ): Promise<User> {
         const userId = session.userId
+        await this.assertUsernameAllowed(fields.username)
+
         const [updatedUser, updatedFields, originalUser] = await this.userStore.updateUser({
             userId,
             fields,

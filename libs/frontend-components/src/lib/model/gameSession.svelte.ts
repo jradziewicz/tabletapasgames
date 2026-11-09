@@ -98,6 +98,14 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
     private sessionUserStore: { current: User | undefined }
     private notifications: GameNotifications
 
+    // Live play. A game's session overrides this to show what the current player has selected.
+    protected onLiveSelection(_playerId: string, _selection: Record<string, unknown>): void {}
+
+    // Older hosts don't have this call yet, and a missed selection doesn't matter.
+    protected sendLiveSelection(selection: Record<string, unknown>): void {
+        this.api.sendLiveSelection?.(this.primaryGame.id, selection).catch(() => {})
+    }
+
     public runtime: GameUIRuntime<T, U>
     private engine: GameEngine<T, U>
     private api: RemoteApiService
@@ -571,7 +579,8 @@ export class GameSession<T extends GameState, U extends HydratedGameState<T> & T
             refreshHost: () => this.representations.refreshHost(),
             enqueue: (update) => this.reconciliation.enqueue(update),
             recover: () => this.checkSync(),
-            onDeleted: () => toast.error('The game has been deleted')
+            onDeleted: () => toast.error('The game has been deleted'),
+            onLiveSelection: (playerId, selection) => this.onLiveSelection(playerId, selection)
         })
 
         this.history = new GameHistory(this.gameContext, {

@@ -1,7 +1,7 @@
 // Setup constants from the draft rulebook.
 // Money for the first player to act; each later seat starts with $1 more (see initializer)
 export const StartingMoney = 15
-export const StartingGems = 1 // was 2 until 2026-11-01
+export const StartingGems = 2 // 1 from 2026-11-01, back to 2 on 2026-11-03
 export const StartingClaimTokens = 4
 // Was 10 while VP could be sold for money; that option is gone, so new games start at 0.
 export const StartingVictoryPoints = 0

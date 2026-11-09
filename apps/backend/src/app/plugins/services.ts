@@ -45,7 +45,8 @@ import {
     FirestoreSessionStore,
     SessionService,
     type DiscordOAuth,
-    DiscordOAuthClient
+    DiscordOAuthClient,
+    UsernameReviewService
 } from '@tabletop/backend-services'
 import type { GameDefinition } from '@tabletop/common'
 
@@ -74,6 +75,7 @@ declare module 'fastify' {
         tournamentService: TournamentService
         preferenceService: PreferenceService
         bugReportService: BugReportService
+        usernameReviewService: UsernameReviewService
         siteStatsService: SiteStatsService
     }
 }
@@ -217,6 +219,9 @@ export default fp(async (fastify: FastifyInstance) => {
     fastify.decorate('tokenService', tokenService)
     fastify.decorate('sessionService', sessionService)
     fastify.decorate('discordOAuth', discordOAuth)
+    const usernameReviewService = new UsernameReviewService(fastify.firestore)
+    userService.isUsernameApproved = (username) => usernameReviewService.isApproved(username)
+    fastify.decorate('usernameReviewService', usernameReviewService)
     fastify.decorate('userService', userService)
     fastify.decorate('emailService', emailService)
     fastify.decorate('secretsService', secretsService)

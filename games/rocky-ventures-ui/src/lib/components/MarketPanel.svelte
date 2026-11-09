@@ -39,8 +39,7 @@
         </div>
     </div>
     <div class="flex flex-row flex-wrap items-start gap-3">
-        {#each [...MarketSlotPrices].reverse() as _price, reversedIndex (reversedIndex)}
-            {@const index = MarketSlotPrices.length - 1 - reversedIndex}
+        {#each MarketSlotPrices as _price, index (index)}
             {@const cardId = market.slots[index]}
             {@const imageUrl = cardId ? cardImageUrl(cardId) : undefined}
             {@const cost = cardId ? totalCost(cardId, index) : undefined}

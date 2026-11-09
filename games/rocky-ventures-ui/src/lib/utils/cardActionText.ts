@@ -1,4 +1,4 @@
-import { AcquireMode, CardActionKind, CardKind, getCard, type CardAction } from '@tabletop/rocky-ventures'
+import { AcquireMode, CardActionKind, CardKind, cardActionsFor, getCard, StartingPlayerCardId, type CardAction } from '@tabletop/rocky-ventures'
 
 function plural(count: number, word: string) {
     return `${count} ${word}${count === 1 ? '' : 's'}`
@@ -14,7 +14,11 @@ export function cardActionText(action: CardAction): string {
         case CardActionKind.ClaimMine: {
             const extras = [
                 action.regionalHunts ? `then ${plural(action.regionalHunts, 'regional hunt')}` : undefined,
-                action.levelTwoMinesFree ? 'level 2 mines are free' : undefined
+                action.levelThreeMinesFree
+                    ? 'level 2 and 3 mines are free'
+                    : action.levelTwoMinesFree
+                      ? 'level 2 mines are free'
+                      : undefined
             ].filter(Boolean)
             return `Claim Mine: ${plural(action.mines, 'mine')}${extras.length ? ` (${extras.join(', ')})` : ''}`
         }
@@ -39,11 +43,16 @@ export function cardActionText(action: CardAction): string {
 }
 
 // Hover text for a card in a player's tableau: its name and every action on it.
-export function cardActionsTooltip(cardId: string): string {
+export function cardActionsTooltip(cardId: string, revised?: boolean): string {
     const card = getCard(cardId)
     if (card.kind === CardKind.EndOfEra) return `End of Era ${card.era}`
     if (card.kind === CardKind.GameOver) return 'Game Over'
-    const title = card.kind === CardKind.Player ? `Card ${card.numeral}` : `Card ${card.number}`
+    const title =
+        card.kind !== CardKind.Player
+            ? `Card ${card.number}`
+            : card.id === StartingPlayerCardId
+              ? 'Player mat'
+              : `Card ${card.numeral}`
     const joiner = card.kind === CardKind.Player && card.exclusiveActions ? '\nor ' : '\n'
-    return `${title}\n${card.actions.map(cardActionText).join(joiner)}`
+    return `${title}\n${cardActionsFor(card, revised).map(cardActionText).join(joiner)}`
 }

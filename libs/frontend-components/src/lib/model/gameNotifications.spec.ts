@@ -42,7 +42,8 @@ function fixture({ hotseat = false, usesProjection = true } = {}) {
         refreshHost: vi.fn(async () => {}),
         enqueue: vi.fn(async (_update: ReconciliationUpdate) => {}),
         recover: vi.fn(async () => {}),
-        onDeleted: vi.fn()
+        onDeleted: vi.fn(),
+        onLiveSelection: vi.fn()
     }
     const notifications = new GameNotifications(game, service, delivery)
     const emit = async (
@@ -104,6 +105,25 @@ describe('GameNotifications', () => {
         await f.emit(GameNotificationAction.AddProjectedActions, f.projected)
         expect(f.delivery.enqueue).toHaveBeenCalledTimes(2)
         f.notifications.stop()
+    })
+
+    it('passes on live selections for this Game only', async () => {
+        const f = fixture()
+        f.notifications.start()
+        const selection = { actionCount: 3 }
+        await f.emit(GameNotificationAction.LiveSelection, {
+            game: { id: 'other' },
+            playerId: 'player-two',
+            selection
+        })
+        expect(f.delivery.onLiveSelection).not.toHaveBeenCalled()
+        await f.emit(GameNotificationAction.LiveSelection, {
+            game: { id: f.game.id },
+            playerId: 'player-two',
+            selection
+        })
+        expect(f.delivery.onLiveSelection).toHaveBeenCalledExactlyOnceWith('player-two', selection)
+        expect(f.delivery.enqueue).not.toHaveBeenCalled()
     })
 
     it('does not subscribe Hotseat Games', async () => {

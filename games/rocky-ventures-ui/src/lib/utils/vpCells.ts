@@ -1,6 +1,6 @@
 import type { Point } from '@tabletop/common'
 
-// Centres of the printed victory point cells on the v0.50 board (2000 x 1481 art space), measured
+// Centres of the printed victory point cells on the v8 board (2000 x 1481 art space), measured
 // from the board art: 0/100 bottom-left, 1-19 up the left edge, 20 top-left, 21-49 across the top,
 // 50 top-right, 51-69 down the right edge, 70 bottom-right, 71-99 back along the bottom.
 export const VictoryPointCellCenters: Point[] = [

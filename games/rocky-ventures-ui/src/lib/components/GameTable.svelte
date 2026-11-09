@@ -23,8 +23,11 @@
     import CardZoom from '$lib/components/CardZoom.svelte'
     import GridZoom from '$lib/components/GridZoom.svelte'
     import AgreementChoice from '$lib/components/AgreementChoice.svelte'
+    import StackChoice from '$lib/components/StackChoice.svelte'
     import CardHoverPreview from '$lib/components/CardHoverPreview.svelte'
     import GameOverOverlay from '$lib/components/GameOverOverlay.svelte'
+    import { setRevisedCardArt } from '$lib/utils/cardImages.js'
+    import { setAgreementDeliveryScoring } from '$lib/utils/agreementImages.js'
     import DragonOverlay from '$lib/components/DragonOverlay.svelte'
     import DragonBonusOverlay from '$lib/components/DragonBonusOverlay.svelte'
     import ScourgeOverlay from '$lib/components/ScourgeOverlay.svelte'
@@ -43,6 +46,17 @@
         $props()
     const session = gameSession as RockyVenturesGameSession
     setGameSession(session)
+    setRevisedCardArt(session.gameState.revisedCards === true)
+    setAgreementDeliveryScoring(session.gameState.agreementsScoreOnDelivery === true)
+
+    // Live play: pass each change of selection on, gathering quick clicks into one message.
+    let liveSelectionTimer: ReturnType<typeof setTimeout> | undefined
+    $effect(() => {
+        JSON.stringify(session.mySelection)
+        clearTimeout(liveSelectionTimer)
+        liveSelectionTimer = setTimeout(() => session.shareMySelection(), 120)
+        return () => clearTimeout(liveSelectionTimer)
+    })
 
     // Railroad colours follow the viewer's colour-blind palette preference.
     $effect(() => {
@@ -423,6 +437,9 @@
     {/if}
     {#if session.hoveredCard && !session.zoomedImage}
         <CardHoverPreview imageUrl={session.hoveredCard.url} alt={session.hoveredCard.alt} />
+    {/if}
+    {#if session.stackPick}
+        <StackChoice slotIndex={session.stackPick.slotIndex} />
     {/if}
     {#if session.agreementPick}
         <AgreementChoice slotIndex={session.agreementPick.slotIndex} cityId={session.agreementPick.cityId} />

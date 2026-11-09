@@ -1,20 +1,20 @@
 import { CompanyId } from '@tabletop/rocky-ventures'
 
-// Winged Wyrm uses Stellar Ventures' Pink Inc share pink (its share art was recoloured to match),
-// light enough to differ in lightness from Wizard Cannonball's mid blue, which in turn stays well
-// lighter than Goblin Central's grey (a colour-blind player confused the old pink and blue).
+// Matches the railroad banners on the printed cards (the share art is recoloured to match).
+// Colour-blind players should use the colour-blind palette below: these blue/magenta and
+// orange/green pairs are close for them.
 const StandardColors: Record<CompanyId, string> = {
-    [CompanyId.WizardCannonball]: '#3f6fd6',
-    [CompanyId.DwarvenPacific]: '#e8892b',
-    [CompanyId.GoblinCentral]: '#4a4a4a',
-    [CompanyId.WingedWyrm]: '#f474c4'
+    [CompanyId.WizardCannonball]: '#176fb4',
+    [CompanyId.DwarvenPacific]: '#de621e',
+    [CompanyId.GoblinCentral]: '#4dbf70',
+    [CompanyId.WingedWyrm]: '#b41766'
 }
 
 const StandardTextColors: Record<CompanyId, string> = {
     [CompanyId.WizardCannonball]: '#ffffff',
     [CompanyId.DwarvenPacific]: '#000000',
-    [CompanyId.GoblinCentral]: '#ffffff',
-    [CompanyId.WingedWyrm]: '#000000'
+    [CompanyId.GoblinCentral]: '#000000',
+    [CompanyId.WingedWyrm]: '#ffffff'
 }
 
 // With the colour-blind palette on, the railroads use Okabe-Ito colours: the standard blue and
@@ -22,7 +22,7 @@ const StandardTextColors: Record<CompanyId, string> = {
 const ColorBlindColors: Record<CompanyId, string> = {
     [CompanyId.WizardCannonball]: '#0072b2',
     [CompanyId.DwarvenPacific]: '#e69f00',
-    [CompanyId.GoblinCentral]: '#4a4a4a',
+    [CompanyId.GoblinCentral]: '#009e73',
     [CompanyId.WingedWyrm]: '#f0e442'
 }
 

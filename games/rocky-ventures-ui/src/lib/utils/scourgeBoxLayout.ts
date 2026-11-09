@@ -1,6 +1,6 @@
 import { RegionId } from '@tabletop/rocky-ventures'
 
-// Art-space (2000 x 1481) scourge boxes printed on the v0.50 board, one per region. Gold Valley
+// Art-space (2000 x 1481) scourge boxes printed on the v8 board, one per region. Gold Valley
 // and Riverwood print landscape boxes, so their cards sit rotated 90 degrees clockwise.
 export interface ScourgeBox {
     x: number
@@ -21,4 +21,6 @@ export const ScourgeBoxes: Record<RegionId, ScourgeBox> = {
 
 export const ScourgeCardWidth = 106
 export const ScourgeCardHeight = 150
-export const ScourgeSplayStep = 30
+// Cards stack almost square on each other; hovering a stack fans them out at full size.
+export const ScourgeStackStep = 5
+export const ScourgeFanGap = 8

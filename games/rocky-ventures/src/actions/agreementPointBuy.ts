@@ -50,14 +50,16 @@ export class HydratedAgreementPointBuy
         }
         if (this.buy) {
             const player = state.getPlayerState(this.playerId)
-            if (player.money < AgreementPointBuyCost) {
+            const cost = pending.cost ?? AgreementPointBuyCost
+            const victoryPoints = pending.victoryPoints ?? AgreementPointBuyVictoryPoints
+            if (player.money < cost) {
                 throw Error('Not enough money')
             }
-            const agreement = `${pending.cityId}-${AgreementLetter.D}`
-            player.spendMoney(AgreementPointBuyCost)
-            player.addVictoryPoints(AgreementPointBuyVictoryPoints)
-            recordCash(state, this.playerId, -AgreementPointBuyCost, 'agreement', { agreement })
-            recordVictoryPoints(state, this.playerId, AgreementPointBuyVictoryPoints, 'agreement', {
+            const agreement = `${pending.cityId}-${pending.letter ?? AgreementLetter.D}`
+            player.spendMoney(cost)
+            player.addVictoryPoints(victoryPoints)
+            recordCash(state, this.playerId, -cost, 'agreement', { agreement })
+            recordVictoryPoints(state, this.playerId, victoryPoints, 'agreement', {
                 agreement
             })
         }

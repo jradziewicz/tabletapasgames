@@ -6,6 +6,7 @@ import {
     NotificationCategory,
     ProcessedActionReplay,
     type GameNotification,
+    type GameNotificationLiveSelectionData,
     type Notification,
     type Visibility
 } from '@tabletop/common'
@@ -27,6 +28,7 @@ interface NotificationDelivery {
     enqueue(update: ReconciliationUpdate): Promise<void>
     recover(): Promise<void>
     onDeleted(): void
+    onLiveSelection?(playerId: string, selection: Record<string, unknown>): void
 }
 
 export class GameNotifications {
@@ -71,6 +73,16 @@ export class GameNotifications {
     }
 
     private async receive(notification: Notification): Promise<void> {
+        if (
+            notification.type === NotificationCategory.Game &&
+            notification.action === GameNotificationAction.LiveSelection
+        ) {
+            const data = notification.data as GameNotificationLiveSelectionData
+            if (data.game.id === this.game.id) {
+                this.delivery.onLiveSelection?.(data.playerId, data.selection)
+            }
+            return
+        }
         if (
             !this.isHandledNotification(notification) ||
             notification.data.game.id !== this.game.id

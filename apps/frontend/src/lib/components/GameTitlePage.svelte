@@ -12,6 +12,7 @@
         ArrowLeftOutline,
         ArrowRightOutline,
         BookOpenOutline,
+        CartOutline,
         UsersOutline
     } from 'flowbite-svelte-icons'
     import TitleGames from '$lib/components/TitleGames.svelte'
@@ -22,8 +23,14 @@
         stellarventures: 'https://tabletapasgames.com/resources'
     }
 
+    // Where to buy the physical game, for titles sold in the shop, keyed by game id.
+    const BUY_URLS: Record<string, string> = {
+        stellarventures: 'https://shop.tabletapasgames.com/'
+    }
+
     let { title }: { title: GameUiDefinition<GameState, HydratedGameState> } = $props()
     const rulesUrl = $derived(RULES_URLS[title.info.id])
+    const buyUrl = $derived(BUY_URLS[title.info.id])
     let creating = $state(false)
     let created = $state(false)
     let gamesSection: ReturnType<typeof TitleGames> | undefined = $state()
@@ -77,6 +84,12 @@
                 {#if rulesUrl}
                     <a class="rules-link" href={rulesUrl} target="_blank" rel="noreferrer">
                         <BookOpenOutline class="h-4 w-4" /> Rules
+                        <span class="sr-only">(opens in a new tab)</span>
+                    </a>
+                {/if}
+                {#if buyUrl}
+                    <a class="rules-link" href={buyUrl} target="_blank" rel="noreferrer">
+                        <CartOutline class="h-4 w-4" /> Buy Now
                         <span class="sr-only">(opens in a new tab)</span>
                     </a>
                 {/if}
@@ -188,16 +201,19 @@
     .description p + p {
         margin-top: 12px;
     }
+    /* Sized to the widest button, with the others stretched to match. */
     .actions {
         display: flex;
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
+        width: fit-content;
         gap: 12px;
         margin-top: 28px;
     }
     .rules-link {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 10px;
         min-height: 48px;
         padding: 0 22px;
@@ -217,6 +233,7 @@
     .start-game {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: 18px;
         min-height: 48px;
         padding: 0 22px;

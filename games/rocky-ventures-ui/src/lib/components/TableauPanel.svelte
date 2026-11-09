@@ -1,4 +1,7 @@
 <script lang="ts">
+    import MatGems from '$lib/components/MatGems.svelte'
+    import StackedUnder from '$lib/components/StackedUnder.svelte'
+    import { StartingPlayerCardId } from '@tabletop/rocky-ventures'
     import { PlayerName } from '@tabletop/frontend-components'
     import { CardKind, OreCapacityByToolLevel, getCard, taxIncomeFor } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -23,6 +26,13 @@
         gameSession.gameState.findPlayerState(selectedPlayerId ?? '') ??
             gameSession.gameState.players[0]
     )
+
+    // In Live play, follow whoever is playing while it isn't your turn, then come back to your own.
+    $effect(() => {
+        if (!gameSession.livePlay) return
+        const activeId = gameSession.gameState.activePlayerIds[0]
+        selectedPlayerId = gameSession.isMyTurn ? (gameSession.myPlayer?.id ?? activeId) : activeId
+    })
 
     function cycle(direction: 1 | -1) {
         const index = playerIds.indexOf(selectedPlayer.playerId)
@@ -81,7 +91,7 @@
             (up to {OreCapacityByToolLevel[selectedPlayer.toolLevel].gold} gold, {OreCapacityByToolLevel[selectedPlayer.toolLevel].silver} silver ore)
         </span>
         {#if selectedPlayer.tuckedCardIds.length > 0}
-            <span>Tucked under I: {selectedPlayer.tuckedCardIds.length} (next tax {`$${taxIncomeFor(selectedPlayer.tuckedCardIds.length + 1)}`})</span>
+            <span>Tucked under your mat: {selectedPlayer.tuckedCardIds.length} (next tax {`$${taxIncomeFor(selectedPlayer.tuckedCardIds.length + 1)}`})</span>
         {/if}
     </div>
 
@@ -89,7 +99,7 @@
         {#each selectedPlayer.tableau as cardId, index (cardId)}
             {@const imageUrl = imageFor(cardId)}
             <div
-                class="relative shrink-0 w-[150px]"
+                class="relative shrink-0 {cardId === StartingPlayerCardId ? 'w-[302px]' : 'w-[150px]'}"
                 style="margin-left: {index === 0 ? selectedPlayer.tuckedCardIds.length * TUCK_STRIP : 0}px;"
             >
                 {#if index === 0}
@@ -106,7 +116,13 @@
                         class="relative z-10 block w-full overflow-hidden rounded-md border border-[#8a6d3b] shadow-md"
                         onclick={() => gameSession.zoomCard(cardId, imageUrl)}
                     >
+                        <StackedUnder
+                            underUrl={selectedPlayer.stackedCards?.[cardId] ? imageFor(selectedPlayer.stackedCards[cardId]!) : undefined}
+                            class="aspect-[414/305]"
+                            imageClass="h-auto w-full"
+                        />
                         <img src={imageUrl} alt={cardId} class="block h-auto w-full" draggable="false" />
+                        {#if cardId === StartingPlayerCardId}<MatGems gems={selectedPlayer.gems} />{/if}
                     </button>
                 {:else}
                     <div class="aspect-[369/516] rounded-md border border-dashed border-[#8a6d3b] p-2 text-xs">{cardId}</div>
@@ -123,12 +139,12 @@
     {#if selectedPlayer.agreements.length > 0}
         <div class="flex flex-row gap-2 overflow-x-auto pb-4">
             {#each selectedPlayer.agreements as agreement (`${agreement.cityId}-${agreement.letter}`)}
-                {@const agreementUrl = agreementImageUrl(agreement.cityId, agreement.letter)}
+                {@const agreementUrl = agreementImageUrl(agreement.cityId, agreement.letter, agreement.flipped)}
                 {#if agreementUrl}
                     <button
                         type="button"
                         class="block w-[150px] shrink-0 overflow-hidden rounded-md border border-[#8a6d3b] shadow-md"
-                        title={agreementTooltip(agreement.cityId, agreement.letter)}
+                        title={agreementTooltip(agreement.cityId, agreement.letter, agreement.flipped)}
                         onclick={() => gameSession.zoomCard(`${agreement.cityId}-${agreement.letter}`, agreementUrl)}
                         onpointerenter={(event) => gameSession.previewCard(event, `${agreement.cityId}-${agreement.letter}`, agreementUrl)}
                         onpointerleave={() => gameSession.clearCardPreview()}

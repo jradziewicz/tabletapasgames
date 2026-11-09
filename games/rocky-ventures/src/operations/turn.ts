@@ -1,3 +1,4 @@
+import { ThirdEraCardId } from './market.js'
 import { AcquireMode, CardActionKind, CardKind, getCard } from '../data/cards.js'
 import { MachineState } from '../definition/states.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
@@ -66,7 +67,8 @@ export function remainingActionKinds(state: HydratedRockyVenturesGameState): Car
     for (const takenKind of taken) {
         const index = remaining.findIndex((kind) => kind === takenKind)
         if (index >= 0) {
-            remaining.splice(index, 1)
+            // In order, anything above the action just taken has been passed on for good.
+            remaining.splice(state.actionsInOrder ? 0 : index, state.actionsInOrder ? index + 1 : 1)
         }
     }
     return remaining
@@ -97,6 +99,10 @@ export function stateAfterTurnEnd(state: HydratedRockyVenturesGameState): Machin
 }
 
 export function nextStateAfterResolution(state: HydratedRockyVenturesGameState): MachineState {
+    // End of Era III ends the game on the spot, whatever else was still to resolve.
+    if (state.eraThreeTriggered) {
+        return MachineState.EndOfGame
+    }
     if (state.pendingAgreementBuy) {
         return MachineState.AgreementPointBuy
     }
@@ -132,6 +138,10 @@ export function startPointBuy(
     cardId: string,
     startPlayerId: string = currentPlayerId(state)
 ) {
+    if (cardId === ThirdEraCardId) {
+        state.eraThreeTriggered = true
+        return
+    }
     const order = state.turnManager.turnOrder
     const start = Math.max(0, order.indexOf(startPlayerId))
     const queue = order.map((_, offset) => order[(start + offset) % order.length]!)

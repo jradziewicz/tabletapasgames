@@ -8,6 +8,7 @@
         type HydratedRockyVenturesPlayerState
     } from '@tabletop/rocky-ventures'
     import { agreementTooltip } from '$lib/utils/agreementImages.js'
+    import { cardChipBackground } from '$lib/utils/cardActionColors.js'
     import { BotProfileNames } from '$lib/bots/rockyBots.js'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { CompanyColors, CompanyTextColors } from '$lib/utils/companyDisplay.svelte.js'
@@ -30,7 +31,7 @@
 
     function tableauImageUrl(cardId: string): string | undefined {
         return getCard(cardId).kind === CardKind.Player
-            ? playerCardImageUrl(cardId, playerState.color)
+            ? playerCardImageUrl(cardId, gameSession.colors.getPlayerColor(player.id))
             : cardImageUrl(cardId)
     }
 
@@ -38,9 +39,9 @@
         const card = getCard(cardId)
         switch (card.kind) {
             case CardKind.Player:
-                return card.numeral
+                return `${card.numeral}${playerState.stackedCards?.[cardId] ? '+' : ''}`
             case CardKind.Development:
-                return `${card.number}`
+                return `${card.number}${playerState.stackedCards?.[cardId] ? '+' : ''}`
             case CardKind.EndOfEra:
                 return `E${card.era}`
             case CardKind.GameOver:
@@ -140,8 +141,8 @@
             <button
                 type="button"
                 class="relative flex h-7 w-6 items-center justify-center rounded border text-[11px] font-bold"
-                style="background-color: #f3ead6; color: #111; border-color: #8a6d3b;"
-                title={cardActionsTooltip(cardId)}
+                style="background: {cardChipBackground(cardId, playerState.stackedCards?.[cardId], gameSession.gameState.revisedCards)}; color: #111; border-color: #8a6d3b;"
+                title={cardActionsTooltip(cardId, gameSession.gameState.revisedCards)}
                 onclick={() => gameSession.zoomCard(cardId, imageUrl)}
                 onpointerenter={(event) => gameSession.previewCard(event, cardId, imageUrl)}
                 onpointerleave={() => gameSession.clearCardPreview()}
@@ -182,7 +183,7 @@
                 <span class="ml-1 text-[10px] font-semibold uppercase tracking-wide" style="color: #7f88ad;">Agreements</span>
             {/if}
             {#each playerState.agreements as agreement, i (i)}
-                <span class="rounded border px-1.5 py-0.5" style="border-color: #2a3155;" title={agreementTooltip(agreement.cityId, agreement.letter)}>{agreement.cityId} {agreement.letter}</span>
+                <span class="rounded border px-1.5 py-0.5" style="border-color: #2a3155;" title={agreementTooltip(agreement.cityId, agreement.letter, agreement.flipped)}>{agreement.cityId} {agreement.letter}</span>
             {/each}
         </div>
     {/if}

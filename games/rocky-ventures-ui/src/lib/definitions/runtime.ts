@@ -15,8 +15,8 @@ const rockyVenturesPlayerColorPalette: PlayerColorPalette = {
     [Color.Yellow]: { fill: PlayerColorHex[Color.Yellow]!, text: '#000000', contrast: '#000000' },
     [Color.Purple]: { fill: PlayerColorHex[Color.Purple]!, text: '#ffffff', contrast: '#ffffff' },
     [Color.White]: { fill: PlayerColorHex[Color.White]!, text: '#000000', contrast: '#000000' },
-    [Color.Green]: { fill: PlayerColorHex[Color.Green]!, text: '#ffffff', contrast: '#ffffff' },
-    [Color.Red]: { fill: PlayerColorHex[Color.Red]!, text: '#ffffff', contrast: '#ffffff' }
+    [Color.Green]: { fill: PlayerColorHex[Color.Green]!, text: '#000000', contrast: '#000000' },
+    [Color.Red]: { fill: PlayerColorHex[Color.Red]!, text: '#000000', contrast: '#000000' }
 }
 
 export const RockyVenturesUiRuntime: GameUIRuntime<

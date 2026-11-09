@@ -34,8 +34,8 @@ import {
 } from '../data/mineTokens.js'
 import { ScourgeDefinitions } from '../data/scourges.js'
 import { StartingWeaponBag } from '../data/weaponBag.js'
-import { AgreementLetters } from '../data/agreements.js'
-import { EndOfEraCards, GameOverCard, PlayerCardIds, developmentCardIdsForDecade } from '../data/cards.js'
+import { type AgreementLetter, TwoSidedAgreementLetters } from '../data/agreements.js'
+import { EndOfEraCards, PlayerCardIds, developmentCardIdsForDecade } from '../data/cards.js'
 import {
     DornochDurStartingMineLevel,
     MarketSize,
@@ -86,7 +86,12 @@ export class RockyVenturesGameInitializer
             removedScourges: [],
             weaponBag: { ...StartingWeaponBag },
             dragon: { trackerTokens: [], summoned: false, hits: 0, killed: false },
-            agreementStacks: this.initializeAgreementStacks(prng),
+            agreementStacks: this.initializeAgreementStacks(),
+            eraThreeEndsGame: true,
+            cardStacking: true,
+            actionsInOrder: true,
+            revisedCards: true,
+            agreementsScoreOnDelivery: true,
             gemsSpent: 0,
             era: 1,
             turnActionsTaken: [],
@@ -181,27 +186,26 @@ export class RockyVenturesGameInitializer
         return { goldA, goldB, silverA, silverB }
     }
 
-    private initializeAgreementStacks(prng: Prng): Record<string, typeof AgreementLetters> {
-        const stacks: Record<string, typeof AgreementLetters> = {}
+    private initializeAgreementStacks(): Record<string, AgreementLetter[]> {
+        const stacks: Record<string, AgreementLetter[]> = {}
         for (const cityId of [DeliveryCityId.Dornoch, DeliveryCityId.Manor]) {
-            const letters = [...AgreementLetters]
-            shuffle(letters, prng.random)
-            stacks[cityId] = letters
+            stacks[cityId] = [...TwoSidedAgreementLetters]
         }
         return stacks
     }
 
     // Decade 1 on top, then Decade 2 with End of Era I shuffled in, Decade 3 with End of Era II,
-    // Decade 4, and the Game Over card face up at the bottom.
+    // and Decade 4 with End of Era III. No card sits at the bottom: the game ends when
+    // End of Era III is bought, or when it meets End of Era II in the market.
     private buildDrawPile(prng: Prng): string[] {
         const decade1 = developmentCardIdsForDecade(1)
         const decade2 = [...developmentCardIdsForDecade(2), EndOfEraCards[0]!.id]
         const decade3 = [...developmentCardIdsForDecade(3), EndOfEraCards[1]!.id]
-        const decade4 = developmentCardIdsForDecade(4)
+        const decade4 = [...developmentCardIdsForDecade(4), EndOfEraCards[2]!.id]
         for (const decade of [decade1, decade2, decade3, decade4]) {
             shuffle(decade, prng.random)
         }
-        return [...decade1, ...decade2, ...decade3, ...decade4, GameOverCard.id]
+        return [...decade1, ...decade2, ...decade3, ...decade4]
     }
 
     private placeDornochDurMine(state: HydratedRockyVenturesGameState) {

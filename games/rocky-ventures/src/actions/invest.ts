@@ -6,7 +6,7 @@ import { ActionType } from '../definition/actions.js'
 import { CardActionKind, CardBonusKind, CardKind, getCard } from '../data/cards.js'
 import { MarketSize } from '../data/setup.js'
 import { remainingActionKinds } from '../operations/turn.js'
-import { investCost, investInMarketCard, reasonChooseAgreementInvalid } from '../operations/invest.js'
+import { investCost, investInMarketCard, reasonChooseAgreementInvalid, reasonStackInvalid } from '../operations/invest.js'
 import { AgreementLetter } from '../data/agreements.js'
 
 export type Invest = Type.Static<typeof Invest>
@@ -19,7 +19,9 @@ export const Invest = Type.Evaluate(
             slotIndex: Type.Number(),
             // Agreement-bonus cards only: take this agreement instead of the top of the pile
             // (costs a gem unless it is the top one).
-            agreementLetter: Type.Optional(Type.Enum(AgreementLetter))
+            agreementLetter: Type.Optional(Type.Enum(AgreementLetter)),
+            // Pay gems to stack the bought card on this tableau card.
+            stackOnCardId: Type.Optional(Type.String())
         })
     ])
 )
@@ -35,6 +37,7 @@ export class HydratedInvest extends HydratableAction<typeof Invest> implements I
     declare playerId: string
     declare slotIndex: number
     declare agreementLetter?: AgreementLetter
+    declare stackOnCardId?: string
 
     constructor(data: Invest) {
         super(data, InvestValidator)
@@ -43,11 +46,14 @@ export class HydratedInvest extends HydratableAction<typeof Invest> implements I
     apply(state: HydratedRockyVenturesGameState, _context?: MachineContext) {
         const invalidReason =
             HydratedInvest.reasonInvestInvalid(state, this.playerId, this.slotIndex) ??
-            HydratedInvest.reasonAgreementChoiceInvalid(state, this.playerId, this.slotIndex, this.agreementLetter)
+            HydratedInvest.reasonAgreementChoiceInvalid(state, this.playerId, this.slotIndex, this.agreementLetter) ??
+            (this.stackOnCardId === undefined
+                ? undefined
+                : reasonStackInvalid(state, this.playerId, this.slotIndex, this.stackOnCardId))
         if (invalidReason) {
             throw Error(invalidReason)
         }
-        investInMarketCard(state, this.playerId, this.slotIndex, this.agreementLetter)
+        investInMarketCard(state, this.playerId, this.slotIndex, this.agreementLetter, this.stackOnCardId)
     }
 
     static reasonAgreementChoiceInvalid(

@@ -5,7 +5,9 @@
         BonusTokensToSummonDragon,
         DragonLevel,
         MachineState,
+        CardKind,
         endTriggers,
+        getCard,
         gemTriggerThreshold
     } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -13,10 +15,12 @@
     const gameSession = getGameSession()
 
     const triggers = $derived(endTriggers(gameSession.gameState))
+    // Games that end on End of Era III show the deck and dragon as information only, and no gems.
+    const eraThreeEnding = $derived(gameSession.gameState.eraThreeEndsGame === true)
     const gemThreshold = $derived(gemTriggerThreshold(gameSession.gameState.players.length))
-    // Cards still to come before the face-up Game Over card at the bottom of the draw pile.
+    // Cards still to come. Older games keep a face-up Game Over card at the bottom, which doesn't count.
     const deckCardsLeft = $derived(
-        Math.max(0, gameSession.gameState.market.drawPile.length - (triggers.deckExhausted ? gameSession.gameState.market.drawPile.length : 1))
+        gameSession.gameState.market.drawPile.filter((cardId) => getCard(cardId).kind !== CardKind.GameOver).length
     )
     const dragon = $derived(gameSession.gameState.dragon)
     const dragonActive = $derived(dragon.summoned && !dragon.killed)
@@ -40,18 +44,22 @@
         {
             key: 'deck',
             label: `DECK ${deckCardsLeft}`,
-            level: triggers.deckExhausted ? 'met' : deckCardsLeft <= DeckWarnCardsLeft ? 'close' : 'far',
-            tip: triggers.deckExhausted
-                ? 'The Game Over card is next: this end trigger is met'
-                : `${deckCardsLeft} ${deckCardsLeft === 1 ? 'card' : 'cards'} left before the Game Over card`
+            level: eraThreeEnding
+                ? deckCardsLeft <= DeckWarnCardsLeft ? 'close' : 'far'
+                : triggers.deckExhausted ? 'met' : deckCardsLeft <= DeckWarnCardsLeft ? 'close' : 'far',
+            tip: eraThreeEnding
+                ? `${deckCardsLeft} ${deckCardsLeft === 1 ? 'card' : 'cards'} left in the deck`
+                : triggers.deckExhausted
+                  ? 'The Game Over card is next: this end trigger is met'
+                  : `${deckCardsLeft} ${deckCardsLeft === 1 ? 'card' : 'cards'} left before the Game Over card`
         },
         dragon.killed
             ? {
                   key: 'dragon',
                   label: `DRAGON ${DragonLevel}/${DragonLevel}`,
-                  level: 'met',
+                  level: eraThreeEnding ? 'far' : 'met',
                   struck: true,
-                  tip: 'The dragon has been killed: this end trigger is met'
+                  tip: eraThreeEnding ? 'The dragon has been killed' : 'The dragon has been killed: this end trigger is met'
               }
             : dragonActive
               ? {
@@ -59,7 +67,7 @@
                     label: `DRAGON ${dragon.hits}/${DragonLevel}`,
                     level: DragonLevel - dragon.hits <= DragonWarnHitsLeft ? 'close' : 'far',
                     pulse: true,
-                    tip: `The dragon is out: ${dragon.hits} of ${DragonLevel} hits landed. Killing it meets this end trigger`
+                    tip: `The dragon is out: ${dragon.hits} of ${DragonLevel} hits landed.${eraThreeEnding ? '' : ' Killing it meets this end trigger'}`
                 }
               : {
                     key: 'dragon',
@@ -67,12 +75,16 @@
                     level: 'far',
                     tip: `${Math.min(dragon.trackerTokens.length, BonusTokensToSummonDragon)} of ${BonusTokensToSummonDragon} bonus tokens drawn. At ${BonusTokensToSummonDragon} the dragon comes out`
                 },
-        {
-            key: 'gems',
-            label: `GEMS ${gemsSpent}/${gemThreshold}`,
-            level: triggers.gemsSpent ? 'met' : gemThreshold - gemsSpent <= GemsWarnLeft ? 'close' : 'far',
-            tip: `${gemsSpent} of ${gemThreshold} gems spent on gem actions`
-        }
+        ...(eraThreeEnding
+            ? []
+            : [
+                  {
+                      key: 'gems',
+                      label: `GEMS ${gemsSpent}/${gemThreshold}`,
+                      level: (triggers.gemsSpent ? 'met' : gemThreshold - gemsSpent <= GemsWarnLeft ? 'close' : 'far') as ChipLevel,
+                      tip: `${gemsSpent} of ${gemThreshold} gems spent on gem actions`
+                  }
+              ])
     ])
     const phaseText = $derived.by(() => {
         switch (gameSession.gameState.machineState) {

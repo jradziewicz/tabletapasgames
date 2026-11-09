@@ -5,13 +5,17 @@
     import { getAppContext, trim } from '@tabletop/frontend-components'
     import PasswordInput from '$lib/components/PasswordInput.svelte'
     import AuthLink from '$lib/components/AuthLink.svelte'
+    import UsernameReviewPrompt from '$lib/components/UsernameReviewPrompt.svelte'
     import { focusFirstInput } from '$lib/utils/focusFirstInput'
+    import { INAPPROPRIATE_USERNAME_ERROR, isInappropriateUsername } from '@tabletop/common'
 
     let { onsignin }: { onsignin?: () => void } = $props()
     const { authorizationService, api } = getAppContext()
     const id = $props.id()
     let unexpectedError = $state(false)
     let errors: Record<string, string[]> = $state({})
+    // The name the filter refused, offered for review ("Think this is a mistake?").
+    let blockedUsername: string | undefined = $state()
     let submitting = $state(false)
     let username = $state('')
     let password = $state('')
@@ -28,9 +32,15 @@
         if (submitting) return
         unexpectedError = false
         errors = {}
+        blockedUsername = undefined
         const result = createUserSchema.safeParse({ username, password, email })
         if (!result.success) {
             errors = result.error.flatten().fieldErrors
+            return
+        }
+        if (isInappropriateUsername(result.data.username)) {
+            errors.username = ['That username is not allowed. Please choose another.']
+            blockedUsername = result.data.username
             return
         }
         submitting = true
@@ -39,7 +49,10 @@
             authorizationService.setSessionUser(newUser)
             await goto('/library')
         } catch (error) {
-            if (error instanceof Error && error.name === 'AlreadyExistsError') {
+            if (error instanceof Error && error.name === INAPPROPRIATE_USERNAME_ERROR) {
+                errors.username = ['That username is not allowed. Please choose another.']
+                blockedUsername = result.data.username
+            } else if (error instanceof Error && error.name === 'AlreadyExistsError') {
                 if (error.message.includes('username')) {
                     errors.username = ['Username already exists']
                 } else if (error.message.includes('email')) {
@@ -80,6 +93,9 @@
             <Helper id={`${id}-username-error`} color="red" class="mt-2" role="alert">
                 {errors.username.join('. ')}
             </Helper>
+        {/if}
+        {#if blockedUsername}
+            <UsernameReviewPrompt username={blockedUsername} />
         {/if}
     </div>
     <div>

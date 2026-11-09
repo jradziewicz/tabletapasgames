@@ -17,7 +17,7 @@
             title="Click to enlarge"
             onclick={() => (gameSession.gridZoomOpen = true)}
         >
-            <GridView idPrefix="grid-panel" class="w-full" />
+            <GridView class="w-full" />
         </button>
     </div>
     <table class="mt-4 w-full max-w-[900px] text-sm">

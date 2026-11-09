@@ -40,6 +40,6 @@
         </tbody>
     </table>
     <div class="text-[10px] text-[#c9a961] mt-1">
-        Dragon tracker: {gameSession.gameState.dragon.trackerTokens.length}/6 · Gems spent: {gameSession.gameState.gemsSpent}
+        Dragon tracker: {gameSession.gameState.dragon.trackerTokens.length}/6{gameSession.gameState.eraThreeEndsGame ? '' : ` · Gems spent: ${gameSession.gameState.gemsSpent}`}
     </div>
 </div>

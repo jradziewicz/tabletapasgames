@@ -19,9 +19,18 @@ export function currentAcquireAction(
     state: HydratedRockyVenturesGameState,
     playerId: string
 ): AcquireCardAction | undefined {
-    return state.actionCardActions(playerId).find(
+    // A stack can hold two acquire actions; each one is used in turn.
+    let used = state.turnActionsSinceImmediate.filter((kind) => kind === CardActionKind.Acquire).length
+    const actions = state.actionCardActions(playerId).filter(
         (action): action is AcquireCardAction => action.kind === CardActionKind.Acquire
     )
+    for (const action of actions) {
+        used -= action.mode === AcquireMode.OneToolAndOneWeapon ? 2 : 1
+        if (used < 0) {
+            return action
+        }
+    }
+    return actions.at(-1)
 }
 
 export function acquireChoices(

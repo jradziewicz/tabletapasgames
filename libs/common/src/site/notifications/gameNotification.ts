@@ -17,7 +17,8 @@ export enum GameNotificationAction {
     AddProjectedActions = 'addProjectedActions',
     ReplaceProjectedActions = 'replaceProjectedActions',
     UndoAction = 'undoAction',
-    Chat = 'chat'
+    Chat = 'chat',
+    LiveSelection = 'liveSelection'
 }
 
 export type GameNotificationUpdateData = Type.Static<typeof GameNotificationUpdateData>
@@ -76,6 +77,15 @@ export const GameNotificationChatData = Type.Object({
     game: Game,
     message: GameChatMessage,
     checksum: Type.Number()
+})
+
+// What the active player has selected but not yet confirmed. It is relayed to the others watching
+// and never stored, so only the game's id travels with it.
+export type GameNotificationLiveSelectionData = Type.Static<typeof GameNotificationLiveSelectionData>
+export const GameNotificationLiveSelectionData = Type.Object({
+    game: Type.Object({ id: Type.String() }),
+    playerId: Type.String(),
+    selection: Type.Record(Type.String(), Type.Unknown())
 })
 
 export type GameCreateNotification = Type.Static<typeof GameCreateNotification>

@@ -10,8 +10,14 @@ import {
     AgreementGoldOreBonus,
     AgreementLetter,
     AgreementPointBuyCost,
+    AgreementPointBuyVictoryPoints,
     AgreementSilverOreBonus,
-    AgreementTransportDiscount
+    AgreementTransportDiscount,
+    AgreementBackEffect,
+    isTwoSidedAgreement,
+    TwoSidedAgreementBacks,
+    TwoSidedAgreementDeliveryPoints,
+    TwoSidedAgreementPointBuys
 } from '../data/agreements.js'
 import { CardActionKind, type ExtractAndSellCardAction } from '../data/cards.js'
 import { CompanyId, CompanyIds } from '../data/companies.js'
@@ -20,7 +26,7 @@ import { DragonSecurityCost } from '../data/scourges.js'
 import { NorthernRegionIds, RegionIds } from '../data/regions.js'
 import { OreCapacityByToolLevel } from '../data/toolWeaponGrid.js'
 import { StatKind } from '../model/stats.js'
-import { recordActionStat, recordCash, recordStat } from './stats.js'
+import { recordActionStat, recordCash, recordStat, recordVictoryPoints } from './stats.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { drawMineToken, mineTierForNode } from './mines.js'
 import { addScourgeToRegion } from './scourges.js'
@@ -57,9 +63,12 @@ export function currentExtractAction(
     state: HydratedRockyVenturesGameState,
     playerId: string
 ): ExtractAndSellCardAction | undefined {
-    return state.actionCardActions(playerId).find(
+    // A stack can hold two extract actions; each one is used in turn.
+    const actions = state.actionCardActions(playerId).filter(
         (action): action is ExtractAndSellCardAction => action.kind === CardActionKind.ExtractAndSell
     )
+    const used = state.turnActionsSinceImmediate.filter((kind) => kind === CardActionKind.ExtractAndSell).length
+    return actions[Math.min(used, actions.length - 1)]
 }
 
 function citySideOfRegion(regionId: string): DeliveryCityId {
@@ -77,6 +86,56 @@ function holdsAgreement(
     return state
         .getPlayerState(playerId)
         .agreements.some((agreement) => agreement.cityId === cityId && agreement.letter === letter)
+}
+
+function dragonCost(state: HydratedRockyVenturesGameState): number {
+    return state.dragon.summoned && !state.dragon.killed ? DragonSecurityCost : 0
+}
+
+export interface GoldSaleAgreements {
+    oreBonus: boolean
+    discount: boolean
+    ignoreDragon: boolean
+    pointBuy?: { letter: AgreementLetter; cost: number; victoryPoints: number; fromIncome: boolean }
+}
+
+// What the player's agreements with a city do for a gold sale into it. Original agreements A, C
+// and D act face up; a two-sided agreement acts through its front (point buy) until a later
+// agreement from the same city flips it to its back.
+export function goldSaleAgreements(
+    state: HydratedRockyVenturesGameState,
+    playerId: string,
+    cityId: DeliveryCityId
+): GoldSaleAgreements {
+    const result: GoldSaleAgreements = { oreBonus: false, discount: false, ignoreDragon: false }
+    for (const agreement of state.getPlayerState(playerId).agreements) {
+        if (agreement.cityId !== cityId) {
+            continue
+        }
+        if (isTwoSidedAgreement(agreement.letter)) {
+            if (!agreement.flipped) {
+                const buy = TwoSidedAgreementPointBuys[agreement.letter]!
+                result.pointBuy = { letter: agreement.letter, ...buy, fromIncome: false }
+                continue
+            }
+            const back = TwoSidedAgreementBacks[agreement.letter]
+            result.oreBonus ||= back === AgreementBackEffect.GoldOreBonus
+            result.discount ||= back === AgreementBackEffect.ExpenseDiscount
+            result.ignoreDragon ||= back === AgreementBackEffect.IgnoreDragon
+            continue
+        }
+        result.oreBonus ||= agreement.letter === AgreementLetter.A
+        result.discount ||= agreement.letter === AgreementLetter.C
+        if (agreement.letter === AgreementLetter.D) {
+            result.pointBuy = {
+                letter: AgreementLetter.D,
+                cost: AgreementPointBuyCost,
+                victoryPoints: AgreementPointBuyVictoryPoints,
+                fromIncome: true
+            }
+        }
+    }
+    return result
 }
 
 export function extractableMineIds(
@@ -164,7 +223,8 @@ export function bestRoute(
     fromNodeId: string,
     cityId: DeliveryCityId,
     disregard: number,
-    hasDiscount: boolean
+    hasDiscount: boolean,
+    ignoreDragon: boolean = false
 ): RouteResult | undefined {
     const startNode = BoardNodesById[fromNodeId]
     if (!startNode) {
@@ -203,8 +263,7 @@ export function bestRoute(
             frontier.push(next)
         }
     }
-    const dragon =
-        state.dragon.summoned && !state.dragon.killed ? DragonSecurityCost : 0
+    const dragon = ignoreDragon ? 0 : dragonCost(state)
     let chosen: RouteResult | undefined
     let chosenTotal = Infinity
     for (const step of best.values()) {
@@ -259,7 +318,8 @@ export function evaluateRoute(
     nodeIds: string[],
     cityId: DeliveryCityId,
     disregard: number,
-    hasDiscount: boolean
+    hasDiscount: boolean,
+    ignoreDragon: boolean = false
 ): RouteResult | string {
     if (nodeIds.length < 2 || nodeIds.at(-1) !== cityId) {
         return 'The route must end at the city you sell to'
@@ -298,7 +358,7 @@ export function evaluateRoute(
         }
     }
     const security = securityForMask(state, mask, disregard)
-    const dragon = state.dragon.summoned && !state.dragon.killed ? DragonSecurityCost : 0
+    const dragon = ignoreDragon ? 0 : dragonCost(state)
     const gross = transport + security + dragon
     const discount = hasDiscount ? Math.min(AgreementTransportDiscount, gross) : 0
     return { nodeIds, transport, security, dragon, discount, regionMask: mask, cubes }
@@ -333,15 +393,27 @@ export function planExtraction(
             return 'Choose Dornoch or Manor to sell the gold to'
         }
         const price = state.goldPriceFor(cityId)
-        const agreementBonus = holdsAgreement(state, playerId, cityId, AgreementLetter.A)
-            ? AgreementGoldOreBonus * oreCount
-            : 0
-        const hasDiscount = holdsAgreement(state, playerId, cityId, AgreementLetter.C)
+        const agreements = goldSaleAgreements(state, playerId, cityId)
+        const agreementBonus = agreements.oreBonus ? AgreementGoldOreBonus * oreCount : 0
         const route = request.routeNodeIds
             ? request.routeNodeIds[0] === request.nodeId
-                ? evaluateRoute(state, request.routeNodeIds, cityId, action.disregardScourges, hasDiscount)
+                ? evaluateRoute(
+                      state,
+                      request.routeNodeIds,
+                      cityId,
+                      action.disregardScourges,
+                      agreements.discount,
+                      agreements.ignoreDragon
+                  )
                 : 'The route must start at the mine'
-            : bestRoute(state, request.nodeId, cityId, action.disregardScourges, hasDiscount)
+            : bestRoute(
+                  state,
+                  request.nodeId,
+                  cityId,
+                  action.disregardScourges,
+                  agreements.discount,
+                  agreements.ignoreDragon
+              )
         if (!route) {
             return 'No route to that city'
         }
@@ -385,7 +457,7 @@ export function planExtraction(
         const agreementBonus = holdsAgreement(state, playerId, cityId, AgreementLetter.B)
             ? AgreementSilverOreBonus * oreCount
             : 0
-        const dragon = state.dragon.summoned && !state.dragon.killed ? DragonSecurityCost : 0
+        const dragon = dragonCost(state)
         const sale = price * oreCount
         plan = {
             nodeId: request.nodeId,
@@ -408,10 +480,15 @@ export function planExtraction(
     }
     // Agreement D (buy 3 VP) only follows a gold delivery to its city; a silver sale delivers to no
     // city, so it doesn't qualify (2026-10-26).
+    // The two-sided agreements' point buy can be paid from any cash, not just the sale's income.
+    const pointBuy =
+        plan.ore === OreKind.Gold ? goldSaleAgreements(state, playerId, plan.saleCityId).pointBuy : undefined
     plan.canBuyVictoryPoints =
-        plan.ore === OreKind.Gold &&
-        holdsAgreement(state, playerId, plan.saleCityId, AgreementLetter.D) &&
-        plan.net >= AgreementPointBuyCost
+        !(state.agreementsScoreOnDelivery && pointBuy !== undefined && isTwoSidedAgreement(pointBuy.letter)) &&
+        pointBuy !== undefined &&
+        (pointBuy.fromIncome
+            ? plan.net >= pointBuy.cost
+            : state.getPlayerState(playerId).money + plan.net >= pointBuy.cost)
     return plan
 }
 
@@ -468,17 +545,45 @@ export function extractAndSellAt(
         detail: `level=${site.token?.level ?? 0};ore=${plan.oreCount};sale=${plan.sale};city=${plan.saleCityId}`
     })
     recordCash(state, playerId, plan.net, 'extract', { nodeId: request.nodeId })
-    const bonusLetter = plan.ore === OreKind.Gold ? AgreementLetter.A : AgreementLetter.B
+    const twoSided = state
+        .getPlayerState(playerId)
+        .agreements.some((agreement) => agreement.cityId === plan.saleCityId && isTwoSidedAgreement(agreement.letter))
+    const bonusLetter = twoSided
+        ? AgreementLetter.One
+        : plan.ore === OreKind.Gold
+          ? AgreementLetter.A
+          : AgreementLetter.B
     recordCash(state, playerId, plan.agreementBonus, 'agreement', {
         agreement: `${plan.saleCityId}-${bonusLetter}`,
         nodeId: request.nodeId
     })
     recordCash(state, playerId, plan.discount, 'agreement', {
-        agreement: `${plan.saleCityId}-${AgreementLetter.C}`,
+        agreement: `${plan.saleCityId}-${twoSided ? AgreementLetter.Two : AgreementLetter.C}`,
         nodeId: request.nodeId
     })
+    const scoringFront =
+        state.agreementsScoreOnDelivery && plan.ore === OreKind.Gold
+            ? goldSaleAgreements(state, playerId, plan.saleCityId).pointBuy
+            : undefined
+    const deliveryPoints = scoringFront ? (TwoSidedAgreementDeliveryPoints[scoringFront.letter] ?? 0) : 0
+    if (deliveryPoints > 0) {
+        state.getPlayerState(playerId).addVictoryPoints(deliveryPoints)
+        recordVictoryPoints(state, playerId, deliveryPoints, 'agreement', {
+            agreement: `${plan.saleCityId}-${scoringFront!.letter}`
+        })
+    }
     if (plan.canBuyVictoryPoints) {
-        state.pendingAgreementBuy = { cityId: plan.saleCityId, income: plan.net }
+        const pointBuy = goldSaleAgreements(state, playerId, plan.saleCityId).pointBuy!
+        state.pendingAgreementBuy =
+            pointBuy.letter === AgreementLetter.D
+                ? { cityId: plan.saleCityId, income: plan.net }
+                : {
+                      cityId: plan.saleCityId,
+                      income: plan.net,
+                      letter: pointBuy.letter,
+                      cost: pointBuy.cost,
+                      victoryPoints: pointBuy.victoryPoints
+                  }
     }
     const goldToken = site.token!
     if (plan.ore === OreKind.Gold) {

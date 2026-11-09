@@ -28,6 +28,8 @@ export interface ClaimMineCardAction {
     mines: number
     regionalHunts: number
     levelTwoMinesFree: boolean
+    // Level 2 and level 3 mines cost nothing.
+    levelThreeMinesFree?: boolean
 }
 
 export interface LayTrackCardAction {
@@ -103,7 +105,8 @@ export interface PlayerCard {
     id: string
     kind: CardKind.Player
     numeral: string
-    // Either/or on card I; every other card performs all of its actions in any order.
+    // Either/or on the mat; every other card performs all of its actions, top to bottom in new
+    // games and in any order in older ones.
     actions: CardAction[]
     exclusiveActions: boolean
 }
@@ -125,7 +128,7 @@ export interface DevelopmentCard {
 export interface EndOfEraCard {
     id: string
     kind: CardKind.EndOfEra
-    era: 1 | 2
+    era: 1 | 2 | 3
     baseCost: number
     pointBuyCost: number
     pointBuyVictoryPoints: number
@@ -146,8 +149,15 @@ const tax: TaxCardAction = { kind: CardActionKind.Tax }
 const claimMine = (
     mines: number,
     regionalHunts: number,
-    levelTwoMinesFree = false
-): ClaimMineCardAction => ({ kind: CardActionKind.ClaimMine, mines, regionalHunts, levelTwoMinesFree })
+    levelTwoMinesFree = false,
+    levelThreeMinesFree = false
+): ClaimMineCardAction => ({
+    kind: CardActionKind.ClaimMine,
+    mines,
+    regionalHunts,
+    levelTwoMinesFree,
+    ...(levelThreeMinesFree ? { levelThreeMinesFree } : {})
+})
 const layTrack = (maxTracks: number, maxCompanies: number): LayTrackCardAction => ({
     kind: CardActionKind.LayTrack,
     maxTracks,
@@ -213,12 +223,14 @@ const development = (
     silverPrice
 })
 
+// The invest/tax card is printed as each player's mat (it can't be discarded), so the four
+// starting cards after it are numbered I-IV (2026-11-03).
 export const PlayerCards: PlayerCard[] = [
-    { id: 'p1', kind: CardKind.Player, numeral: 'I', actions: [invest, tax], exclusiveActions: true },
-    { id: 'p2', kind: CardKind.Player, numeral: 'II', actions: [claimMine(1, 1)], exclusiveActions: false },
-    { id: 'p3', kind: CardKind.Player, numeral: 'III', actions: [layTrack(2, 1)], exclusiveActions: false },
-    { id: 'p4', kind: CardKind.Player, numeral: 'IV', actions: [extract()], exclusiveActions: false },
-    { id: 'p5', kind: CardKind.Player, numeral: 'V', actions: [acquire(1)], exclusiveActions: false }
+    { id: 'p1', kind: CardKind.Player, numeral: 'Mat', actions: [invest, tax], exclusiveActions: true },
+    { id: 'p2', kind: CardKind.Player, numeral: 'I', actions: [claimMine(1, 1)], exclusiveActions: false },
+    { id: 'p3', kind: CardKind.Player, numeral: 'II', actions: [layTrack(2, 1)], exclusiveActions: false },
+    { id: 'p4', kind: CardKind.Player, numeral: 'III', actions: [extract()], exclusiveActions: false },
+    { id: 'p5', kind: CardKind.Player, numeral: 'IV', actions: [acquire(1)], exclusiveActions: false }
 ]
 
 export const PlayerCardIds: string[] = PlayerCards.map((card) => card.id)
@@ -258,9 +270,39 @@ export const DevelopmentCards: DevelopmentCard[] = [
     development(30, DornochDurNodeId, RegionId.TheSpine, 4, immediate(extract()), [acquire(2), hunt(2)], 8, 4)
 ]
 
+// New games play these actions in place of the ones above (Justin's spreadsheet, 2026-11-06). On
+// cards 25 to 30 the buyer also performs all of the card's actions straight away instead of the
+// single immediate action printed above.
+const claimWithFreeLevelThree = claimMine(1, 1, false, true)
+const bigExtract = extract({ bonusOre: 2, temporaryToolLevels: 2, addsScourge: true })
+const RevisedCardActions: Record<string, CardAction[]> = {
+    d02: [layTrack(2, 2), hunt(1)],
+    d03: [extract({ disregardScourges: 1 })],
+    d04: [acquire(1), layTrack(1, 1)],
+    d06: [layTrack(2, 2), hunt(1)],
+    d07: [extract({ disregardScourges: 1 })],
+    d08: [hunt(1), acquire(1)],
+    d10: [layTrack(3, 1), hunt(1)],
+    d11: [layTrack(1, 1), extract({ disregardScourges: 1 })],
+    d13: [claimWithFreeLevelThree],
+    d22: [acquire(1), claimWithFreeLevelThree],
+    d25: [acquire(2), extract({ disregardScourges: 1 })],
+    d26: [claimMine(1, 1), bigExtract],
+    d27: [layTrack(4, 2), hunt(2)],
+    d28: [claimMine(1, 1), bigExtract],
+    d29: [layTrack(4, 2), hunt(2)],
+    d30: [acquire(2), extract({ disregardScourges: 1 })]
+}
+
+export function cardActionsFor(card: PlayerCard | DevelopmentCard, revised?: boolean): CardAction[] {
+    return (revised ? RevisedCardActions[card.id] : undefined) ?? card.actions
+}
+
 export const EndOfEraCards: EndOfEraCard[] = [
     { id: 'era1', kind: CardKind.EndOfEra, era: 1, baseCost: 0, pointBuyCost: 10, pointBuyVictoryPoints: 5, goldPrice: 6, silverPrice: 6 },
-    { id: 'era2', kind: CardKind.EndOfEra, era: 2, baseCost: 0, pointBuyCost: 15, pointBuyVictoryPoints: 5, goldPrice: 8, silverPrice: 8 }
+    { id: 'era2', kind: CardKind.EndOfEra, era: 2, baseCost: 0, pointBuyCost: 15, pointBuyVictoryPoints: 5, goldPrice: 8, silverPrice: 8 },
+    // Taking this card ends the game; its $5 for 1 VP rate is the final scoring (2026-11-04).
+    { id: 'era3', kind: CardKind.EndOfEra, era: 3, baseCost: 0, pointBuyCost: 5, pointBuyVictoryPoints: 1, goldPrice: 9, silverPrice: 9 }
 ]
 
 export const GameOverCard: GameOverCard = { id: 'gameOver', kind: CardKind.GameOver, cashPerVictoryPoint: 5 }
