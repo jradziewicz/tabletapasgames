@@ -70,7 +70,7 @@
         // Backroom Deal's own interactive chart (BackroomDealPanel.svelte): true while the
         // deciding President hasn't yet clicked the glowing Alien Mining Capacity marker to
         // reveal where it could move. Every other caller leaves this false, and the marker keeps
-        // its normal splay-a-stacked-pile click behavior instead.
+        // it does nothing when clicked.
         alienMiningMarkerClickable?: boolean
         onAlienMiningMarkerClick?: () => void
         // The 1-2 Mining Capacity values (already +/-BACKROOM_DEAL_MINING_CAPACITY_DELTA and
@@ -262,98 +262,101 @@
         top: number
         aspect: number
         zIndex: number
-        groupSize: number
+        // Shrink factor (1 = full size) so every token sharing a cell fits side by side.
+        scale: number
     }
 
-    // Markers that land on the same cell are grouped and arranged per-track:
-    //   - Mining Capacity: they stack directly on top of one another (a small cascade offset so
-    //     it reads as a pile rather than one marker), with the most recently added one on top.
-    //     Hovering any marker in a stacked pile splays them apart so all are visible and they
-    //     restack when the pointer leaves (hover-only, no click, like every other splay in the
-    //     game). "Most recently added" has no real timestamp in the game state, so
-    //     this uses each marker's position in `raw` (Corporations in turn order, Alien last) as
-    //     a stand-in - the last one built is treated as the newest and drawn on top.
-    //   - Cargo: the first two Corporations to land on a cell sit side by side; a third (or
-    //     later) stacks on top of that pair, in the middle, rather than splitting into a 3-wide
-    //     row. Hovering a Cargo pile of 3+ splays it into one left-to-right row (spilling into
-    //     the Mining Capacity zone for the moment it's open) so every token is visible.
-    // While a pile is splayed its markers sit above everything else on the chart (z-index 50+),
-    // over the transparent hover zone described at splayZone below.
-    // A Cargo cell only hides tokens once a third one stacks on the side-by-side pair.
-    const CARGO_SPLAY_MIN = 3
+    // A standing "40+" flag for a company whose Mining Capacity has wrapped the chart at least
+    // once (lap > 0). These always sit in the bottom row (the printed chart's one full-width "0"
+    // box), alongside whatever markers are also there.
+    type FortyPlusBadge = {
+        key: string
+        label: string
+        icon: string
+        left: number
+        top: number
+        scale: number
+    }
+
+    // Every token stays fully visible: tokens that share a cell sit side by side in one row,
+    // shrunk evenly when they wouldn't otherwise fit the cell's width. There's no hover-to-splay
+    // pile, since touch screens can't hover. The "40+" flags join the bottom row's line.
+    const TOKEN_GAP_PCT = 0.4
+    const CELL_FILL = 0.94
 
     function markerWidthPct(aspect: number) {
         return MARKER_HEIGHT_PCT * aspect * (CHART_HEIGHT / CHART_WIDTH)
     }
 
-    // Spacing for a splayed Cargo row: the widest token in the pile plus a small gap.
-    function cargoSplaySlotWidth(group: RawMarker[]) {
-        const widest = Math.max(...group.map((m) => MarkerAspect[m.iconKey] ?? 1))
-        return markerWidthPct(widest) * 1.08
+    function fortyPlusWidthPct() {
+        return FORTY_PLUS_HEIGHT_PCT * FORTY_PLUS_ASPECT * (CHART_HEIGHT / CHART_WIDTH)
     }
 
-    function place(raw: RawMarker[], splayedCellKey: string | undefined): PlacedMarker[] {
-        const groups = new Map<string, RawMarker[]>()
-        for (const m of raw) {
-            const arr = groups.get(m.cellKey) ?? []
-            arr.push(m)
-            groups.set(m.cellKey, arr)
+    const ZERO_ROW_CELL_KEY = 'mining-0-zero'
+
+    function layout(raw: RawMarker[]): { markers: PlacedMarker[]; badges: FortyPlusBadge[] } {
+        type Item =
+            | { kind: 'marker'; marker: RawMarker; width: number }
+            | { kind: 'badge'; marker: RawMarker; width: number }
+        const groups = new Map<string, { cellLeft: number; cellWidth: number; row: number; items: Item[] }>()
+        const groupFor = (cellKey: string, cellLeft: number, cellWidth: number, row: number) => {
+            let group = groups.get(cellKey)
+            if (!group) {
+                group = { cellLeft, cellWidth, row, items: [] }
+                groups.set(cellKey, group)
+            }
+            return group
         }
-        const result: PlacedMarker[] = []
-        for (const [cellKey, group] of groups) {
-            const n = group.length
-            const centerLeft = group[0]!.cellLeft + group[0]!.cellWidth / 2
-            const centerTop = rowTop(group[0]!.row) + ROW_HEIGHT / 2
-            const cellWidth = group[0]!.cellWidth
-
-            group.forEach((m, i) => {
-                let left = centerLeft
-                let top = centerTop
-                let zIndex = i
-
-                if (m.track === 'cargo' && splayedCellKey === cellKey && n >= CARGO_SPLAY_MIN) {
-                    // One row starting at the Cargo column's left edge, a marker-width apart.
-                    left = group[0]!.cellLeft + cargoSplaySlotWidth(group) * (i + 0.5)
-                    zIndex = 50 + i
-                } else if (m.track === 'cargo') {
-                    if (n >= 2 && i === 0) {
-                        left = centerLeft - cellWidth * 0.24
-                    } else if (n >= 2 && i === 1) {
-                        left = centerLeft + cellWidth * 0.24
-                    }
-                    if (i >= 2) {
-                        // Stacks on top of the side-by-side pair, in the middle, with a small
-                        // cascade so a third/fourth marker is still distinguishable.
-                        top = centerTop - (i - 1) * 0.5
-                        zIndex = 10 + i
-                    }
-                } else if (n > 1) {
-                    if (splayedCellKey === cellKey) {
-                        const spread = (i - (n - 1) / 2) * 0.55
-                        const jitter = i % 2 === 0 ? -0.55 : 0.55
-                        left = centerLeft + spread * cellWidth
-                        top = centerTop + jitter
-                        zIndex = 50 + i
-                    } else {
-                        // Stacked pile - a small cascade toward the upper-right per item, newest
-                        // (highest index) on top and closest to dead-center.
-                        left = centerLeft + i * cellWidth * 0.035
-                        top = centerTop - i * 0.4
-                        zIndex = i
-                    }
-                }
-
-                result.push({
-                    ...m,
-                    left,
-                    top,
-                    zIndex,
-                    groupSize: n,
-                    aspect: MarkerAspect[m.iconKey] ?? 1
-                })
+        for (const m of raw) {
+            groupFor(m.cellKey, m.cellLeft, m.cellWidth, m.row).items.push({
+                kind: 'marker',
+                marker: m,
+                width: markerWidthPct(MarkerAspect[m.iconKey] ?? 1)
             })
         }
-        return result
+        for (const m of raw) {
+            if (m.track !== 'mining' || m.lap === 0) continue
+            groupFor(ZERO_ROW_CELL_KEY, MINING_ZONE.left, MINING_ZONE.width, 0).items.push({
+                kind: 'badge',
+                marker: m,
+                width: fortyPlusWidthPct()
+            })
+        }
+
+        const markers: PlacedMarker[] = []
+        const badges: FortyPlusBadge[] = []
+        for (const group of groups.values()) {
+            const gaps = TOKEN_GAP_PCT * (group.items.length - 1)
+            const natural = group.items.reduce((sum, item) => sum + item.width, 0) + gaps
+            const scale = Math.min(1, (group.cellWidth * CELL_FILL) / natural)
+            const top = rowTop(group.row) + ROW_HEIGHT / 2
+            let left = group.cellLeft + group.cellWidth / 2 - (natural * scale) / 2
+            group.items.forEach((item, i) => {
+                const center = left + (item.width * scale) / 2
+                left += (item.width + TOKEN_GAP_PCT) * scale
+                const m = item.marker
+                if (item.kind === 'marker') {
+                    markers.push({
+                        ...m,
+                        left: center,
+                        top,
+                        zIndex: i,
+                        scale,
+                        aspect: MarkerAspect[m.iconKey] ?? 1
+                    })
+                } else {
+                    badges.push({
+                        key: `${m.key}-40plus`,
+                        label: `${m.label} - wrapped the chart ${m.lap} time${m.lap === 1 ? '' : 's'}`,
+                        icon: Corporation40PlusIcons[m.iconKey] ?? m.icon,
+                        left: center,
+                        top,
+                        scale
+                    })
+                }
+            })
+        }
+        return { markers, badges }
     }
 
     const activeCorporations = $derived(
@@ -433,72 +436,9 @@
         return raw
     })
 
-    // Which Mining Capacity pile (if any) is currently splayed open - hovering any marker in a
-    // stacked pile opens it and leaving closes it, matching MoneyStack.svelte's behavior.
-    let splayedCellKey: string | undefined = $state()
-
-    function isSplayablePile(marker: PlacedMarker) {
-        return (
-            (marker.track === 'mining' && marker.groupSize > 1) ||
-            (marker.track === 'cargo' && marker.groupSize >= CARGO_SPLAY_MIN)
-        )
-    }
-
-    function onMarkerPointerEnter(marker: PlacedMarker) {
-        if (!isSplayablePile(marker)) return
-        splayedCellKey = marker.cellKey
-    }
-
-    // Splaying moves the markers out from under the cursor, so the marker just hovered fires a
-    // leave the instant it slides away. Only restack when the pointer really left the pile, i.e.
-    // it is not now over another marker of this same cell or that cell's hover zone.
-    function onMarkerPointerLeave(marker: PlacedMarker, e: PointerEvent) {
-        if (!isSplayablePile(marker)) return
-        closeSplayUnlessStillInside(marker.cellKey, e)
-    }
-
-    function closeSplayUnlessStillInside(cellKey: string, e: PointerEvent) {
-        const next = e.relatedTarget
-        if (next instanceof HTMLElement && next.dataset['cellKey'] === cellKey) return
-        if (splayedCellKey === cellKey) splayedCellKey = undefined
-    }
-
-    const markers = $derived(place(rawMarkers, splayedCellKey))
-
-    // A transparent hit area covering the whole splayed pile (the gaps between its tokens and
-    // the spot the stack sat in), just beneath the splayed tokens. Without it, the pointer
-    // falls into a gap as the tokens slide apart, the pile restacks under the cursor, and the
-    // pile flickers open and shut.
-    const splayZone = $derived.by(() => {
-        if (!splayedCellKey) return undefined
-        const pile = markers.filter((marker) => marker.cellKey === splayedCellKey)
-        if (pile.length < 2) return undefined
-        const halfWidths = pile.map((marker) => markerWidthPct(marker.aspect) / 2)
-        const left = Math.min(...pile.map((marker, i) => marker.left - halfWidths[i]!))
-        const right = Math.max(...pile.map((marker, i) => marker.left + halfWidths[i]!))
-        const tops = pile.map((marker) => marker.top)
-        const top = Math.min(...tops) - MARKER_HEIGHT_PCT / 2
-        const bottom = Math.max(...tops) + MARKER_HEIGHT_PCT / 2
-        return { cellKey: splayedCellKey, left, top, width: right - left, height: bottom - top }
-    })
-
-    // Standing "40+" flags - one physical token per Corporation/Alien Corporation that has
-    // wrapped the chart at least once (lap > 0), stacked right on top of that same company's own
-    // Mining Capacity marker and moving with it, so it never covers another company's marker.
-    const fortyPlusBadges = $derived(
-        markers
-            .filter((m) => m.track === 'mining' && m.lap > 0)
-            .map((m) => ({
-                key: `${m.key}-40plus`,
-                label: `${m.label} - wrapped the chart ${m.lap} time${m.lap === 1 ? '' : 's'}`,
-                icon: Corporation40PlusIcons[m.iconKey] ?? m.icon,
-                left: m.left,
-                top: m.top,
-                // Markers render at zIndex * 2, so this sits directly above its own marker and
-                // below the next marker stacked in the same cell.
-                zIndex: m.zIndex * 2 + 1
-            }))
-    )
+    const placed = $derived(layout(rawMarkers))
+    const markers = $derived(placed.markers)
+    const fortyPlusBadges = $derived(placed.badges)
 
     // Backroom Deal's own two candidate-destination ghost markers (BackroomDealPanel.svelte) -
     // only ever populated once the President has clicked the glowing Alien marker
@@ -588,7 +528,7 @@
         />
 
         {#each markers as marker (marker.key)}
-            {@const heightPct = MARKER_HEIGHT_PCT}
+            {@const heightPct = MARKER_HEIGHT_PCT * marker.scale}
             {@const widthPct = heightPct * marker.aspect * (CHART_HEIGHT / CHART_WIDTH)}
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             {@const isDeepSpaceSmugglingTarget =
@@ -611,25 +551,13 @@
                       : isDeepSpacePiratesTarget
                         ? 'deep-space-pirates-target-pulse'
                         : 'drop-shadow-md'}"
-                style="left: {marker.left}%; top: {marker.top}%; height: {heightPct}%; width: {widthPct}%; z-index: {marker.zIndex * 2}; transform: translate(-50%, -50%); transition: left {markerMoveMs}ms ease-in-out, top {markerMoveMs}ms ease-in-out;"
-                data-cell-key={marker.cellKey}
+                style="left: {marker.left}%; top: {marker.top}%; height: {heightPct}%; width: {widthPct}%; z-index: {marker.zIndex}; transform: translate(-50%, -50%); transition: left {markerMoveMs}ms ease-in-out, top {markerMoveMs}ms ease-in-out;"
                 onclick={() => onMarkerClick(marker)}
-                onpointerenter={() => onMarkerPointerEnter(marker)}
-                onpointerleave={(e) => onMarkerPointerLeave(marker, e)}
             />
         {/each}
 
-        {#if splayZone}
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div
-                data-cell-key={splayZone.cellKey}
-                style="position: absolute; left: {splayZone.left}%; top: {splayZone.top}%; width: {splayZone.width}%; height: {splayZone.height}%; z-index: 49;"
-                onpointerleave={(e) => closeSplayUnlessStillInside(splayZone.cellKey, e)}
-            ></div>
-        {/if}
-
         {#each fortyPlusBadges as badge (badge.key)}
-            {@const heightPct = FORTY_PLUS_HEIGHT_PCT}
+            {@const heightPct = FORTY_PLUS_HEIGHT_PCT * badge.scale}
             {@const widthPct = heightPct * FORTY_PLUS_ASPECT * (CHART_HEIGHT / CHART_WIDTH)}
             <img
                 src={badge.icon}
@@ -637,7 +565,7 @@
                 title={badge.label}
                 class="absolute drop-shadow-md"
                 class:pointer-events-none={true}
-                style="left: {badge.left}%; top: {badge.top}%; height: {heightPct}%; width: {widthPct}%; z-index: {badge.zIndex}; transform: translate(-50%, -50%); transition: left {markerMoveMs}ms ease-in-out, top {markerMoveMs}ms ease-in-out;"
+                style="left: {badge.left}%; top: {badge.top}%; height: {heightPct}%; width: {widthPct}%; z-index: 20; transform: translate(-50%, -50%); transition: left {markerMoveMs}ms ease-in-out, top {markerMoveMs}ms ease-in-out;"
             />
         {/each}
 
