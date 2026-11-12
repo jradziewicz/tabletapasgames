@@ -389,6 +389,8 @@
 
                 <div class="overflow-x-hidden overflow-y-auto workspace-shell" style="flex:1; min-height: 320px;">
                     {#if session.preferences.ready && workspaceLayoutPreference.ready}
+                        <!-- Rebuilt when admin turns on or off, so the Points tab joins the tab row rather than the overflow menu -->
+                        {#key session.isActingAdmin || session.isViewingHost}
                         <TabWorkspace
                             bind:selected={workspaceTab}
                             tabs={workspaceTabs}
@@ -418,6 +420,7 @@
                                 {/if}
                             {/snippet}
                         </TabWorkspace>
+                        {/key}
                     {/if}
                 </div>
             </div>
