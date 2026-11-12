@@ -15,7 +15,6 @@
     import gemIcon from '$lib/images/icons/gem.png'
     import Pawn from '$lib/components/Pawn.svelte'
     import { cardActionsTooltip } from '$lib/utils/cardActionText.js'
-    import PointSources from '$lib/components/PointSources.svelte'
     import { cardImageUrl } from '$lib/utils/cardImages.js'
     import { playerCardImageUrl } from '$lib/utils/playerCardImages.js'
 
@@ -77,7 +76,6 @@
             {/if}
         </div>
     </div>
-    <PointSources playerId={player.id} />
 
     <div class="flex border-b" style="border-color: #2a3155;">
         <div class="flex-1 px-3 py-1.5">

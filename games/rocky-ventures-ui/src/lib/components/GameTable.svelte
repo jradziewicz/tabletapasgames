@@ -26,6 +26,7 @@
     import StackChoice from '$lib/components/StackChoice.svelte'
     import CardHoverPreview from '$lib/components/CardHoverPreview.svelte'
     import GameOverOverlay from '$lib/components/GameOverOverlay.svelte'
+    import PointSources from '$lib/components/PointSources.svelte'
     import { setRevisedCardArt } from '$lib/utils/cardImages.js'
     import { setAgreementDeliveryScoring, setAgreementDiscardAllowed } from '$lib/utils/agreementImages.js'
     import DragonOverlay from '$lib/components/DragonOverlay.svelte'
@@ -108,14 +109,23 @@
         }, BotThinkMs)
     })
 
-    const workspaceTabs: WorkspaceTab[] = [
+    const workspaceTabs: WorkspaceTab[] = $derived([
         { id: 'board', label: 'Map', closable: false },
         { id: 'tableau', label: 'Tableau' },
         { id: 'market', label: 'Market' },
         { id: 'grid', label: 'Weapon / Tool Grid' },
         { id: 'dragon', label: 'Dragon' },
-        { id: 'railroads', label: 'Railroads' }
-    ]
+        { id: 'railroads', label: 'Railroads' },
+        // Admin only: where everyone's points came from.
+        ...(session.isActingAdmin || session.isViewingHost ? [{ id: 'points', label: 'Points' }] : [])
+    ])
+
+    // Leaving admin while on the Points tab goes back to the map.
+    $effect(() => {
+        if (workspaceTab === 'points' && !session.isActingAdmin && !session.isViewingHost) {
+            workspaceTab = 'board'
+        }
+    })
 
     // Each player's workspace layout follows their account via the title preferences system.
     const workspaceLayoutPreference = new DebouncedLayout(
@@ -403,6 +413,8 @@
                                     <div class="p-2">
                                         <CompaniesPanel />
                                     </div>
+                                {:else if id === 'points' && (session.isActingAdmin || session.isViewingHost)}
+                                    <PointSources />
                                 {/if}
                             {/snippet}
                         </TabWorkspace>

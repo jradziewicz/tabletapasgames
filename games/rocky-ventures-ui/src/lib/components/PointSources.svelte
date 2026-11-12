@@ -2,9 +2,7 @@
     import { StatKind } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
-    // Admin view only: where a player's points came from, from the game's own point records.
-    let { playerId }: { playerId: string } = $props()
-
+    // Admin-only tab: where each player's points came from, from the game's own point records.
     const gameSession = getGameSession()
 
     const SourceNames: Record<string, string> = {
@@ -16,25 +14,48 @@
         finalCash: 'Final cash'
     }
 
-    const parts = $derived.by(() => {
-        const totals = new Map<string, number>()
-        for (const event of gameSession.gameState.statEvents) {
-            if (event.kind !== StatKind.VictoryPoints || event.playerId !== playerId) continue
-            const source = event.source ?? 'other'
-            totals.set(source, (totals.get(source) ?? 0) + event.amount)
-        }
-        const recorded = [...totals.values()].reduce((sum, amount) => sum + amount, 0)
-        const other = gameSession.gameState.getPlayerState(playerId).victoryPoints - recorded
-        const list = [...totals.entries()]
-            .filter(([, amount]) => amount !== 0)
-            .map(([source, amount]) => `${SourceNames[source] ?? source} ${amount}`)
-        if (other !== 0) list.push(`Other ${other}`)
-        return list
+    const table = $derived.by(() => {
+        const state = gameSession.gameState
+        const sources: string[] = []
+        const rows = state.players.map((player) => {
+            const totals: Record<string, number> = {}
+            for (const event of state.statEvents) {
+                if (event.kind !== StatKind.VictoryPoints || event.playerId !== player.playerId) continue
+                const source = event.source ?? 'other'
+                totals[source] = (totals[source] ?? 0) + event.amount
+                if (!sources.includes(source)) sources.push(source)
+            }
+            const recorded = Object.values(totals).reduce((sum, amount) => sum + amount, 0)
+            return { playerId: player.playerId, totals, other: player.victoryPoints - recorded, total: player.victoryPoints }
+        })
+        return { sources, rows, showOther: rows.some((row) => row.other !== 0) }
     })
 </script>
 
-{#if gameSession.isActingAdmin || gameSession.isViewingHost}
-    <div class="px-3 py-1 text-[11px] text-[#c9a961]" title="Admin view only">
-        VP from: {parts.length ? parts.join(' · ') : 'none yet'}
-    </div>
-{/if}
+<div class="p-3 text-sm text-[#f1e6cf]">
+    <div class="mb-2 text-xs uppercase tracking-widest text-[#c9a961]">Points by source (admin only)</div>
+    <table>
+        <thead>
+            <tr class="text-left text-[11px] uppercase tracking-wide text-[#c9a961]">
+                <th class="pr-4">Player</th>
+                {#each table.sources as source (source)}
+                    <th class="pr-4">{SourceNames[source] ?? source}</th>
+                {/each}
+                {#if table.showOther}<th class="pr-4">Other</th>{/if}
+                <th>Total</th>
+            </tr>
+        </thead>
+        <tbody>
+            {#each table.rows as row (row.playerId)}
+                <tr>
+                    <td class="pr-4 capitalize">{gameSession.getPlayerName(row.playerId)}</td>
+                    {#each table.sources as source (source)}
+                        <td class="pr-4 font-mono">{row.totals[source] ?? 0}</td>
+                    {/each}
+                    {#if table.showOther}<td class="pr-4 font-mono">{row.other}</td>{/if}
+                    <td class="font-mono font-semibold">{row.total}</td>
+                </tr>
+            {/each}
+        </tbody>
+    </table>
+</div>
