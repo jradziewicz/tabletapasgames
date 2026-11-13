@@ -190,6 +190,22 @@
         }
     })
 
+    // What the latest Acquire this turn earned beyond the level: an unlock, a gem or points.
+    const lastAcquire = $derived.by(() => {
+        if (!turn.some((action) => action.type === ActionType.Acquire) || !actorId) return undefined
+        const recent = recentOtherPlayerAction(gameSession, ActionType.Acquire, { includeMine: true })
+        if (!recent) return undefined
+        const before = recent.before.getPlayerState(actorId)
+        const after = recent.after.getPlayerState(actorId)
+        const gains = [
+            !before.redMinesUnlocked && after.redMinesUnlocked ? 'Unlocked red mines' : undefined,
+            !before.blueMinesUnlocked && after.blueMinesUnlocked ? 'Unlocked blue mines' : undefined,
+            after.gems > before.gems ? `Gained ${after.gems - before.gems} ${after.gems - before.gems === 1 ? 'gem' : 'gems'}` : undefined,
+            after.victoryPoints > before.victoryPoints ? `Scored ${after.victoryPoints - before.victoryPoints} VP` : undefined
+        ].filter((text) => text !== undefined)
+        return { actionId: recent.action.id, detail: gains.join(', ') }
+    })
+
     function huntStep(region: string): Step {
         return { text: region === DragonHuntRegion ? 'hunt the Dragon' : `hunt in ${regionName(region)}`, zoom: regionZoom(region) }
     }
@@ -295,6 +311,7 @@
                     return [
                         {
                             text: `raised ${choice} to ${choice === 'weapon' ? weaponAfter : toolAfter}`,
+                            detail: lastAcquire?.actionId === action.id && lastAcquire.detail ? lastAcquire.detail : undefined,
                             zoom,
                             move: { from, to, color: actorId ? gameSession.colors.getPlayerUiColor(actorId) : '#ffd166' }
                         }
