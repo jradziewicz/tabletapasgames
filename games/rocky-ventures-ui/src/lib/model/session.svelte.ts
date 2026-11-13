@@ -707,6 +707,21 @@ export class RockyVenturesGameSession extends GameSession<
         return extractableMineIds(this.gameState, playerId)
     }
 
+    // Live play: the routes the current player is looking at, for everyone watching.
+    get watchedRoutePreviews(): { cityId: DeliveryCityId; routeNodeIds: string[]; net: number }[] {
+        const selection = this.livePlay && !this.isMyTurn ? this.watchedSelection : undefined
+        const playerId = this.gameState.activePlayerIds[0]
+        const nodeId = selection?.extractNodeId
+        if (!selection || playerId === undefined || nodeId === undefined) return []
+        if (this.gameState.board.mines[nodeId]?.token?.ore !== 'gold') return []
+        const shownCity = selection.extractCityId as DeliveryCityId | undefined
+        const cities: DeliveryCityId[] = shownCity ? [shownCity] : [DeliveryCityId.Dornoch, DeliveryCityId.Manor]
+        return cities.flatMap((cityId) => {
+            const plan = planExtraction(this.gameState, playerId, { nodeId, cityId })
+            return typeof plan === 'string' || plan.routeNodeIds.length < 2 ? [] : [{ cityId, routeNodeIds: plan.routeNodeIds, net: plan.net }]
+        })
+    }
+
     get extractRoutePreviews(): { cityId: DeliveryCityId; routeNodeIds: string[]; net: number }[] {
         const playerId = this.gameState.activePlayerIds[0]
         const nodeId = this.extractHoverNodeId ?? this.extractNodeId

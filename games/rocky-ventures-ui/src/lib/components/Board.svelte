@@ -7,6 +7,12 @@
         BoxSize,
         BoardNodes,
         BoardNodesById,
+        buildableBoxes as buildableBoxesFor,
+        claimableMineIds,
+        remainingActionKinds,
+        CardActionKind,
+        MachineState as BoardMachineState,
+        type CompanyId as BoardCompanyId,
         CompanyIds,
         CompanyId,
         DeliveryCityId,
@@ -147,6 +153,30 @@
     })
 
     const MineTokenRadius = 24
+
+    // Live play: watchers see the spots the current player is choosing between, glowing big.
+    const watching = $derived(
+        gameSession.livePlay && !gameSession.isMyTurn && !gameSession.isViewingHistory ? gameSession.watchedSelection : undefined
+    )
+    const watchColor = $derived(
+        gameSession.gameState.activePlayerIds[0] ? gameSession.colors.getPlayerUiColor(gameSession.gameState.activePlayerIds[0]) : '#ffd166'
+    )
+    const watchBoxes = $derived(
+        watching?.trackCompanyId ? buildableBoxesFor(gameSession.gameState, watching.trackCompanyId as BoardCompanyId) : []
+    )
+    const watchMineIds = $derived.by(() => {
+        const state = gameSession.gameState
+        const activeId = state.activePlayerIds[0]
+        if (!gameSession.livePlay || gameSession.isMyTurn || !activeId || state.machineState !== BoardMachineState.TakeActions) return []
+        const remaining = remainingActionKinds(state)
+        const claimNext = state.actionsInOrder ? remaining[0] === CardActionKind.ClaimMine : remaining.includes(CardActionKind.ClaimMine)
+        return claimNext ? claimableMineIds(state, activeId) : []
+    })
+    const watchNodeIds = $derived(
+        [watching?.extractNodeId, watching?.extractCityId].filter(
+            (id) => id !== undefined
+        ) as string[]
+    )
 
     let previousSlots: string[] | undefined
     let previousRevealed: Set<string> | undefined
@@ -459,7 +489,7 @@
                     rx="4"
                     fill="none"
                     stroke={glow}
-                    stroke-width="8"
+                    stroke-width="13"
                     transform="rotate({location.angle} {location.x} {location.y})"
                     filter="url(#track-halo-blur)"
                     class="mine-halo"
@@ -480,6 +510,54 @@
                 />
             </g>
         {/if}
+    {/each}
+
+    <!-- Live play: what the current player can build on, claim or has picked, for everyone watching -->
+    {#each watchBoxes as buildable (buildable.boxId)}
+        {@const location = BoardBoxLocations.find((candidate) => candidate.box.id === buildable.boxId)}
+        {#if location}
+            <rect
+                x={location.x - BoxSize / 2 - 8}
+                y={location.y - BoxSize / 2 - 8}
+                width={BoxSize + 16}
+                height={BoxSize + 16}
+                rx="5"
+                fill="none"
+                stroke={CompanyColors[watching?.trackCompanyId as BoardCompanyId] ?? watchColor}
+                stroke-width="14"
+                transform="rotate({location.angle} {location.x} {location.y})"
+                filter="url(#track-halo-blur)"
+                class="mine-halo"
+                pointer-events="none"
+            />
+            <rect
+                x={location.x - BoxSize / 2 - 2}
+                y={location.y - BoxSize / 2 - 2}
+                width={BoxSize + 4}
+                height={BoxSize + 4}
+                rx="3"
+                fill="none"
+                stroke="#fff"
+                stroke-width="3"
+                transform="rotate({location.angle} {location.x} {location.y})"
+                pointer-events="none"
+            />
+        {/if}
+    {/each}
+    {#each [...watchMineIds, ...watchNodeIds] as nodeId (nodeId)}
+        {@const node = BoardNodesById[nodeId]}
+        {#if node}
+            <circle cx={node.x} cy={node.y} r={MineTokenRadius + 14} fill="none" stroke={watchColor} stroke-width="26" filter="url(#mine-halo-blur)" class="mine-halo" pointer-events="none" />
+            <circle cx={node.x} cy={node.y} r={MineTokenRadius + 6} fill="none" stroke="#fff" stroke-width="4" pointer-events="none" />
+        {/if}
+    {/each}
+
+    <!-- Live play: the routes the current player is looking at, drawn thick for watchers -->
+    {#each gameSession.watchedRoutePreviews as preview (preview.cityId)}
+        {@const points = routePolylinePoints(preview.routeNodeIds)}
+        {@const color = CityRouteColors[preview.cityId] ?? '#ffd166'}
+        <polyline {points} fill="none" stroke={color} stroke-width="26" stroke-linecap="round" stroke-linejoin="round" opacity="0.45" class="pulse-soft" style="--glow: {color};" pointer-events="none" />
+        <polyline {points} fill="none" stroke={color} stroke-width="8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="14 10" pointer-events="none" />
     {/each}
 
     {#each gameSession.extractRoutePreviews as preview (preview.cityId)}
@@ -547,7 +625,7 @@
                     r={MineTokenRadius + 10}
                     fill="none"
                     stroke={claimable || extractable ? activePlayerColor : '#ffd166'}
-                    stroke-width="16"
+                    stroke-width="24"
                     filter="url(#mine-halo-blur)"
                     class="mine-halo"
                     pointer-events="none"
