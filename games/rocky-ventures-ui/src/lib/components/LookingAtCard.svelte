@@ -675,12 +675,14 @@
 {#if watching && entries.length}
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <div
-        onclick={() => canDismiss && (dismissedKeys = [...dismissedKeys, summaryKey])}
-        title={canDismiss ? 'Click to dismiss' : undefined}
-        class="{canDismiss ? 'cursor-pointer' : 'pointer-events-none'} fixed bottom-4 right-4 z-40 flex w-80 max-w-[calc(100vw-2rem)] flex-col rounded-xl border-2 border-[#ffd166] bg-[#1b140c]/95 text-xs text-[#f1e6cf] shadow-2xl">
-        <div class="border-b border-[#8a6d3b] px-2 py-1 text-sm"><strong class="capitalize">{name}</strong>'s turn{#if canDismiss}<span class="float-right text-xs text-[#c9a961]">click to dismiss ✕</span>{/if}</div>
-        <div bind:this={feedEl} class="flex max-h-[70vh] flex-col gap-3 overflow-y-auto p-2">
+    <!-- The box can be scrolled back through; the header closes it for the player whose turn is next -->
+    <div class="fixed bottom-4 right-4 z-40 flex w-80 max-w-[calc(100vw-2rem)] flex-col rounded-xl border-2 border-[#ffd166] bg-[#1b140c]/95 text-xs text-[#f1e6cf] shadow-2xl">
+        <div
+            onclick={() => canDismiss && (dismissedKeys = [...dismissedKeys, summaryKey])}
+            title={canDismiss ? 'Click to dismiss' : undefined}
+            class="border-b border-[#8a6d3b] px-2 py-1 text-sm {canDismiss ? 'cursor-pointer' : ''}"
+        ><strong class="capitalize">{name}</strong>'s turn{#if canDismiss}<span class="float-right text-xs text-[#c9a961]">click to dismiss ✕</span>{/if}</div>
+        <div bind:this={feedEl} class="viewer-feed flex max-h-[55vh] flex-col gap-3 overflow-y-scroll p-2">
             {#each entries as entry, index (index)}
                 {@const newest = index === entries.length - 1}
                 <!-- Earlier steps keep their size but grey out, so the newest stands out -->
@@ -763,6 +765,10 @@
 {/if}
 
 <style>
+    .viewer-feed {
+        scrollbar-width: thin;
+        scrollbar-color: #8a6d3b transparent;
+    }
     .track-pulse {
         animation: track-pulse 1.2s ease-in-out infinite;
     }
