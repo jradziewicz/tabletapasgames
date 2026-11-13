@@ -490,10 +490,10 @@
                 .map((event) => ({
                     text: event.text,
                     imageUrl: event.imageUrl,
-                    iconUrl: event.tokenKind ? weaponTokenImageUrl(event.tokenKind as WeaponTokenKind) : undefined
+                    iconUrl: event.iconUrl ?? (event.tokenKind ? weaponTokenImageUrl(event.tokenKind as WeaponTokenKind) : undefined)
                 }))
         }
-        return turn.flatMap((action) => [...stepsOf(action), ...enteredAfter(action), ...eventsAfter(action)])
+        return turn.flatMap((action) => [...stepsOf(action), ...eventsAfter(action), ...enteredAfter(action)])
     })
 
     const steps = $derived(mergeTrack(rawSteps))

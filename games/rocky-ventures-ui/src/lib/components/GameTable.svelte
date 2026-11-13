@@ -39,6 +39,9 @@
     import type { RockyVenturesGameSession } from '$lib/model/session.svelte'
     import { BonusTokensToSummonDragon, RegionIds, type WeaponTokenKind } from '@tabletop/rocky-ventures'
     import { DragonTileImageUrl } from '$lib/utils/dragonImages.js'
+    import { BoardNodesById } from '@tabletop/rocky-ventures'
+    import { cardImageUrl } from '$lib/utils/cardImages.js'
+    import { mineTokenImageUrl } from '$lib/utils/tokenImages.js'
     import type { HydratedRockyVenturesGameState, RockyVenturesGameState } from '@tabletop/rocky-ventures'
     import { setGameSession } from '$lib/model/sessionContext.svelte'
     import { chooseBotMoves } from '$lib/bots/rockyBots.js'
@@ -322,6 +325,42 @@
                 }
             }
         }
+    })
+
+    // Live play: what the game does between moves (the dummy taxing, new market cards, mines flipping
+    // face up) goes into the watcher box, keyed to the move that set it off.
+    let previousSlots: string[] | undefined
+    let previousRevealed: Set<string> | undefined
+    let previousDummyTucked: number | undefined
+    $effect(() => {
+        const state = session.gameState
+        const slots = [...state.market.slots]
+        const revealed = new Set(Object.entries(state.board.mines).filter(([, site]) => site?.token).map(([nodeId]) => nodeId))
+        const dummyTucked = state.dummy?.tuckedCardIds.length
+        const hadPrevious = previousSlots !== undefined
+        const oldSlots = previousSlots ?? []
+        const oldRevealed = previousRevealed ?? new Set<string>()
+        const oldDummy = previousDummyTucked
+        previousSlots = slots
+        previousRevealed = revealed
+        previousDummyTucked = dummyTucked
+        if (!hadPrevious || !session.livePlay || session.isViewingHistory) return
+        const actionCount = state.actionCount
+        const events: typeof session.viewerEvents = []
+        if (dummyTucked !== undefined && oldDummy !== undefined && dummyTucked > oldDummy && state.dummy?.lastAction) {
+            events.push({ actionCount, text: `the Dummy took its turn: ${state.dummy.lastAction}` })
+        }
+        for (const cardId of slots.filter((id) => !oldSlots.includes(id))) {
+            events.push({ actionCount, text: 'a new card came out', imageUrl: cardImageUrl(cardId) })
+        }
+        for (const nodeId of [...revealed].filter((id) => !oldRevealed.has(id))) {
+            const token = state.board.mines[nodeId]?.token
+            // A face-down mine turning up (a mine re-drawn after extracting already had a token, so it isn't new).
+            if (token) {
+                events.push({ actionCount, text: `mine revealed at ${BoardNodesById[nodeId]?.name ?? nodeId}`, iconUrl: mineTokenImageUrl(token) })
+            }
+        }
+        if (events.length) session.viewerEvents = [...session.viewerEvents, ...events]
     })
 
     let turnEndScourges: { region: (typeof RegionIds)[number]; scourgeId: string; playerId: string | undefined }[] = $state([])

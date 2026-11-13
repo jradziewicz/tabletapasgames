@@ -137,7 +137,7 @@ export class RockyVenturesGameSession extends GameSession<
     // Live play: true while the watcher box is still playing a turn through; big overlays wait for it.
     viewerHold = $state(false)
     // Live play: things the game did on its own (dragon tracker, dragon arrival), keyed to the move behind them.
-    viewerEvents: { actionCount: number; text: string; imageUrl?: string; tokenKind?: string }[] = $state([])
+    viewerEvents: { actionCount: number; text: string; imageUrl?: string; tokenKind?: string; iconUrl?: string }[] = $state([])
     private lastMovePick: { playerId: string; cardId: string } | undefined
     private heldMoveTimer: ReturnType<typeof setTimeout> | undefined
 
