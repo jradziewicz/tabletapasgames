@@ -41,7 +41,7 @@
     const gameSession = getGameSession()
 
     type Zoom = { x: number; y: number; width: number; height: number }
-    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string } }
+    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string }; track?: { companyId: string; points: { x: number; y: number }[]; cost: number; count: number; free: boolean } }
 
     const ZoomAspect = 4 / 3
 
@@ -272,7 +272,33 @@
         return { text: region === DragonHuntRegion ? 'hunt the Dragon' : `hunt in ${regionName(region)}`, zoom: regionZoom(region) }
     }
 
-    const steps = $derived.by((): Step[] => {
+    // Track laid piece by piece for one railroad reads as one entry whose map grows with each piece.
+    function mergeTrack(list: Step[]): Step[] {
+        const merged: Step[] = []
+        for (const step of list) {
+            const previous = merged.at(-1)
+            if (step.track && previous?.track && previous.track.companyId === step.track.companyId) {
+                const track = {
+                    ...previous.track,
+                    points: [...previous.track.points, ...step.track.points],
+                    cost: previous.track.cost + step.track.cost,
+                    count: previous.track.count + 1
+                }
+                const name = CompanyNames[track.companyId as CompanyId]
+                merged[merged.length - 1] = {
+                    ...previous,
+                    text: `laid ${track.count} ${name} track ${track.cost === 0 ? 'for free' : `for $${track.cost}`}`,
+                    zoom: around(track.points),
+                    track
+                }
+            } else {
+                merged.push(step)
+            }
+        }
+        return merged
+    }
+
+    const rawSteps = $derived.by((): Step[] => {
         const state = gameSession.gameState
         const turnStart = state.actionCount - turn.length
         const ofKind = (kind: StatKind) => state.statEvents.filter((event) => event.kind === kind && event.playerId === actorId && event.action >= turnStart)
@@ -322,7 +348,8 @@
                         {
                             text: `laid ${company ? `${company} ` : ''}track ${action.type === ActionType.LayFreeTrack || cost === 0 ? 'for free' : `for $${cost}`}`,
                             logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
-                            zoom: location ? around([location]) : undefined
+                            zoom: location ? around([location]) : undefined,
+                            track: companyId ? { companyId, points: location ? [location] : [], cost, count: 1, free: action.type === ActionType.LayFreeTrack } : undefined
                         }
                     ]
                 }
@@ -428,6 +455,8 @@
         })
     })
 
+    const steps = $derived(mergeTrack(rawSteps))
+
     // The entry at the bottom of the history: what they're doing right now, before it's committed.
     const live = $derived.by((): Step | undefined => {
         if (!watching || actorId !== activeId) return undefined
@@ -479,6 +508,8 @@
         if (selection.step === 'Lay Track' || selection.trackCompanyId) {
             const companyId = selection.trackCompanyId as CompanyId | undefined
             if (!companyId) return { text: 'is choosing a railroad to build', live: true }
+            // Once they've laid a piece, that entry updates as each new piece lands; no second entry.
+            if (steps.at(-1)?.track?.companyId === companyId) return undefined
             // Every spot they could build next, so watchers see the options light up on the map.
             const options = buildableBoxes(gameSession.gameState, companyId)
                 .map((buildable) => BoardBoxLocations.find((candidate) => candidate.box.id === buildable.boxId))
