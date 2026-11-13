@@ -425,7 +425,7 @@
                 {@const newest = index === entries.length - 1}
                 <div class="flex flex-col gap-1 {newest ? '' : 'opacity-70'}">
                     <div class={newest ? 'text-sm font-semibold text-[#ffd166]' : 'text-[#c9a961]'}>
-                        {#if entry.live}<strong class="capitalize">{name}</strong> {entry.text}{:else}{index + 1}. {capital(entry.text)}{/if}
+                        {#if entry.live}<strong class="capitalize">{name}</strong> {entry.text}{:else}{capital(entry.text)}{/if}
                     </div>
                     {#if entry.logoUrl}
                         <img src={entry.logoUrl} alt="" class="mx-auto {newest ? 'h-16' : 'h-8'} w-auto" draggable="false" />
