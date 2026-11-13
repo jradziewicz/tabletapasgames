@@ -312,7 +312,13 @@
                             {#each entry.tokens as token, tokenIndex (tokenIndex)}
                                 {@const url = weaponTokenImageUrl(token.kind as WeaponTokenKind)}
                                 {#if url}
-                                    <img src={url} alt={token.kind} class="{newest ? 'h-20 w-20' : 'h-10 w-10'} rounded-md object-contain {token.picked ? 'ring-4 ring-[#ffd166]' : entry.live ? '' : 'opacity-40 grayscale'}" draggable="false" />
+                                    <!-- The token as printed, with a gold circle over it once picked -->
+                                    <div class="relative {newest ? 'h-20 w-20' : 'h-10 w-10'}">
+                                        <img src={url} alt={token.kind} class="h-full w-full object-contain {token.picked || entry.live ? '' : 'opacity-40 grayscale'}" draggable="false" />
+                                        {#if token.picked}
+                                            <div class="absolute -inset-1 rounded-full border-4 border-[#ffd166] shadow-[0_0_12px_rgba(255,209,102,0.8)]"></div>
+                                        {/if}
+                                    </div>
                                 {/if}
                             {/each}
                         </div>
