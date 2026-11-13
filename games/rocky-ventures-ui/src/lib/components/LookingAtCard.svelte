@@ -711,7 +711,7 @@
                                 {#if url}
                                     <!-- The token as printed, with a gold circle over it once picked -->
                                     <div class="relative h-20 w-20">
-                                        <img src={url} alt={token.kind} class="h-full w-full object-contain {token.picked || entry.live ? '' : 'opacity-40 grayscale'}" draggable="false" />
+                                        <img src={url} alt={token.kind} class="h-full w-full object-contain" draggable="false" />
                                         {#if token.picked}
                                             <!-- Wide enough that the whole square token sits inside the circle -->
                                             <div class="pointer-events-none absolute rounded-full border-4 border-[#ffd166] shadow-[0_0_12px_rgba(255,209,102,0.8)]" style="inset: -24%;"></div>
