@@ -122,6 +122,35 @@ export class RockyVenturesGameSession extends GameSession<
 
     // Live play: what the current player has selected but not confirmed yet.
     private remoteSelection: LiveSelection | undefined = $state()
+    // Live play: the card the watched player last picked to move to, kept lit briefly after the move is made.
+    heldMovePick: { playerId: string; cardId: string } | undefined = $state()
+    private lastMovePick: { playerId: string; cardId: string } | undefined
+    private heldMoveTimer: ReturnType<typeof setTimeout> | undefined
+
+    // The card the watched player has picked (or just moved to) on their tableau, for watchers.
+    pickedMoveCardId(playerId: string): string | undefined {
+        if (this.mirroring && this.gameState.activePlayerIds[0] === playerId) {
+            const index = this.watchedSelection?.moveTargetIndex
+            if (index !== undefined) return this.gameState.findPlayerState(playerId)?.tableau[index]
+        }
+        return this.heldMovePick?.playerId === playerId ? this.heldMovePick.cardId : undefined
+    }
+
+    trackMovePick() {
+        const playerId = this.gameState.activePlayerIds[0]
+        const index = this.mirroring ? this.watchedSelection?.moveTargetIndex : undefined
+        const cardId = playerId && index !== undefined ? this.gameState.findPlayerState(playerId)?.tableau[index] : undefined
+        if (playerId && cardId) {
+            this.lastMovePick = { playerId, cardId }
+            return
+        }
+        if (this.lastMovePick) {
+            this.heldMovePick = this.lastMovePick
+            this.lastMovePick = undefined
+            clearTimeout(this.heldMoveTimer)
+            this.heldMoveTimer = setTimeout(() => (this.heldMovePick = undefined), 1500)
+        }
+    }
 
     zoomedImage: { url: string; alt: string } | undefined = $state()
     // Buying an agreement card while holding a gem: choose which agreement to take first.

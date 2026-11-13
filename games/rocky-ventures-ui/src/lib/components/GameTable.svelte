@@ -65,6 +65,7 @@
             session.clearLocalSelection()
         }
         wasMirroring = mirroring
+        session.trackMovePick()
     })
 
     // Live play: pass each change of selection on, gathering quick clicks into one message.

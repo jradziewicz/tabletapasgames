@@ -39,6 +39,8 @@
         gameSession.mirroring && selectedPlayer.playerId === gameSession.gameState.activePlayerIds[0] ? gameSession.watchedSelection : undefined
     )
 
+    const pickedCardId = $derived(gameSession.pickedMoveCardId(selectedPlayer.playerId))
+
     function cycle(direction: 1 | -1) {
         const index = playerIds.indexOf(selectedPlayer.playerId)
         selectedPlayerId = playerIds[(index + direction + playerIds.length) % playerIds.length]
@@ -118,7 +120,7 @@
                 {#if imageUrl}
                     <button
                         type="button"
-                        class="tableau-card relative z-10 block w-full overflow-hidden rounded-md border border-[#8a6d3b] shadow-md {gameSession.mirroring && gameSession.watchedSelection?.lookingAtCardId === cardId && selectedPlayer.playerId === gameSession.gameState.activePlayerIds[0] ? 'mirror-pulse' : ''} {watchedMove?.moveTargetIndex === index ? 'move-picked' : ''}"
+                        class="tableau-card relative z-10 block w-full overflow-hidden rounded-md border border-[#8a6d3b] shadow-md {gameSession.mirroring && gameSession.watchedSelection?.lookingAtCardId === cardId && selectedPlayer.playerId === gameSession.gameState.activePlayerIds[0] ? 'mirror-pulse' : ''} {pickedCardId === cardId ? 'move-picked' : ''}"
                         onclick={() => gameSession.zoomCard(cardId, imageUrl)}
                         onpointerenter={(event) => gameSession.pointAtCard(event, cardId)}
                         onpointerleave={(event) => gameSession.pointAtCard(event, undefined)}
@@ -130,7 +132,7 @@
                         />
                         <img src={imageUrl} alt={cardId} class="block h-auto w-full" draggable="false" />
                         {#if cardId === StartingPlayerCardId}<MatGems gems={selectedPlayer.gems} />{/if}
-                        {#if watchedMove?.moveTargetIndex === index}
+                        {#if pickedCardId === cardId}
                             <div class="pointer-events-none absolute left-1/2 top-2 z-30 -translate-x-1/2 rounded-full bg-[#1b140c]/90 px-2 py-0.5 text-xs font-bold text-[#ffd166]">Moving here</div>
                         {:else if watchedMove?.moveDiscardIndexes.includes(index)}
                             <div class="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-red-900/60 text-sm font-bold text-white">DISCARD</div>
