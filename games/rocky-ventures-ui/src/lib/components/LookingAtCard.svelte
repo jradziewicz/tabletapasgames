@@ -368,7 +368,7 @@
                         event && nowToken && (nowToken.ore !== event.source || String(nowToken.level) !== (detail['level'] ?? ''))
                             ? [
                                   {
-                                      text: `${mine} drew a ${nowToken.ore === 'gold' ? 'gold' : nowToken.ore === 'silver' ? 'silver' : String(nowToken.ore)} mine (level ${nowToken.level})`,
+                                      text: `${nowToken.ore === 'gold' ? 'Gold' : nowToken.ore === 'silver' ? 'Silver' : String(nowToken.ore)} Mine (level ${nowToken.level}) revealed at ${mine}`,
                                       iconUrl: mineTokenImageUrl(nowToken)
                                   }
                               ]
