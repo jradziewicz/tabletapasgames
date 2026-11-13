@@ -894,13 +894,13 @@
                 stroke="#ff3b2f"
                 stroke-width="10"
                 filter="url(#mine-halo-blur)"
-                class={dragonKilled ? undefined : 'mine-halo'}
+                class={dragonKilled || gameSession.livePlay ? undefined : 'mine-halo'}
                 opacity={dragonKilled ? 0.6 : undefined}
                 pointer-events="none"
             />
             {#if gameSession.turnMarks.hitTargets.includes('dragon')}
                 <!-- Live play: dragon hit this turn, in the hunter's colour -->
-                <polygon points={hexPoints(DragonTileSpot, 12)} fill="none" stroke={gameSession.colors.getPlayerUiColor(gameSession.turnMarks.playerId ?? '')} stroke-width="16" filter="url(#mine-halo-blur)" class="mine-halo" pointer-events="none" />
+                <polygon points={hexPoints(DragonTileSpot, 12)} fill="none" stroke={gameSession.colors.getPlayerUiColor(gameSession.turnMarks.playerId ?? '')} stroke-width="16" filter="url(#mine-halo-blur)" pointer-events="none" />
                 <polygon points={hexPoints(DragonTileSpot, 8)} fill="none" stroke="#ffd166" stroke-width="3" pointer-events="none" />
             {/if}
             <image
@@ -1117,7 +1117,7 @@
                     stroke={gameSession.colors.getPlayerUiColor(gameSession.turnMarks.playerId ?? '')}
                     stroke-width="14"
                     filter="url(#mine-halo-blur)"
-                    class="mine-halo"
+                    class={gameSession.livePlay ? undefined : "mine-halo"}
                     transform={box.landscape ? `rotate(90, ${cx}, ${cy})` : undefined}
                     pointer-events="none"
                 />
