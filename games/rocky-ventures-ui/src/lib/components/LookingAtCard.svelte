@@ -26,6 +26,7 @@
     import { weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
     import { recentOtherPlayerAction } from '$lib/utils/recentAction.js'
     import { shareImageUrl } from '$lib/utils/shareImages.js'
+    import { companyLogoUrl } from '$lib/utils/companyLogos.js'
     import { tick } from 'svelte'
 
     // Live play: the watcher box. While someone else plays it keeps their selected card up until the turn
@@ -34,7 +35,7 @@
     const gameSession = getGameSession()
 
     type Zoom = { x: number; y: number; width: number; height: number }
-    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean }
+    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string }
 
     const ZoomAspect = 4 / 3
 
@@ -203,6 +204,7 @@
                     return [
                         {
                             text: `laid ${company ? `${company} ` : ''}track ${action.type === ActionType.LayFreeTrack || cost === 0 ? 'for free' : `for $${cost}`}`,
+                            logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
                             zoom: location ? around([location]) : undefined
                         }
                     ]
@@ -281,6 +283,7 @@
                 .filter((location) => location !== undefined)
             return {
                 text: `is laying free ${CompanyNames[freeTrack.companyId]} track`,
+                logoUrl: companyLogoUrl(freeTrack.companyId),
                 detail: `${freeTrack.remaining} left to lay`,
                 zoom: around(options),
                 live: true
@@ -302,6 +305,7 @@
                 .filter((location) => location !== undefined)
             return {
                 text: `is laying ${CompanyNames[companyId]} track`,
+                logoUrl: companyLogoUrl(companyId),
                 detail: `Treasury $${gameSession.gameState.getCompany(companyId).treasury}`,
                 zoom: around(options),
                 live: true
@@ -340,6 +344,9 @@
                     <div class={newest ? 'text-sm font-semibold text-[#ffd166]' : 'text-[#c9a961]'}>
                         {#if entry.live}<strong class="capitalize">{name}</strong> {entry.text}{:else}{index + 1}. {capital(entry.text)}{/if}
                     </div>
+                    {#if entry.logoUrl}
+                        <img src={entry.logoUrl} alt="" class="mx-auto {newest ? 'h-16' : 'h-8'} w-auto" draggable="false" />
+                    {/if}
                     {#if entry.detail}<div class="text-[#f1e6cf]">{entry.detail}</div>{/if}
                     {#if entry.imageUrl}
                         <img src={entry.imageUrl} alt="" class="mx-auto {newest ? 'h-48' : 'h-24'} w-auto rounded-lg" draggable="false" />
