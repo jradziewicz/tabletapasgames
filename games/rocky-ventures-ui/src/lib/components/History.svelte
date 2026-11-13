@@ -20,6 +20,13 @@
         type StatEvent
     } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
+    import { BoardBoxLocations } from '@tabletop/rocky-ventures'
+    import { cardImageUrl } from '$lib/utils/cardImages.js'
+    import { playerCardImageUrl } from '$lib/utils/playerCardImages.js'
+    import { weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
+    import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
+    import { companyLogoUrl } from '$lib/utils/companyLogos.js'
+    import { GridRegion, gridCellPosition } from '$lib/utils/trackLayout.js'
 
     // Same shape as the other Board Together games' History (e.g. Kaivai): newest first on a
     // timeline, each entry a short "<player> did something" sentence with how long ago it was,
@@ -63,6 +70,7 @@
         players: Record<string, PlayerFigures>
         companyValues: Partial<Record<CompanyId, number>>
         tableaus: Record<string, string[]>
+        tucked: Record<string, string[]>
         huntDrawn?: WeaponTokenKind[]
         statCount: number
     }
@@ -70,6 +78,7 @@
     function snapshot(state: HydratedRockyVenturesGameState): Snapshot {
         const players: Snapshot['players'] = {}
         const tableaus: Snapshot['tableaus'] = {}
+        const tucked: Snapshot['tucked'] = {}
         for (const player of state.players) {
             players[player.playerId] = {
                 money: player.money,
@@ -79,6 +88,7 @@
                 toolLevel: player.toolLevel
             }
             tableaus[player.playerId] = [...player.tableau]
+            tucked[player.playerId] = [...player.tuckedCardIds]
         }
         const companyValues: Snapshot['companyValues'] = {}
         for (const company of state.companies) {
@@ -88,6 +98,7 @@
             players,
             companyValues,
             tableaus,
+            tucked,
             huntDrawn: state.pendingHunt ? [...state.pendingHunt.drawn] : undefined,
             statCount: state.statEvents.length
         }
@@ -314,6 +325,145 @@
         return `acquired ${parts.join(' and ')}${level !== undefined ? ` (now level ${level})` : ''}`
     }
 
+    // The pictures that go with a step, like the Live play watcher box: the card, the tokens, the
+    // railroad, and a close-up of the spot on the map (the map as it is now).
+    type Zoom = { x: number; y: number; width: number; height: number }
+    type Visual = {
+        cards: string[]
+        tokens: { kind: WeaponTokenKind; picked: boolean }[]
+        logo?: string
+        zoom?: Zoom
+        rings: { x: number; y: number }[]
+    }
+
+    function around(points: { x: number; y: number }[], minWidth = 380): Zoom | undefined {
+        if (!points.length) return undefined
+        const xs = points.map((point) => point.x)
+        const ys = points.map((point) => point.y)
+        const pad = 80
+        let width = Math.max(minWidth, Math.max(...xs) - Math.min(...xs) + pad * 2)
+        let height = Math.max(Math.max(...ys) - Math.min(...ys) + pad * 2, (width * 3) / 4)
+        width = Math.max(width, (height * 4) / 3)
+        height = (width * 3) / 4
+        const cx = (Math.max(...xs) + Math.min(...xs)) / 2
+        const cy = (Math.max(...ys) + Math.min(...ys)) / 2
+        return { x: cx - width / 2, y: cy - height / 2, width, height }
+    }
+
+    function cardPicture(cardId: string | undefined, playerId: string): string | undefined {
+        if (!cardId) return undefined
+        try {
+            return getCard(cardId).kind === CardKind.Player
+                ? playerCardImageUrl(cardId, gameSession.colors.getPlayerColor(playerId))
+                : cardImageUrl(cardId)
+        } catch {
+            return undefined
+        }
+    }
+
+    function nodePoints(nodeId: unknown): { x: number; y: number }[] {
+        const node = typeof nodeId === 'string' ? BoardNodesById[nodeId] : undefined
+        return node ? [{ x: node.x, y: node.y }] : []
+    }
+
+    function visual(entry: Entry): Visual {
+        const action = entry.actions[0] as unknown as Record<string, unknown>
+        const playerId = String(action['playerId'])
+        const result: Visual = { cards: [], tokens: [], rings: [] }
+        const events = eventsFor(entry)
+        switch (action['type']) {
+            case ActionType.MovePawn: {
+                const index = typeof action['targetIndex'] === 'number' ? action['targetIndex'] : undefined
+                const url = cardPicture(index !== undefined ? entry.before?.tableaus[playerId]?.[index] : undefined, playerId)
+                if (url) result.cards.push(url)
+                break
+            }
+            case ActionType.Invest: {
+                const url = cardPicture(events.find((event) => event.kind === StatKind.Purchase)?.cardId, playerId)
+                if (url) result.cards.push(url)
+                break
+            }
+            case ActionType.Tax: {
+                const url = cardPicture(entry.after?.tucked[playerId]?.at(-1), playerId)
+                if (url) result.cards.push(url)
+                break
+            }
+            case ActionType.ChooseShare:
+                result.logo = typeof action['companyId'] === 'string' ? companyLogoUrl(action['companyId'] as CompanyId) : undefined
+                break
+            case ActionType.ClaimMine:
+                result.zoom = around(nodePoints(action['nodeId']))
+                result.rings = nodePoints(action['nodeId'])
+                break
+            case ActionType.LayTrack:
+            case ActionType.LayFreeTrack: {
+                const points = entry.actions
+                    .map((step) => BoardBoxLocations.find((location) => location.box.id === (step as unknown as Record<string, unknown>)['boxId']))
+                    .filter((location) => location !== undefined)
+                result.zoom = around(points)
+                result.rings = points.map((point) => ({ x: point.x, y: point.y }))
+                result.logo = typeof action['companyId'] === 'string' ? companyLogoUrl(action['companyId'] as CompanyId) : undefined
+                break
+            }
+            case ActionType.ExtractAndSell: {
+                const extract = events.find((event) => event.kind === StatKind.MineExtract)
+                const detail = Object.fromEntries((extract?.detail ?? '').split(';').map((pair) => pair.split('=') as [string, string]))
+                result.zoom = around([...nodePoints(action['nodeId']), ...nodePoints(detail['city'])])
+                result.rings = nodePoints(action['nodeId'])
+                result.logo = typeof action['creditCompanyId'] === 'string' ? companyLogoUrl(action['creditCompanyId'] as CompanyId) : undefined
+                break
+            }
+            case ActionType.Hunt:
+                result.tokens = (entry.after?.huntDrawn ?? []).map((kind) => ({ kind, picked: false }))
+                break
+            case ActionType.ResolveHunt: {
+                const indexes = Array.isArray(action['tokenIndexes']) ? (action['tokenIndexes'] as number[]) : []
+                result.tokens = (entry.before?.huntDrawn ?? []).map((kind, index) => ({ kind, picked: indexes.includes(index) }))
+                // Scourges hit and since gone from the board were killed.
+                const onBoard = new Set(
+                    Object.values(gameSession.gameState.board.scourgesByRegion).flatMap((list) => (list ?? []).map((scourge) => scourge.scourgeId))
+                )
+                for (const target of new Set(Array.isArray(action['hitTargets']) ? (action['hitTargets'] as string[]) : [])) {
+                    if (target !== DragonHuntRegion && !onBoard.has(target)) {
+                        const url = scourgeImageUrl(target)
+                        if (url) result.cards.push(url)
+                    }
+                }
+                break
+            }
+            case ActionType.Acquire: {
+                const after = entry.after?.players[playerId]
+                if (after) {
+                    const cell = gridCellPosition(after.weaponLevel, after.toolLevel)
+                    result.zoom = around([cell], 220)
+                    result.rings = [cell]
+                } else {
+                    result.zoom = { x: GridRegion.x, y: GridRegion.y, width: GridRegion.width, height: GridRegion.height }
+                }
+                break
+            }
+        }
+        return result
+    }
+
+    // Each turn is one block: who played, then their steps oldest first. Turns read newest first.
+    type Turn = { id: string; playerId?: string; entries: Entry[] }
+    const turns = $derived.by((): Turn[] => {
+        const chronological = entries.toReversed()
+        const result: Turn[] = []
+        for (const entry of chronological) {
+            const action = entry.actions[0]!
+            const current = result.at(-1)
+            const startsTurn = action.type === ActionType.MovePawn
+            if (!current || startsTurn || (action.playerId && current.playerId !== action.playerId)) {
+                result.push({ id: entry.id, playerId: action.playerId, entries: [entry] })
+            } else {
+                current.entries.push(entry)
+            }
+        }
+        return result.toReversed()
+    })
+
     // The sentence after the player's name.
     function describe(entry: Entry): string {
         const action = entry.actions[0] as unknown as Record<string, unknown>
@@ -396,22 +546,52 @@
 >
     <div class="overflow-auto h-full w-full px-1 py-1">
         <ol class="relative ms-1.5 border-s border-[#3d2c1a]">
-            {#each entries as entry (entry.id)}
-                {@const action = entry.actions[0]!}
-                <li class="mb-3 ms-4">
-                    <div
-                        class="absolute -start-1.5 mt-1 h-3 w-3 rounded-full border border-[#1a120b] bg-[#c9a961]"
-                    ></div>
-                    <div class="text-[11px] text-[#a88d5a]">
-                        {action.createdAt ? timeAgo.format(action.createdAt) : ''}
+            {#each turns as turn (turn.id)}
+                {@const first = turn.entries[0]!.actions[0]!}
+                <li class="mb-4 ms-4">
+                    <div class="absolute -start-1.5 mt-1 h-3 w-3 rounded-full border border-[#1a120b] bg-[#c9a961]"></div>
+                    <div class="text-[11px] text-[#a88d5a]">{first.createdAt ? timeAgo.format(first.createdAt) : ''}</div>
+                    <div class="mb-1 text-sm font-semibold">
+                        {#if turn.playerId}<PlayerName playerId={turn.playerId} />'s turn{:else}The game{/if}
                     </div>
-                    <div class="text-sm leading-snug">
-                        {#if action.playerId}
-                            <PlayerName playerId={action.playerId} />
-                            {describe(entry)}
-                        {:else}
-                            <span class="text-[#e0cfae]">{formatType(action.type)}</span>
-                        {/if}
+                    <div class="flex flex-col gap-2">
+                        {#each turn.entries as entry (entry.id)}
+                            {@const action = entry.actions[0]!}
+                            {@const pictures = visual(entry)}
+                            <div class="flex flex-col gap-1">
+                                <div class="text-sm leading-snug text-[#e8d9b8]">
+                                    {#if action.playerId}{describe(entry)}{:else}{formatType(action.type)}{/if}
+                                </div>
+                                {#if pictures.cards.length || pictures.tokens.length || pictures.logo}
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        {#each pictures.cards as url, cardIndex (cardIndex)}
+                                            <img src={url} alt="" class="h-28 w-auto rounded" draggable="false" />
+                                        {/each}
+                                        {#each pictures.tokens as token, tokenIndex (tokenIndex)}
+                                            {@const url = weaponTokenImageUrl(token.kind)}
+                                            {#if url}
+                                                <div class="relative mx-2 h-10 w-10">
+                                                    <img src={url} alt={token.kind} class="h-full w-full object-contain" draggable="false" />
+                                                    {#if token.picked}
+                                                        <div class="pointer-events-none absolute rounded-full border-2 border-[#ffd166]" style="inset: -24%;"></div>
+                                                    {/if}
+                                                </div>
+                                            {/if}
+                                        {/each}
+                                        {#if pictures.logo}<img src={pictures.logo} alt="" class="h-10 w-auto" draggable="false" />{/if}
+                                    </div>
+                                {/if}
+                                {#if pictures.zoom}
+                                    <svg viewBox="{pictures.zoom.x} {pictures.zoom.y} {pictures.zoom.width} {pictures.zoom.height}" class="block aspect-[4/3] w-full max-w-xs rounded border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
+                                        <use href="#rv-board-svg" />
+                                        {#each pictures.rings as point, ringIndex (ringIndex)}
+                                            <circle cx={point.x} cy={point.y} r="30" fill="none" stroke="#111" stroke-width="10" opacity="0.8" />
+                                            <circle cx={point.x} cy={point.y} r="30" fill="none" stroke="#ffd166" stroke-width="5" />
+                                        {/each}
+                                    </svg>
+                                {/if}
+                            </div>
+                        {/each}
                     </div>
                 </li>
             {/each}
