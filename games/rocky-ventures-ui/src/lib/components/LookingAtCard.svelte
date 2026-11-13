@@ -97,11 +97,10 @@
         return id ? around([regionLabelPoint(id as RegionId)], 520) : undefined
     }
 
-    function gridZoom(): Zoom | undefined {
+    function gridZoom(width: number = GridRegion.width): Zoom | undefined {
         const player = actorId ? gameSession.gameState.findPlayerState(actorId) : undefined
         if (!player) return undefined
         const cell = gridCellPosition(player.weaponLevel, player.toolLevel)
-        const width = GridRegion.width
         return { x: cell.x - width / 2, y: cell.y - width / ZoomAspect / 2, width, height: width / ZoomAspect }
     }
 
@@ -279,7 +278,8 @@
                 case ActionType.Acquire: {
                     const choice = data.choice as 'weapon' | 'tool'
                     const level = choice === 'weapon' ? player?.weaponLevel : player?.toolLevel
-                    return [{ text: `raised ${choice} to ${level}`, zoom: gridZoom() }]
+                    // Close in on the disc where it landed on the weapon/tool grid.
+                    return [{ text: `raised ${choice} to ${level}`, zoom: gridZoom(180) }]
                 }
                 case ActionType.ChooseShare: {
                     const companyId = data.companyId as CompanyId
