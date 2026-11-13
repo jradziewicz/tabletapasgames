@@ -4,7 +4,8 @@ enum UserServiceError {
     AccountUnavailable = 'AccountUnavailableError',
     InvalidPassword = 'InvalidPasswordError',
     EmailVerification = 'EmailVerificationError',
-    InvalidTimeZone = 'InvalidTimeZoneError'
+    InvalidTimeZone = 'InvalidTimeZoneError',
+    AccountDeletion = 'AccountDeletionError'
 }
 
 export class AccountUnavailableError extends BaseError {
@@ -52,5 +53,13 @@ export class InvalidTimeZoneError extends BaseError {
             message: `Unknown time zone ${timeZone}`,
             metadata: { timeZone }
         })
+    }
+}
+
+export class AccountDeletionError extends BaseError {
+    readonly statusCode = 403
+
+    constructor(message: string) {
+        super({ name: UserServiceError.AccountDeletion, message })
     }
 }

@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
+    deletedAccountRecord,
+    isReservedUsername,
     accountStatusAfterCompletionCheck,
     canHoldAuthenticatedSession,
     Role,
@@ -65,5 +67,34 @@ describe('accountStatusAfterCompletionCheck', () => {
                 UserStatus.Deleted
             )
         }
+    })
+})
+
+describe('account deletion', () => {
+    it('reserves names that pose as a deleted player', () => {
+        expect(isReservedUsername('Deleted player 3')).toBe(true)
+        expect(isReservedUsername('deleted_PLAYER')).toBe(true)
+        expect(isReservedUsername('Adele')).toBe(false)
+    })
+
+    it('keeps only the id, status and dates of a deleted account', () => {
+        const now = new Date(5)
+        expect(
+            deletedAccountRecord(
+                { id: 'a', sessionGeneration: 2, createdAt: new Date(1), activatedAt: new Date(2) },
+                now
+            )
+        ).toEqual({
+            id: 'a',
+            status: UserStatus.Deleted,
+            deleted: true,
+            deletedAt: now,
+            roles: [],
+            externalIds: [],
+            sessionGeneration: 3,
+            updatedAt: now,
+            createdAt: new Date(1),
+            activatedAt: new Date(2)
+        })
     })
 })

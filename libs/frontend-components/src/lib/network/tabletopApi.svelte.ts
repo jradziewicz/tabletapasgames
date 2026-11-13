@@ -293,6 +293,15 @@ export class TabletopApi {
         return response.payload.user
     }
 
+    async deleteOwnAccount(): Promise<void> {
+        await this.wretch
+            .post(undefined, '/user/delete')
+            .unauthorized(this.on401)
+            .forbidden(this.handleError)
+            .badRequest(this.handleError)
+            .json()
+    }
+
     async updateUserPreferences(userId: string, preferences: UserPreferences): Promise<User> {
         const response = await this.wretch
             .post({ userId, preferences }, '/user/updatePreferences')

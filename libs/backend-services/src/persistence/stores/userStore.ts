@@ -48,4 +48,9 @@ export interface UserStore {
         service: ExternalAuthService
     }): Promise<User>
     removeExternalId(userId: string, externalId: string): Promise<User>
+
+    // Replaces the account with a tombstone (id, status and dates) and releases its username,
+    // email and linked logins. Returns [tombstone, account as it was].
+    deleteUser(userId: string, validate?: (existing: StoredUser) => void): Promise<[User, User]>
+    deletePreferences(userId: string): Promise<void>
 }

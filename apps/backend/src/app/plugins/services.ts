@@ -13,6 +13,7 @@ import {
     SiteStatsService,
     TokenService,
     UserService,
+    AccountDeletion,
     SecretsService,
     EnvSecretsService,
     FirestoreGameStore,
@@ -61,6 +62,7 @@ declare module 'fastify' {
         sessionService: SessionService
         discordOAuth: DiscordOAuth
         userService: UserService
+        accountDeletion: AccountDeletion
         emailService: EmailService
         secretsService: SecretsService
         gameService: GameService
@@ -226,6 +228,18 @@ export default fp(async (fastify: FastifyInstance) => {
     userService.isUsernameApproved = (username) => usernameReviewService.isApproved(username)
     fastify.decorate('usernameReviewService', usernameReviewService)
     fastify.decorate('userService', userService)
+    fastify.decorate(
+        'accountDeletion',
+        new AccountDeletion({
+            users: userService,
+            games: gameService,
+            sessions: sessionService,
+            tokens: tokenService,
+            preferences: userStore,
+            notifications: notificationService,
+            tasks: taskService
+        })
+    )
     fastify.decorate('emailService', emailService)
     fastify.decorate('secretsService', secretsService)
     fastify.decorate('gameService', gameService)

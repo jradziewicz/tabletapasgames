@@ -165,6 +165,10 @@ export class DummyRemoteApiService implements RemoteApiService {
         return this.fail('updateUser')
     }
 
+    async deleteOwnAccount(): Promise<void> {
+        return this.fail('deleteOwnAccount')
+    }
+
     async updateUserPreferences(_userId: string, _preferences: UserPreferences): Promise<User> {
         return this.fail('updateUserPreferences')
     }

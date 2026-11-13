@@ -156,6 +156,34 @@ export function nextSessionGeneration(user: Pick<User, 'sessionGeneration'>): nu
     return sessionGenerationOf(user) + 1
 }
 
+// Deleted accounts appear in games as "Deleted player N", so no live account may pose as one.
+export function isReservedUsername(username: string): boolean {
+    return username
+        .toLowerCase()
+        .replace(/[^a-z]/g, '')
+        .includes('deletedplayer')
+}
+
+// What is kept of a deleted account: its id, status and dates. Everything that identifies the
+// person (username, email, linked logins, preferences) is dropped.
+export function deletedAccountRecord(
+    existing: Pick<User, 'id' | 'sessionGeneration' | 'createdAt' | 'activatedAt'>,
+    now: Date
+): User & Required<Pick<User, 'updatedAt' | 'deletedAt'>> {
+    return {
+        id: existing.id,
+        status: UserStatus.Deleted,
+        deleted: true,
+        deletedAt: now,
+        roles: [],
+        externalIds: [],
+        sessionGeneration: nextSessionGeneration(existing),
+        updatedAt: now,
+        ...(existing.createdAt ? { createdAt: existing.createdAt } : {}),
+        ...(existing.activatedAt ? { activatedAt: existing.activatedAt } : {})
+    }
+}
+
 export function canHoldAuthenticatedSession(user: Pick<User, 'status'>): boolean {
     return user.status === UserStatus.Active || user.status === UserStatus.Incomplete
 }

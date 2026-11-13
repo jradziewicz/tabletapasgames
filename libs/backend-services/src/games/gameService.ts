@@ -30,6 +30,7 @@ import {
     playerUndoRestriction,
     PlayerUndoRestriction,
     findPlayerForUserId,
+    getGameStatusesForCategory,
     ownerMayDeleteGame,
     gameUserIds,
     isListedPublicGame,
@@ -64,7 +65,8 @@ import {
     Visibility,
     assertExists,
     type Tournament,
-    type TournamentSchedule
+    type TournamentSchedule,
+    playersWithDeletedAccount
 } from '@tabletop/common'
 import { TaskService } from '../tasks/taskService.js'
 import { TokenService, TokenType } from '../tokens/tokenService.js'
@@ -402,6 +404,70 @@ export class GameService {
         await this.notifyGameStarted(created)
         await this.scheduleStartingTurnNotifications(created)
         return created
+    }
+
+    /**
+     * Takes a deleted account out of its games. Games it set up that haven't started are
+     * deleted, a seat it holds in someone else's unstarted game is given up, and every other
+     * seat (games in progress and finished ones) is renamed "Deleted player N".
+     * `user` is the account as it was before deletion. Safe to run again.
+     */
+    async releaseDeletedPlayer(user: User): Promise<void> {
+        const games = (
+            await Promise.all(
+                [
+                    GameStatusCategory.Active,
+                    GameStatusCategory.Completed,
+                    GameStatusCategory.Archived
+                ].map((category) => this.gameStore.findGamesForUser(user, category))
+            )
+        ).flat()
+        const failures: unknown[] = []
+        for (const game of games) {
+            try {
+                await this.releaseDeletedPlayerFromGame(user, game)
+            } catch (error) {
+                console.error(`Could not release deleted player from game ${game.id}`, error)
+                failures.push(error)
+            }
+        }
+        if (failures.length > 0) {
+            throw new AggregateError(failures, `${failures.length} games kept the deleted player`)
+        }
+    }
+
+    private async releaseDeletedPlayerFromGame(user: User, game: Game): Promise<void> {
+        const unstarted =
+            game.status === GameStatus.WaitingForPlayers ||
+            game.status === GameStatus.WaitingToStart
+        if (unstarted && !game.tournament && !game.hotseat) {
+            if (game.ownerId === user.id) {
+                await this.deleteGame(user, game.id)
+                return
+            }
+            const seat = findPlayerForUserId(game, user.id)
+            if (seat && seat.status !== PlayerStatus.Declined) {
+                await this.declineGame({ user, gameId: game.id })
+                return
+            }
+        }
+        if (!playersWithDeletedAccount(game.players, user.id)) return
+        const [updatedGame, updatedFields] = await this.gameStore.updateGame({
+            game,
+            fields: { players: game.players },
+            validator: (existingGame, fieldsToUpdate) => {
+                const players = playersWithDeletedAccount(existingGame.players, user.id)
+                if (!players) return UpdateValidationResult.Cancel
+                fieldsToUpdate.players = players
+                return UpdateValidationResult.Proceed
+            }
+        })
+        if (
+            updatedFields.length > 0 &&
+            getGameStatusesForCategory(GameStatusCategory.Active).includes(updatedGame.status)
+        ) {
+            await this.notifyGamePlayers(GameNotificationAction.Update, { game: updatedGame })
+        }
     }
 
     async deleteGame(user: User, gameId: string): Promise<void> {
@@ -2378,7 +2444,10 @@ export class GameService {
         if (!game) {
             throw new GameNotFoundError({ id: gameId })
         }
-        this.liveSelectionGames.set(gameId, { game, loadedAt: cached?.game === game ? cached.loadedAt : now })
+        this.liveSelectionGames.set(gameId, {
+            game,
+            loadedAt: cached?.game === game ? cached.loadedAt : now
+        })
         if ((game.config as { livePlay?: boolean } | undefined)?.livePlay !== true) {
             return
         }
@@ -2496,7 +2565,10 @@ export class GameService {
         const cacheKey = this.makeTurnNotificationCacheKey(user.id, gameId)
         const now = new Date()
         const inSeconds = turnReminderDelaySeconds(reminderIndex, now, user)
-        if (turnStartedAt !== undefined && isPastTurnReminderCutoff(turnStartedAt, now, inSeconds)) {
+        if (
+            turnStartedAt !== undefined &&
+            isPastTurnReminderCutoff(turnStartedAt, now, inSeconds)
+        ) {
             return
         }
         // The chain guard must outlive the (possibly Reminder Hours-delayed) task.

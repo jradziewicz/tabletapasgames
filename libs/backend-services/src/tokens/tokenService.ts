@@ -113,6 +113,16 @@ export class TokenService {
         await this.tokenStore.delete(this.challengeKey(identity))
     }
 
+    async cancelAllChallenges(userId: string) {
+        const types: AuthenticationChallengeClaim['type'][] = [
+            TokenType.PasswordReset,
+            TokenType.EmailVerification,
+            TokenType.EmailChange,
+            TokenType.SensitiveChange
+        ]
+        await Promise.all(types.map((type) => this.cancelChallenge({ type, userId })))
+    }
+
     consumeChallenge(
         secret: string,
         expected: AuthenticationChallengeClaim
