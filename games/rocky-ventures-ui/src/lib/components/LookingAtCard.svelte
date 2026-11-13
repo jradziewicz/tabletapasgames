@@ -527,8 +527,18 @@
 
     const paced = $derived(steps.slice(0, shown))
     const caughtUp = $derived(shown >= steps.length && liveAfter === shown)
+    // A railroad's logo shows once, on the first entry that names it.
+    function logoOnce(list: Step[]): Step[] {
+        const seen = new Set<string>()
+        return list.map((entry) => {
+            if (!entry.logoUrl) return entry
+            if (seen.has(entry.logoUrl)) return { ...entry, logoUrl: undefined }
+            seen.add(entry.logoUrl)
+            return entry
+        })
+    }
     const entries = $derived(
-        !caughtUp ? paced : live ? [...paced, live] : finished ? [...paced, { text: 'finished their turn', live: true }] : paced
+        logoOnce(!caughtUp ? paced : live ? [...paced, live] : finished ? [...paced, { text: 'finished their turn', live: true }] : paced)
     )
 
     // Keep the newest entry in view as the history grows.
