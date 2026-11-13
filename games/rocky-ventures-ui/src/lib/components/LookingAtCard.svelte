@@ -48,12 +48,8 @@
     // so the last turn's summary stays up instead of vanishing the moment the turn passes.
     const actorId = $derived.by(() => {
         const last = gameSession.actions.at(-1)
-        // The next player has started once they act or actually pick something (a fresh turn sends an empty selection).
-        const selection = gameSession.watchedSelection
-        const picking =
-            selection !== undefined &&
-            (selection.moveTargetIndex !== undefined || selection.step !== undefined || selection.trackCompanyId !== undefined || selection.extractNodeId !== undefined || selection.huntSelected.length > 0)
-        const started = last?.playerId === activeId || picking || gameSession.gameState.pendingHunt !== undefined
+        // The next player has started once they commit their first move (picking their card and action).
+        const started = last?.playerId === activeId
         if (started || !last?.playerId || last.playerId === gameSession.myPlayer?.id) return activeId
         return last.playerId
     })
