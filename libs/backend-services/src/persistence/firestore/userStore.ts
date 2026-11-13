@@ -203,6 +203,17 @@ export class FirestoreUserStore implements UserStore, SiteStatsUserSource {
         }
     }
 
+    async findIncompleteUsers(): Promise<User[]> {
+        try {
+            const snapshot = await this.users.where('status', '==', UserStatus.Incomplete).get()
+            this.recordRead(snapshot.size)
+            return snapshot.docs.map((doc) => this.sanitize(doc.data()))
+        } catch (error) {
+            this.handleError(error, 'incomplete')
+            throw Error('unreachable')
+        }
+    }
+
     async createUser(
         user: User,
         password?: string,

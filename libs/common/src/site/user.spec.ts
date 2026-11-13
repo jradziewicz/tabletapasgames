@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
     deletedAccountRecord,
     isReservedUsername,
+    isAbandonedSignUp,
     accountStatusAfterCompletionCheck,
     canHoldAuthenticatedSession,
     Role,
@@ -96,5 +97,28 @@ describe('account deletion', () => {
             createdAt: new Date(1),
             activatedAt: new Date(2)
         })
+    })
+})
+
+describe('isAbandonedSignUp', () => {
+    const now = new Date('2026-11-20T00:00:00Z')
+    const created = (days: number) => new Date(now.getTime() - days * 86_400_000)
+
+    it('is an Incomplete account never activated, 3 days after sign-up', () => {
+        expect(
+            isAbandonedSignUp({ status: UserStatus.Incomplete, createdAt: created(3) }, now)
+        ).toBe(true)
+        expect(
+            isAbandonedSignUp({ status: UserStatus.Incomplete, createdAt: created(2) }, now)
+        ).toBe(false)
+        expect(
+            isAbandonedSignUp(
+                { status: UserStatus.Incomplete, createdAt: created(9), activatedAt: created(8) },
+                now
+            )
+        ).toBe(false)
+        expect(isAbandonedSignUp({ status: UserStatus.Active, createdAt: created(9) }, now)).toBe(
+            false
+        )
     })
 })

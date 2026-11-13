@@ -4,6 +4,7 @@
     import {
         INAPPROPRIATE_USERNAME_ERROR,
         isInappropriateUsername,
+        ABANDONED_SIGN_UP_DAYS,
         UserStatus,
         type UserUpdateRequest
     } from '@tabletop/common'
@@ -31,6 +32,7 @@
     let codeExpiresAt: Date | undefined = $state(undefined)
 
     let user = $derived(authorizationService.getSessionUser())
+    let neverActivated = $derived(Boolean(user && !user.activatedAt))
 
     async function updateUser(event: SubmitEvent) {
         event.preventDefault()
@@ -126,6 +128,14 @@
     }
 </script>
 
+{#snippet signUpDeadline()}
+    {#if neverActivated}
+        <P class="text-sm mt-4 text-gray-500 dark:text-gray-400"
+            >Unfinished sign-ups are deleted after {ABANDONED_SIGN_UP_DAYS} days.</P
+        >
+    {/if}
+{/snippet}
+
 <div class="h-[calc(100dvh-70px)] flex flex-col items-center justify-center space-y-6">
     {#if user && user.email && !user.emailVerified}
         <Card class="p-4 sm:p-6">
@@ -173,6 +183,7 @@
                     ><Button type="submit">Submit</Button>
                 </div>
             </form>
+            {@render signUpDeadline()}
         </Card>
     {:else}
         <Card class="p-4 sm:p-6">
@@ -235,6 +246,7 @@
                 {/if}
                 <div class="flex justify-end"><Button type="submit" class="">Submit</Button></div>
             </form>
+            {@render signUpDeadline()}
         </Card>
     {/if}
 </div>

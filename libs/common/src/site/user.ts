@@ -1,6 +1,7 @@
 import * as Type from 'typebox'
 import { DateType } from '../util/typebox.js'
 import { Color } from '../game/model/colors.js'
+import { MILLISECONDS_PER_DAY } from './siteStats.js'
 
 export enum Role {
     User = 'user',
@@ -154,6 +155,22 @@ export function sessionGenerationOf(user: Pick<User, 'sessionGeneration'>): numb
 
 export function nextSessionGeneration(user: Pick<User, 'sessionGeneration'>): number {
     return sessionGenerationOf(user) + 1
+}
+
+export const ABANDONED_SIGN_UP_DAYS = 3
+
+// A sign-up never finished within ABANDONED_SIGN_UP_DAYS is deleted. An account that was ever
+// Active is not a sign-up, even if it is Incomplete again.
+export function isAbandonedSignUp(
+    user: Pick<User, 'status' | 'createdAt' | 'activatedAt'>,
+    now: Date
+): boolean {
+    return (
+        user.status === UserStatus.Incomplete &&
+        !user.activatedAt &&
+        user.createdAt instanceof Date &&
+        now.getTime() - user.createdAt.getTime() >= ABANDONED_SIGN_UP_DAYS * MILLISECONDS_PER_DAY
+    )
 }
 
 // Deleted accounts appear in games as "Deleted player N", so no live account may pose as one.
