@@ -184,8 +184,12 @@
             {/if}
             {#each playerState.shares as share, i (i)}
                 {@const company = gameSession.gameState.getCompany(share.companyId)}
+                {@const takenThisTurn =
+                    gameSession.turnMarks.playerId === player.id &&
+                    gameSession.turnMarks.shareCompanyIds.includes(share.companyId) &&
+                    playerState.shares.findLastIndex((other) => other.companyId === share.companyId) === i}
                 <span
-                    class="rounded px-2 py-0.5 text-sm font-bold"
+                    class="rounded px-2 py-0.5 text-sm font-bold {takenThisTurn ? 'spotlit' : ''}"
                     style="background-color: {CompanyColors[share.companyId]}; color: {CompanyTextColors[share.companyId]};"
                     title="{company.multiplierForShare(share.shareIndex) * company.value > 0 ? `Worth $${company.multiplierForShare(share.shareIndex) * company.value}` : ''}"
                     >×{company.multiplierForShare(share.shareIndex)}</span

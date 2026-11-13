@@ -175,6 +175,8 @@
                     const level = choice === 'weapon' ? player?.weaponLevel : player?.toolLevel
                     return [{ text: `raised ${choice} to ${level}`, zoom: gridZoom() }]
                 }
+                case ActionType.ChooseShare:
+                    return [{ text: `took a ${CompanyNames[data.companyId as CompanyId] ?? ''} share` }]
                 case ActionType.GemAction:
                     return [{ text: 'used a gem' }]
                 case ActionType.AgreementPointBuy:

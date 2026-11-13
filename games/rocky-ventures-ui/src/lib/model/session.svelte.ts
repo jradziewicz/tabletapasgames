@@ -694,8 +694,8 @@ export class RockyVenturesGameSession extends GameSession<
 
     // Live play: everything the current player has done this turn stays marked until the next turn:
     // track laid, mines claimed or extracted, the city and route sold along, and cards taken.
-    turnMarks: { playerId?: string; boxIds: string[]; nodeIds: string[]; routes: string[][]; cardIds: string[]; hitTargets: string[] } = $derived.by(() => {
-        const empty = { boxIds: [], nodeIds: [], routes: [], cardIds: [], hitTargets: [] }
+    turnMarks: { playerId?: string; boxIds: string[]; nodeIds: string[]; routes: string[][]; cardIds: string[]; hitTargets: string[]; shareCompanyIds: string[] } = $derived.by(() => {
+        const empty = { boxIds: [], nodeIds: [], routes: [], cardIds: [], hitTargets: [], shareCompanyIds: [] }
         if (!this.livePlay || this.isViewingHistory) return empty
         const state = this.gameState
         const playerId = state.activePlayerIds[0]
@@ -706,7 +706,7 @@ export class RockyVenturesGameSession extends GameSession<
             turn.push(action)
             if (action.type === ActionType.MovePawn) break
         }
-        const marks = { playerId, boxIds: [] as string[], nodeIds: [] as string[], routes: [] as string[][], cardIds: [] as string[], hitTargets: [] as string[] }
+        const marks = { playerId, boxIds: [] as string[], nodeIds: [] as string[], routes: [] as string[][], cardIds: [] as string[], hitTargets: [] as string[], shareCompanyIds: [] as string[] }
         for (const action of turn) {
             const data = action as GameAction & { boxId?: string; nodeId?: string; cityId?: string; routeNodeIds?: string[] }
             if ((action.type === ActionType.LayTrack || action.type === ActionType.LayFreeTrack) && data.boxId) marks.boxIds.push(data.boxId)
@@ -714,6 +714,9 @@ export class RockyVenturesGameSession extends GameSession<
             if (action.type === ActionType.ExtractAndSell) {
                 if (data.cityId) marks.nodeIds.push(data.cityId)
                 if (data.routeNodeIds?.length) marks.routes.push(data.routeNodeIds)
+            }
+            if (action.type === ActionType.ChooseShare) {
+                marks.shareCompanyIds.push((action as GameAction & { companyId: string }).companyId)
             }
             if (action.type === ActionType.ResolveHunt) {
                 marks.hitTargets.push(...((action as GameAction & { hitTargets?: string[] }).hitTargets ?? []))
