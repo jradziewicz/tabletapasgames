@@ -256,9 +256,24 @@
         }
         for (const [scourgeId, region] of current) {
             if (!previous.has(scourgeId)) {
-                pendingScourge = { region, scourgeId }
+                if (session.livePlay) {
+                    // Live play: the reveal waits until the turn that brought it out is entirely over.
+                    turnEndScourges = [...turnEndScourges, { region, scourgeId, playerId: session.actions.findLast((action) => action.playerId)?.playerId }]
+                } else {
+                    pendingScourge = { region, scourgeId }
+                }
             }
         }
+    })
+
+    let turnEndScourges: { region: (typeof RegionIds)[number]; scourgeId: string; playerId: string | undefined }[] = $state([])
+    $effect(() => {
+        const next = turnEndScourges[0]
+        if (!next || pendingScourge || session.revealScourgeId !== undefined) return
+        const activeId = session.gameState.activePlayerIds[0]
+        if (next.playerId && activeId === next.playerId && !session.gameState.result) return
+        turnEndScourges = turnEndScourges.slice(1)
+        pendingScourge = { region: next.region, scourgeId: next.scourgeId }
     })
 
     $effect(() => {
