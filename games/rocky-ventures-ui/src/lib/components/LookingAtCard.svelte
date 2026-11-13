@@ -360,8 +360,6 @@
                 live: true
             }
         }
-        const lookingAt = gameSession.mirroring ? selection.lookingAtCardId : undefined
-        if (lookingAt && lookingAt !== selectedCardId) return { text: 'is looking at', detail: cardActions(lookingAt), imageUrl: cardUrl(lookingAt), live: true }
         if (selection.step) return { text: `is choosing ${selection.step}`, live: true }
         return undefined
     })
