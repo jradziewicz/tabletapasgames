@@ -369,7 +369,7 @@
                         onclick={() => gameSession.selectMoveTarget(index)}
                         onpointerenter={(event) => gameSession.pointAtCard(event, cardId)}
                         onpointerleave={(event) => gameSession.pointAtCard(event, undefined)}
-                        class="tableau-card relative z-10 block overflow-hidden rounded border-2 transition {cardId === StartingPlayerCardId ? '' : 'bg-white'} {mirrorPulse(cardId)} {gameSession.mirroring && isTarget ? 'move-picked' : ''}"
+                        class="tableau-card relative z-10 block overflow-hidden rounded border-2 transition {cardId === StartingPlayerCardId ? '' : 'bg-white'} {mirrorPulse(cardId)}"
                         style="border-color: {isTarget ? '#ffd166' : isSkipped ? (discarded ? '#c9302c' : '#b8700a') : '#4a3620'}; filter: {legal ? 'none' : 'brightness(0.55)'};"
                         title={legal ? `Move to ${cardLabel(cardId)}` : 'Not a legal move'}
                     >
@@ -382,6 +382,11 @@
                         {/if}
                         {#if isSkipped && discarded}
                             <div class="absolute inset-0 flex items-center justify-center bg-red-900/60 text-xs font-bold">DISCARD</div>
+                        {/if}
+                        {#if player && gameSession.pickedMoveCardId(player.playerId) === cardId}
+                            <!-- Live play: the watched player's pick, drawn inside the card so nothing clips it -->
+                            <div class="pointer-events-none absolute inset-0 z-20 rounded ring-[6px] ring-inset ring-[#ffd166]"></div>
+                            <div class="pointer-events-none absolute left-1/2 top-2 z-30 -translate-x-1/2 whitespace-nowrap rounded-full bg-[#1b140c]/90 px-2 py-0.5 text-xs font-bold text-[#ffd166]">Moving here</div>
                         {/if}
                     </button>
                     </div>
