@@ -705,16 +705,16 @@
                         </div>
                     {/if}
                     {#if entry.tokens?.length}
-                        <div class="flex flex-wrap justify-center gap-7 p-4">
+                        <div class="flex flex-wrap justify-center gap-x-9 gap-y-7 px-3 py-4">
                             {#each entry.tokens as token, tokenIndex (tokenIndex)}
                                 {@const url = weaponTokenImageUrl(token.kind as WeaponTokenKind)}
                                 {#if url}
                                     <!-- The token as printed, with a gold circle over it once picked -->
-                                    <div class="relative h-20 w-20">
+                                    <div class="relative h-14 w-14">
                                         <img src={url} alt={token.kind} class="h-full w-full object-contain" draggable="false" />
                                         {#if token.picked}
                                             <!-- Wide enough that the whole square token sits inside the circle -->
-                                            <div class="pointer-events-none absolute rounded-full border-4 border-[#ffd166] shadow-[0_0_12px_rgba(255,209,102,0.8)]" style="inset: -24%;"></div>
+                                            <div class="pointer-events-none absolute rounded-full border-[3px] border-[#ffd166] shadow-[0_0_12px_rgba(255,209,102,0.8)]" style="inset: -24%;"></div>
                                         {/if}
                                     </div>
                                 {/if}
