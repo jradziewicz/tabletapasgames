@@ -31,6 +31,7 @@
     import { recentOtherPlayerAction } from '$lib/utils/recentAction.js'
     import { shareImageUrl } from '$lib/utils/shareImages.js'
     import { companyLogoUrl } from '$lib/utils/companyLogos.js'
+    import { CompanyColors } from '$lib/utils/companyDisplay.svelte.js'
     import { mineTokenImageUrl } from '$lib/utils/tokenImages.js'
     import { MarketSlotBoxes } from '$lib/utils/marketLayout.js'
     import { tick } from 'svelte'
@@ -637,7 +638,12 @@
                             {#if entry.track}
                                 <!-- Each piece laid this turn, ringed so it stands out in the snippet -->
                                 {#each entry.track.points as point, pointIndex (pointIndex)}
-                                    <circle cx={point.x} cy={point.y} r="26" fill="none" stroke="#ffd166" stroke-width="6" class="track-pulse" />
+                                    <!-- A dark band under the railroad's colour so the ring reads on any terrain -->
+                                    <g class="track-pulse">
+                                        <circle cx={point.x} cy={point.y} r="26" fill="none" stroke="#111" stroke-width="13" opacity="0.85" />
+                                        <circle cx={point.x} cy={point.y} r="26" fill="none" stroke={CompanyColors[entry.track.companyId as CompanyId] ?? '#ffd166'} stroke-width="7" />
+                                        <circle cx={point.x} cy={point.y} r="32" fill="none" stroke="#fff" stroke-width="2" />
+                                    </g>
                                 {/each}
                             {/if}
                             {#if entry.move}
