@@ -312,7 +312,7 @@
                             {#each entry.tokens as token, tokenIndex (tokenIndex)}
                                 {@const url = weaponTokenImageUrl(token.kind as WeaponTokenKind)}
                                 {#if url}
-                                    <img src={url} alt={token.kind} class="{newest ? 'h-14 w-14' : 'h-9 w-9'} rounded-full {token.picked ? 'ring-4 ring-[#ffd166]' : 'opacity-40 grayscale'}" draggable="false" />
+                                    <img src={url} alt={token.kind} class="{newest ? 'h-20 w-20' : 'h-10 w-10'} rounded-md object-contain {token.picked ? 'ring-4 ring-[#ffd166]' : entry.live ? '' : 'opacity-40 grayscale'}" draggable="false" />
                                 {/if}
                             {/each}
                         </div>
