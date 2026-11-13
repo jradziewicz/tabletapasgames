@@ -368,7 +368,7 @@
                         event && nowToken && (nowToken.ore !== event.source || String(nowToken.level) !== (detail['level'] ?? ''))
                             ? [
                                   {
-                                      text: `revealed at ${mine}`,
+                                      text: 'drew',
                                       iconUrl: mineTokenImageUrl(nowToken)
                                   }
                               ]
@@ -653,15 +653,12 @@
                 {@const newest = index === entries.length - 1}
                 <div class="flex flex-col gap-1 {newest ? '' : 'opacity-70'}">
                     <div class={newest ? 'text-sm font-semibold text-[#ffd166]' : 'text-[#c9a961]'}>
-                        {#if entry.live}<strong class="capitalize">{name}</strong> {entry.text}{:else}{capital(entry.text)}{/if}
+                        {#if entry.live}<strong class="capitalize">{name}</strong> {entry.text}{:else}{capital(entry.text)}{/if}{#if entry.iconUrl}<img src={entry.iconUrl} alt="" class="ml-2 inline-block align-middle {newest ? 'h-10 w-10' : 'h-7 w-7'}" draggable="false" />{/if}
                     </div>
                     {#if entry.logoUrl}
                         <img src={entry.logoUrl} alt="" class="mx-auto {newest ? 'h-16' : 'h-8'} w-auto" draggable="false" />
                     {/if}
                     {#if entry.detail}<div class="text-[#f1e6cf]">{entry.detail}</div>{/if}
-                    {#if entry.iconUrl}
-                        <img src={entry.iconUrl} alt="" class="mx-auto {newest ? 'h-16 w-16' : 'h-10 w-10'}" draggable="false" />
-                    {/if}
                     {#if entry.imageUrl}
                         <img src={entry.imageUrl} alt="" class="mx-auto {newest ? 'h-48' : 'h-24'} w-auto rounded-lg" draggable="false" />
                     {/if}
