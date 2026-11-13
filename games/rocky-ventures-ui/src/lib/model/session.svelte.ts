@@ -132,6 +132,8 @@ export class RockyVenturesGameSession extends GameSession<
     private remoteSelection: LiveSelection | undefined = $state()
     // Live play: the card the watched player last picked to move to, kept lit briefly after the move is made.
     heldMovePick: { playerId: string; cardId: string } | undefined = $state()
+    // Live play: scourges as they come onto the board, keyed to the move that brought them out.
+    enteredScourges: { scourgeId: string; region: string; actionCount: number }[] = $state([])
     private lastMovePick: { playerId: string; cardId: string } | undefined
     private heldMoveTimer: ReturnType<typeof setTimeout> | undefined
 

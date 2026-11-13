@@ -256,6 +256,7 @@
         }
         for (const [scourgeId, region] of current) {
             if (!previous.has(scourgeId)) {
+                session.enteredScourges = [...session.enteredScourges, { scourgeId, region, actionCount: session.gameState.actionCount }]
                 if (session.livePlay) {
                     // Live play: the reveal waits until the turn that brought it out is entirely over.
                     turnEndScourges = [...turnEndScourges, { region, scourgeId, playerId: session.actions.findLast((action) => action.playerId)?.playerId }]

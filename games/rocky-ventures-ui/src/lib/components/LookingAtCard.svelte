@@ -320,7 +320,7 @@
         for (const action of turn) {
             if (action.type === ActionType.Acquire) pendingGain[(action as GameAction & { choice: 'weapon' | 'tool' }).choice] += 1
         }
-        return turn.flatMap((action): Step[] => {
+        const stepsOf = (action: GameAction): Step[] => {
             const data = action as GameAction & Record<string, unknown>
             switch (action.type) {
                 case ActionType.MovePawn:
@@ -464,7 +464,18 @@
                 default:
                     return []
             }
-        })
+        }
+        // A scourge that came out with a move enters right after that move's step.
+        const enteredAfter = (action: GameAction): Step[] => {
+            const count = gameSession.actions.indexOf(action) + 1
+            return gameSession.enteredScourges
+                .filter((entered) => entered.actionCount === count)
+                .map((entered) => ({
+                    text: `a ${ScourgeDefinitionsById[entered.scourgeId]?.name ?? 'scourge'} entered ${regionName(entered.region)}`,
+                    imageUrl: scourgeImageUrl(entered.scourgeId)
+                }))
+        }
+        return turn.flatMap((action) => [...stepsOf(action), ...enteredAfter(action)])
     })
 
     const steps = $derived(mergeTrack(rawSteps))
