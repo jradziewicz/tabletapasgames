@@ -536,11 +536,14 @@
     let paceTimer: ReturnType<typeof setTimeout> | undefined
     $effect(() => {
         const total = steps.length
-        if (shownFor !== actorId) {
-            // A new player's history starts from its first step.
-            shownFor = actorId
+        // A new turn's history starts from its first step. The turn is known by its opening move, so a
+        // brief refresh of the game (no steps for a moment) doesn't replay the whole history.
+        const turnKey = turn[0] ? `${actorId}:${turn[0].id ?? gameSession.actions.indexOf(turn[0])}` : undefined
+        if (turnKey && shownFor !== turnKey) {
+            shownFor = turnKey
             shown = Math.min(total, 1)
         }
+        if (total === 0) return
         if (shown > total) shown = total
         clearTimeout(paceTimer)
         if (shown < total) {
