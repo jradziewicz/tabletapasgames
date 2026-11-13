@@ -634,6 +634,12 @@
                     {#if entry.zoom}
                         <svg viewBox="{entry.zoom.x} {entry.zoom.y} {entry.zoom.width} {entry.zoom.height}" class="block aspect-[4/3] {newest ? 'w-full' : 'w-2/3'} mx-auto rounded-lg border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
                             <use href="#rv-board-svg" />
+                            {#if entry.track}
+                                <!-- Each piece laid this turn, ringed so it stands out in the snippet -->
+                                {#each entry.track.points as point, pointIndex (pointIndex)}
+                                    <circle cx={point.x} cy={point.y} r="26" fill="none" stroke="#ffd166" stroke-width="6" class="track-pulse" />
+                                {/each}
+                            {/if}
                             {#if entry.move}
                                 {@const move = entry.move}
                                 <!-- Where the disc was (ghost), the path, and the disc sliding to where it landed -->
@@ -651,3 +657,18 @@
         </div>
     </div>
 {/if}
+
+<style>
+    .track-pulse {
+        animation: track-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes track-pulse {
+        0%,
+        100% {
+            opacity: 1;
+        }
+        50% {
+            opacity: 0.35;
+        }
+    }
+</style>
