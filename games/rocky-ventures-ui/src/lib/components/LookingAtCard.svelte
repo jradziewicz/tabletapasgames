@@ -42,7 +42,7 @@
     const gameSession = getGameSession()
 
     type Zoom = { x: number; y: number; width: number; height: number }
-    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string }; track?: { companyId: string; points: { x: number; y: number }[]; cost: number; count: number; free: boolean }; kind?: string; iconUrl?: string }
+    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string }; track?: { companyId: string; points: { x: number; y: number }[]; cost: number; count: number; free: boolean }; kind?: string; iconUrl?: string; pin?: { x: number; y: number; url: string } }
 
     const ZoomAspect = 4 / 3
 
@@ -373,6 +373,12 @@
                                   }
                               ]
                             : []
+                    // Show the mine in the snippet as the token they extracted, not what it flipped to after.
+                    const minePoint = BoardNodesById[data.nodeId as string]
+                    const extractedUrl =
+                        (lastExtract?.actionId === action.id ? lastExtract.tokenUrl : undefined) ??
+                        (event ? mineTokenImageUrl({ ore: event.source, level: Number(detail['level'] ?? 0) } as never) : undefined)
+                    const pin = minePoint && extractedUrl ? { x: minePoint.x, y: minePoint.y, url: extractedUrl } : undefined
                     const oreCount = Number(detail['ore'] ?? 0)
                     const sale = Number(detail['sale'] ?? 0)
                     const bonus = cash.filter((other) => other.source === 'agreement' && other.action === event?.action).reduce((sum, other) => sum + other.amount, 0)
@@ -391,6 +397,7 @@
                             text: `extracted ${detail['ore'] ?? ''} ${ore} from ${mine}${city ? `, sold to ${city}` : ''}${companyId ? ` via ${CompanyNames[companyId]}` : ''}${event ? `: ${money(event.amount)}` : ''}`.replace('  ', ' '),
                             logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
                             lines,
+                            pin,
                             zoom: around(route)
                         },
                         ...drew
@@ -686,6 +693,10 @@
                     {#if entry.zoom}
                         <svg viewBox="{entry.zoom.x} {entry.zoom.y} {entry.zoom.width} {entry.zoom.height}" class="block aspect-[4/3] {newest ? 'w-full' : 'w-2/3'} mx-auto rounded-lg border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
                             <use href="#rv-board-svg" />
+                            {#if entry.pin}
+                                <circle cx={entry.pin.x} cy={entry.pin.y} r="27" fill="#1b140c" />
+                                <image href={entry.pin.url} x={entry.pin.x - 25} y={entry.pin.y - 25} width="50" height="50" />
+                            {/if}
                             {#if entry.track}
                                 <!-- Each piece laid this turn, ringed so it stands out in the snippet -->
                                 {#each entry.track.points as point, pointIndex (pointIndex)}
