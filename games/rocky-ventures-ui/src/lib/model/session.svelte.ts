@@ -1,3 +1,4 @@
+import { GameEngine } from '@tabletop/common'
 import { GameSession, TitlePreferences } from '@tabletop/frontend-components'
 import {
     ActionType,
@@ -51,6 +52,7 @@ import {
     type CompanyId,
     type RegionId,
     RockyVenturesPreferenceDefinition,
+    Definition,
     type RockyVenturesPreferences,
     type RockyVenturesGameState,
     type HydratedRockyVenturesGameState
@@ -77,6 +79,10 @@ export type LiveSelection = {
     step?: string
     huntSelected: number[]
     huntHitTargets: string[]
+    huntHitTargetMap?: Record<number, string>
+    huntFocusHit?: number
+    acquireMode?: boolean
+    lookingAtCardId?: string
     trackCompanyId?: string
     extractNodeId?: string
     extractCityId?: string
@@ -274,7 +280,7 @@ export class RockyVenturesGameSession extends GameSession<
         const playerId = this.gameState.activePlayerIds[0]
         if (
             playerId === undefined ||
-            !this.isMyTurn ||
+            !this.seesActiveView ||
             this.gameState.machineState !== MachineState.TakeActions ||
             this.extractActive ||
             this.trackActive ||
@@ -309,7 +315,7 @@ export class RockyVenturesGameSession extends GameSession<
 
     get acquirePlans() {
         const playerId = this.gameState.activePlayerIds[0]
-        if (!this.acquireActive || playerId === undefined || !this.isMyTurn) {
+        if (!this.acquireActive || playerId === undefined || !this.seesActiveView) {
             return []
         }
         const player = this.gameState.getPlayerState(playerId)
@@ -580,7 +586,7 @@ export class RockyVenturesGameSession extends GameSession<
     // What the player is offered now. In games played top to bottom that's only the next action on
     // the card; Pass moves on to the one below it.
     get offeredActionTypes(): string[] {
-        const valid = this.validActionTypes
+        const valid = this.mirroring ? this.mirrorValidActionTypes : this.validActionTypes
         const state = this.gameState
         const playerId = state.activePlayerIds[0]
         const cardId = playerId === undefined ? undefined : state.actionCardId(playerId)
@@ -598,6 +604,50 @@ export class RockyVenturesGameSession extends GameSession<
             .map((kind) => ActionTypeByCardAction[kind])
             .find((type) => valid.includes(type) && !this.passedActionTypes.includes(type))
         return valid.filter((type) => !cardTypes.includes(type) || type === next)
+    }
+
+    // Live play: while someone else plays, show their panel and selections as if it were ours,
+    // read-only (the panel is inert and nothing can be submitted for them).
+    get mirroring(): boolean {
+        return this.livePlay && !this.isMyTurn && !this.isViewingHistory && this.watchedSelection !== undefined
+    }
+
+    get seesActiveView(): boolean {
+        return this.isMyTurn || this.mirroring
+    }
+
+    private mirrorEngine = new GameEngine(Definition.runtime)
+
+    // Worked out once per change of game state, since the panel asks for it many times a render.
+    private mirrorValidActionTypes: string[] = $derived.by(() => {
+        const activeId = this.gameState.activePlayerIds[0]
+        if (!this.livePlay || this.isMyTurn || !activeId) return []
+        try {
+            return this.mirrorEngine.getValidActionTypesForPlayer(this.primaryGame, this.gameState.dehydrate() as never, activeId)
+        } catch {
+            return []
+        }
+    })
+
+    // Copies the watched player's selection into this screen's own selection state.
+    applyMirror() {
+        const selection = this.watchedSelection
+        if (!this.mirroring || !selection) return
+        this.moveTargetIndex = selection.moveTargetIndex
+        this.moveDiscardIndexes = [...selection.moveDiscardIndexes]
+        this.movePaidIndexes = [...selection.movePaidIndexes]
+        this.investPickerOpen = selection.step === 'Invest'
+        this.trackMode = selection.step === 'Lay Track'
+        this.extractMode = selection.step === 'Extract & Sell'
+        this.huntMode = selection.step === 'Hunt'
+        this.acquireMode = selection.acquireMode ?? selection.step === 'Acquire'
+        this.huntSelected = [...selection.huntSelected]
+        this.huntHitTargets = { ...(selection.huntHitTargetMap ?? {}) }
+        this.huntFocusHit = selection.huntFocusHit
+        this.trackCompanyId = selection.trackCompanyId as CompanyId | undefined
+        this.extractNodeId = selection.extractNodeId
+        this.extractCityId = selection.extractCityId as DeliveryCityId | undefined
+        this.extractCreditCompanyId = selection.extractCreditCompanyId as CompanyId | undefined
     }
 
     get livePlay(): boolean {
@@ -629,6 +679,10 @@ export class RockyVenturesGameSession extends GameSession<
                         : this.gemMode,
             huntSelected: [...this.huntSelected],
             huntHitTargets: Object.values(this.huntHitTargets),
+            huntHitTargetMap: { ...this.huntHitTargets },
+            huntFocusHit: this.huntFocusHit,
+            acquireMode: this.acquireMode,
+            lookingAtCardId: this.zoomedImage?.alt ?? this.hoveredCard?.alt,
             trackCompanyId: this.trackCompanyId,
             extractNodeId: this.extractNodeId,
             extractCityId: this.extractCityId,
@@ -669,7 +723,7 @@ export class RockyVenturesGameSession extends GameSession<
 
     get autoActionKind(): ActionType | undefined {
         if (
-            !this.isMyTurn ||
+            !this.seesActiveView ||
             this.gameState.machineState !== MachineState.TakeActions ||
             this.investPickerOpen
         ) {
@@ -701,7 +755,7 @@ export class RockyVenturesGameSession extends GameSession<
 
     get extractableNodeIds(): string[] {
         const playerId = this.gameState.activePlayerIds[0]
-        if (!this.extractActive || playerId === undefined || !this.isMyTurn) {
+        if (!this.extractActive || playerId === undefined || !this.seesActiveView) {
             return []
         }
         return extractableMineIds(this.gameState, playerId)
@@ -725,7 +779,7 @@ export class RockyVenturesGameSession extends GameSession<
     get extractRoutePreviews(): { cityId: DeliveryCityId; routeNodeIds: string[]; net: number }[] {
         const playerId = this.gameState.activePlayerIds[0]
         const nodeId = this.extractHoverNodeId ?? this.extractNodeId
-        if (!this.extractActive || playerId === undefined || nodeId === undefined || !this.isMyTurn) {
+        if (!this.extractActive || playerId === undefined || nodeId === undefined || !this.seesActiveView) {
             return []
         }
         if (this.gameState.board.mines[nodeId]?.token?.ore !== 'gold') {
@@ -927,7 +981,7 @@ export class RockyVenturesGameSession extends GameSession<
         const playerId = this.gameState.activePlayerIds[0]
         const freeTrack = this.gameState.freeTrack
         if (this.gameState.machineState === MachineState.FreeTrack) {
-            return freeTrack && this.isMyTurn && freeTrack.remaining > 0
+            return freeTrack && this.seesActiveView && freeTrack.remaining > 0
                 ? buildableBoxes(this.gameState, freeTrack.companyId, true)
                 : []
         }
@@ -935,7 +989,7 @@ export class RockyVenturesGameSession extends GameSession<
             !this.trackActive ||
             this.trackCompanyId === undefined ||
             playerId === undefined ||
-            !this.isMyTurn ||
+            !this.seesActiveView ||
             this.gameState.machineState !== MachineState.TakeActions
         ) {
             return []

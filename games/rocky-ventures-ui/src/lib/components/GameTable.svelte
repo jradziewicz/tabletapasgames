@@ -22,6 +22,7 @@
     import DragonPanel from '$lib/components/DragonPanel.svelte'
     import CardZoom from '$lib/components/CardZoom.svelte'
     import CardSpotlight from '$lib/components/CardSpotlight.svelte'
+    import LookingAtCard from '$lib/components/LookingAtCard.svelte'
     import GridZoom from '$lib/components/GridZoom.svelte'
     import AgreementChoice from '$lib/components/AgreementChoice.svelte'
     import StackChoice from '$lib/components/StackChoice.svelte'
@@ -52,6 +53,19 @@
     setFeastBonusArt(session.gameState.feastBuyerBonus === true)
     setAgreementDeliveryScoring(session.gameState.agreementsScoreOnDelivery === true)
     setAgreementDiscardAllowed(session.gameState.noAgreementDiscard !== true)
+
+    // Live play: mirror the watched player's selection here; clear it once the mirror ends.
+    let wasMirroring = false
+    $effect(() => {
+        JSON.stringify(session.watchedSelection)
+        const mirroring = session.mirroring
+        if (mirroring) {
+            session.applyMirror()
+        } else if (wasMirroring) {
+            session.clearLocalSelection()
+        }
+        wasMirroring = mirroring
+    })
 
     // Live play: pass each change of selection on, gathering quick clicks into one message.
     let liveSelectionTimer: ReturnType<typeof setTimeout> | undefined
@@ -175,7 +189,7 @@
     let workspaceTab: string | undefined = $state()
 
     $effect(() => {
-        if (session.huntActive && session.isMyTurn && !session.isViewingHistory) {
+        if (session.huntActive && session.seesActiveView && !session.isViewingHistory) {
             workspaceTab = 'board'
         }
     })
@@ -466,6 +480,7 @@
         <GridZoom onclose={() => (session.gridZoomOpen = false)} />
     {/if}
     <CardSpotlight />
+    <LookingAtCard />
     {#if session.zoomedImage}
         <CardZoom imageUrl={session.zoomedImage.url} alt={session.zoomedImage.alt} onclose={() => (session.zoomedImage = undefined)} />
     {/if}

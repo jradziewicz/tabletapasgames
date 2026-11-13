@@ -67,7 +67,7 @@
     const gameState = $derived(gameSession.gameState)
     const activeId = $derived(gameState.activePlayerIds[0])
     const player = $derived(activeId ? gameState.getPlayerState(activeId) : undefined)
-    const canAct = $derived(gameSession.isMyTurn && !gameSession.isViewingHistory)
+    const canAct = $derived(gameSession.seesActiveView && !gameSession.isViewingHistory)
     const validTypes = $derived(gameSession.offeredActionTypes)
     const playerColor = $derived(activeId ? gameSession.colors.getPlayerBgColorValue(activeId) : '#888888')
 
@@ -115,6 +115,10 @@
     function stackedUnderUrl(cardId: string): string | undefined {
         const underId = player?.stackedCards?.[cardId]
         return underId === undefined ? undefined : thumbUrl(underId)
+    }
+
+    function mirrorPulse(cardId: string): string {
+        return gameSession.mirroring && gameSession.watchedSelection?.lookingAtCardId === cardId ? 'mirror-pulse' : ''
     }
 
     function thumbUrl(cardId: string): string | undefined {
@@ -176,7 +180,12 @@
     const bundles = $derived(Math.min(gameSession.pointBuyBundles, maxBundles))
 </script>
 
-<div class="px-4 py-2 text-[#f1e6cf] text-sm">
+{#if gameSession.mirroring && activeId}
+    <div class="mx-4 mt-2 rounded border-2 border-[#ffd166] bg-[#ffd166]/15 px-3 py-1.5 text-sm font-semibold text-[#ffd166]">
+        👁 Live: you're seeing <span class="capitalize">{gameSession.getPlayerName(activeId)}</span>'s screen as they play
+    </div>
+{/if}
+<div class="px-4 py-2 text-[#f1e6cf] text-sm" inert={gameSession.mirroring}>
     {#if gameSession.lastActionError}
         <div class="mb-2 rounded border border-red-500 bg-red-900/40 px-2 py-1 text-red-100">
             {gameSession.lastActionError}
@@ -264,7 +273,7 @@
                         {/if}
                         <button
                             type="button"
-                            class="relative block overflow-hidden rounded border-2 {player.pawnIndex === index ? 'border-[#ffd166]' : 'border-[#4a3620]'}"
+                            class="tableau-card relative block overflow-hidden rounded border-2 {player.pawnIndex === index ? 'border-[#ffd166]' : 'border-[#4a3620]'}"
                             onclick={() => gameSession.zoomCard(cardId, thumbUrl(cardId))}
                         >
                             <StackedUnder underUrl={stackedUnderUrl(cardId)} class="h-[53px]" imageClass="h-[112px] w-auto" />
@@ -358,7 +367,9 @@
                         type="button"
                         disabled={!legal}
                         onclick={() => gameSession.selectMoveTarget(index)}
-                        class="relative z-10 block overflow-hidden rounded border-2 transition {cardId === StartingPlayerCardId ? '' : 'bg-white'}"
+                        onpointerenter={(event) => gameSession.previewCard(event, cardId, thumbUrl(cardId))}
+                        onpointerleave={() => gameSession.clearCardPreview()}
+                        class="tableau-card relative z-10 block overflow-hidden rounded border-2 transition {cardId === StartingPlayerCardId ? '' : 'bg-white'} {mirrorPulse(cardId)}"
                         style="border-color: {isTarget ? '#ffd166' : isSkipped ? (discarded ? '#c9302c' : '#b8700a') : '#4a3620'}; filter: {legal ? 'none' : 'brightness(0.55)'};"
                         title={legal ? `Move to ${cardLabel(cardId)}` : 'Not a legal move'}
                     >
@@ -779,8 +790,10 @@
                         {/if}
                             <button
                                 type="button"
-                                class="relative z-10 block overflow-hidden rounded border-2 border-[#4a3620]"
+                                class="tableau-card relative z-10 block overflow-hidden rounded border-2 border-[#4a3620] {mirrorPulse(cardId)}"
                                 onclick={() => gameSession.zoomCard(cardId, thumbUrl(cardId))}
+                                onpointerenter={(event) => gameSession.previewCard(event, cardId, thumbUrl(cardId))}
+                                onpointerleave={() => gameSession.clearCardPreview()}
                             >
                                 <StackedUnder underUrl={stackedUnderUrl(cardId)} class="h-[76px] max-sm:h-[53px]" imageClass="h-[160px] w-auto max-sm:h-[112px]" />
                                 <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[160px] w-auto max-sm:h-[112px]" draggable="false" />
@@ -1114,6 +1127,23 @@
 </div>
 
 <style>
+    /* Tableau cards pulse on hover like market cards; in Live play, watchers see the card the player points at pulse. */
+    .tableau-card:hover,
+    .mirror-pulse {
+        animation: tableau-card-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes tableau-card-pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(255, 214, 110, 0.9);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(255, 214, 110, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(255, 214, 110, 0);
+        }
+    }
+
     .acquire-tile:hover {
         transform: translateY(-2px);
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);

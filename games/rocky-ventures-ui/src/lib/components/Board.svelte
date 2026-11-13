@@ -65,7 +65,7 @@
     let boardSvg: SVGSVGElement | undefined = $state()
     let huntHoverRegion: RegionId | undefined = $state()
     const huntPickRegions: RegionId[] = $derived(
-        gameSession.huntActive && gameSession.isMyTurn && !gameSession.isViewingHistory
+        gameSession.huntActive && gameSession.seesActiveView && !gameSession.isViewingHistory
             ? RegionIds.filter((region) => huntableRegions(gameSession.gameState).includes(region))
             : []
     )

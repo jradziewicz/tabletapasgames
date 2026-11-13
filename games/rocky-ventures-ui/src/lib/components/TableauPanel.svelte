@@ -113,8 +113,10 @@
                 {#if imageUrl}
                     <button
                         type="button"
-                        class="relative z-10 block w-full overflow-hidden rounded-md border border-[#8a6d3b] shadow-md"
+                        class="tableau-card relative z-10 block w-full overflow-hidden rounded-md border border-[#8a6d3b] shadow-md {gameSession.mirroring && gameSession.watchedSelection?.lookingAtCardId === cardId && selectedPlayer.playerId === gameSession.gameState.activePlayerIds[0] ? 'mirror-pulse' : ''}"
                         onclick={() => gameSession.zoomCard(cardId, imageUrl)}
+                        onpointerenter={(event) => gameSession.previewCard(event, cardId, imageUrl)}
+                        onpointerleave={() => gameSession.clearCardPreview()}
                     >
                         <StackedUnder
                             underUrl={selectedPlayer.stackedCards?.[cardId] ? imageFor(selectedPlayer.stackedCards[cardId]!) : undefined}
@@ -156,3 +158,21 @@
         </div>
     {/if}
 </div>
+
+<style>
+    .tableau-card:hover,
+    .mirror-pulse {
+        animation: tableau-card-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes tableau-card-pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(255, 214, 110, 0.9);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(255, 214, 110, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(255, 214, 110, 0);
+        }
+    }
+</style>

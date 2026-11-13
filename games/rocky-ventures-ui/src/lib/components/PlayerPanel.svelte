@@ -151,7 +151,7 @@
             {@const imageUrl = tableauImageUrl(cardId)}
             <button
                 type="button"
-                class="relative flex h-7 w-6 items-center justify-center rounded border text-[11px] font-bold {spotlit(cardId) ? 'spotlit' : ''}"
+                class="tableau-card relative flex h-7 w-6 items-center justify-center rounded border text-[11px] font-bold {spotlit(cardId) ? 'spotlit' : ''} {gameSession.mirroring && gameSession.watchedSelection?.lookingAtCardId === cardId && player.id === gameSession.gameState.activePlayerIds[0] ? 'mirror-pulse' : ''}"
                 style="background: {cardChipBackground(cardId, playerState.stackedCards?.[cardId], gameSession.gameState.revisedCards)}; color: #111; border-color: #8a6d3b;"
                 title={cardActionsTooltip(cardId, gameSession.gameState.revisedCards)}
                 onclick={() => gameSession.zoomCard(cardId, imageUrl)}
@@ -204,6 +204,23 @@
 </div>
 
 <style>
+    /* Tableau cards pulse on hover like market cards; in Live play, watchers see the card the player points at pulse. */
+    .tableau-card:hover,
+    .mirror-pulse {
+        animation: tableau-card-pulse 1.2s ease-in-out infinite;
+    }
+    @keyframes tableau-card-pulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(255, 214, 110, 0.9);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(255, 214, 110, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(255, 214, 110, 0);
+        }
+    }
+
     .spotlit {
         box-shadow: 0 0 0 3px #ffd166, 0 0 12px 4px rgba(255, 209, 102, 0.8);
     }
