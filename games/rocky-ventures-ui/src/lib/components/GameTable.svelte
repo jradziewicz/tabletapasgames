@@ -173,6 +173,7 @@
     })
     let previousScourgeIds: Set<string> | undefined
     let pendingScourge: { region: (typeof RegionIds)[number]; scourgeId: string } | undefined = $state()
+    let scourgeWaitedFor: string | undefined = $state()
     let scourgeOverlayTimer: ReturnType<typeof setTimeout> | undefined
     let previousDragonSummoned: boolean | undefined
     let dragonOverlayOpen = $state(false)
@@ -250,7 +251,14 @@
     })
 
     $effect(() => {
-        if (session.holdScourgeOverlay || !pendingScourge) {
+        // Live play: wait for a card pop-up to clear so each reveal gets its own moment. The pop-up starts
+        // a moment after the state changes, so give it time to appear before deciding.
+        if (session.holdScourgeOverlay || !pendingScourge || session.spotlight?.phase === 'up') {
+            return
+        }
+        if (session.livePlay && scourgeWaitedFor !== pendingScourge.scourgeId) {
+            const waiting = pendingScourge.scourgeId
+            setTimeout(() => (scourgeWaitedFor = waiting), 150)
             return
         }
         const { region, scourgeId } = pendingScourge
@@ -448,7 +456,7 @@
     {/if}
     {#if session.revealScourgeId}
         {#key session.revealScourgeId}
-            <ScourgeRevealOverlay scourgeId={session.revealScourgeId} onclose={finishScourgeReveal} />
+            <ScourgeRevealOverlay scourgeId={session.revealScourgeId} slow={session.livePlay} onclose={finishScourgeReveal} />
         {/key}
     {/if}
     {#if gameOverOpen}

@@ -3,11 +3,12 @@
     import { ScourgeDefinitionsById } from '@tabletop/rocky-ventures'
     import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
 
-    let { scourgeId, onclose }: { scourgeId: string; onclose: () => void } = $props()
+    let { scourgeId, slow = false, onclose }: { scourgeId: string; slow?: boolean; onclose: () => void } = $props()
 
-    const RiseMs = 320
-    const HoldMs = 650
-    const DropMs = 560
+    // Live play holds the new scourge up long enough for everyone at the table to read it.
+    const RiseMs = $derived(slow ? 500 : 320)
+    const HoldMs = $derived(slow ? 2200 : 650)
+    const DropMs = $derived(slow ? 900 : 560)
 
     const url = $derived(scourgeImageUrl(scourgeId))
     const definition = $derived(ScourgeDefinitionsById[scourgeId])
