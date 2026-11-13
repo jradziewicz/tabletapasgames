@@ -210,12 +210,31 @@
             tokens.length < BonusTokensToSummonDragon &&
             !session.isViewingHistory
         ) {
-            bonusOverlayTokens = [...tokens]
+            pendingBonus = { tokens: [...tokens], playerId: session.actions.at(-1)?.playerId }
+        }
+    })
+
+    // Live play: the dragon bonus waits until the hunt's pop-up has cleared and the turn is fully
+    // done, so it comes after everything else that player did rather than on top of it.
+    let pendingBonus: { tokens: WeaponTokenKind[]; playerId: string | undefined } | undefined = $state()
+    $effect(() => {
+        const bonus = pendingBonus
+        if (!bonus) return
+        if (session.livePlay) {
+            if (session.spotlight?.phase === 'up') return
+            if (bonus.playerId && session.gameState.activePlayerIds[0] === bonus.playerId && !session.gameState.result) return
+        }
+        pendingBonus = undefined
+        const tokens = bonus.tokens
+        const show = () => {
+            bonusOverlayTokens = tokens
             clearTimeout(bonusOverlayTimer)
             bonusOverlayTimer = setTimeout(() => {
                 bonusOverlayTokens = undefined
             }, 2600 + tokens.length * 350)
         }
+        if (session.livePlay) setTimeout(show, 800)
+        else show()
     })
 
     $effect(() => {
