@@ -38,6 +38,7 @@
 
     import type { RockyVenturesGameSession } from '$lib/model/session.svelte'
     import { BonusTokensToSummonDragon, RegionIds, type WeaponTokenKind } from '@tabletop/rocky-ventures'
+    import { DragonTileImageUrl } from '$lib/utils/dragonImages.js'
     import type { HydratedRockyVenturesGameState, RockyVenturesGameState } from '@tabletop/rocky-ventures'
     import { setGameSession } from '$lib/model/sessionContext.svelte'
     import { chooseBotMoves } from '$lib/bots/rockyBots.js'
@@ -234,6 +235,13 @@
             !session.isViewingHistory
         ) {
             // Live play has no full-screen overlays; the watcher box carries the turn.
+            if (session.livePlay) {
+                const kind = tokens.at(-1)
+                session.viewerEvents = [
+                    ...session.viewerEvents,
+                    { actionCount: session.gameState.actionCount, text: `added a bonus to the dragon tracker (${tokens.length} of ${BonusTokensToSummonDragon})`, tokenKind: kind }
+                ]
+            }
             if (!session.livePlay) pendingBonus = { tokens: [...tokens], playerId: session.actions.at(-1)?.playerId }
         }
     })
@@ -266,8 +274,12 @@
         const previous = previousDragonSummoned
         previousDragonSummoned = summoned
         if (previous === false && summoned && !session.isViewingHistory) {
-            // Live play has no full-screen overlays.
-            if (!session.livePlay) openDragonOverlay()
+            // Live play has no full-screen overlays; the watcher box notes the arrival instead.
+            if (session.livePlay) {
+                session.viewerEvents = [...session.viewerEvents, { actionCount: session.gameState.actionCount, text: 'summoned the Dragon', imageUrl: DragonTileImageUrl }]
+            } else {
+                openDragonOverlay()
+            }
         }
     })
 

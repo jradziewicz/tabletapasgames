@@ -482,7 +482,18 @@
                     imageUrl: scourgeImageUrl(entered.scourgeId)
                 }))
         }
-        return turn.flatMap((action) => [...stepsOf(action), ...enteredAfter(action)])
+        // Things the game did on its own because of a move (the dragon tracker, the dragon arriving).
+        const eventsAfter = (action: GameAction): Step[] => {
+            const count = gameSession.actions.indexOf(action) + 1
+            return gameSession.viewerEvents
+                .filter((event) => event.actionCount === count)
+                .map((event) => ({
+                    text: event.text,
+                    imageUrl: event.imageUrl,
+                    iconUrl: event.tokenKind ? weaponTokenImageUrl(event.tokenKind as WeaponTokenKind) : undefined
+                }))
+        }
+        return turn.flatMap((action) => [...stepsOf(action), ...enteredAfter(action), ...eventsAfter(action)])
     })
 
     const steps = $derived(mergeTrack(rawSteps))

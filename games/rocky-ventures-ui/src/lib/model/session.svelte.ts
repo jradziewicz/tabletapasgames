@@ -136,6 +136,8 @@ export class RockyVenturesGameSession extends GameSession<
     enteredScourges: { scourgeId: string; region: string; actionCount: number }[] = $state([])
     // Live play: true while the watcher box is still playing a turn through; big overlays wait for it.
     viewerHold = $state(false)
+    // Live play: things the game did on its own (dragon tracker, dragon arrival), keyed to the move behind them.
+    viewerEvents: { actionCount: number; text: string; imageUrl?: string; tokenKind?: string }[] = $state([])
     private lastMovePick: { playerId: string; cardId: string } | undefined
     private heldMoveTimer: ReturnType<typeof setTimeout> | undefined
 
