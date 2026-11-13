@@ -367,8 +367,8 @@
                         type="button"
                         disabled={!legal}
                         onclick={() => gameSession.selectMoveTarget(index)}
-                        onpointerenter={(event) => gameSession.previewCard(event, cardId, thumbUrl(cardId))}
-                        onpointerleave={() => gameSession.clearCardPreview()}
+                        onpointerenter={(event) => gameSession.pointAtCard(event, cardId)}
+                        onpointerleave={(event) => gameSession.pointAtCard(event, undefined)}
                         class="tableau-card relative z-10 block overflow-hidden rounded border-2 transition {cardId === StartingPlayerCardId ? '' : 'bg-white'} {mirrorPulse(cardId)}"
                         style="border-color: {isTarget ? '#ffd166' : isSkipped ? (discarded ? '#c9302c' : '#b8700a') : '#4a3620'}; filter: {legal ? 'none' : 'brightness(0.55)'};"
                         title={legal ? `Move to ${cardLabel(cardId)}` : 'Not a legal move'}
@@ -792,8 +792,8 @@
                                 type="button"
                                 class="tableau-card relative z-10 block overflow-hidden rounded border-2 border-[#4a3620] {mirrorPulse(cardId)}"
                                 onclick={() => gameSession.zoomCard(cardId, thumbUrl(cardId))}
-                                onpointerenter={(event) => gameSession.previewCard(event, cardId, thumbUrl(cardId))}
-                                onpointerleave={() => gameSession.clearCardPreview()}
+                                onpointerenter={(event) => gameSession.pointAtCard(event, cardId)}
+                                onpointerleave={(event) => gameSession.pointAtCard(event, undefined)}
                             >
                                 <StackedUnder underUrl={stackedUnderUrl(cardId)} class="h-[76px] max-sm:h-[53px]" imageClass="h-[160px] w-auto max-sm:h-[112px]" />
                                 <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[160px] w-auto max-sm:h-[112px]" draggable="false" />

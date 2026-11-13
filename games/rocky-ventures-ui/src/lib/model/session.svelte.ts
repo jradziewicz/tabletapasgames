@@ -682,7 +682,7 @@ export class RockyVenturesGameSession extends GameSession<
             huntHitTargetMap: { ...this.huntHitTargets },
             huntFocusHit: this.huntFocusHit,
             acquireMode: this.acquireMode,
-            lookingAtCardId: this.zoomedImage?.alt ?? this.hoveredCard?.alt,
+            lookingAtCardId: this.zoomedImage?.alt ?? this.hoveredCard?.alt ?? this.pointedCardId,
             trackCompanyId: this.trackCompanyId,
             extractNodeId: this.extractNodeId,
             extractCityId: this.extractCityId,
@@ -1195,6 +1195,13 @@ export class RockyVenturesGameSession extends GameSession<
 
     clearCardPreview() {
         this.hoveredCard = undefined
+    }
+
+    // A tableau card under the mouse: no big preview, but Live play watchers see it pulse.
+    pointedCardId: string | undefined = $state()
+
+    pointAtCard(event: PointerEvent, cardId: string | undefined) {
+        if (event.pointerType === 'mouse') this.pointedCardId = cardId
     }
 
     async invest(slotIndex: number) {

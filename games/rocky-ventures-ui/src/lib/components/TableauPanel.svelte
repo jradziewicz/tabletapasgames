@@ -115,8 +115,8 @@
                         type="button"
                         class="tableau-card relative z-10 block w-full overflow-hidden rounded-md border border-[#8a6d3b] shadow-md {gameSession.mirroring && gameSession.watchedSelection?.lookingAtCardId === cardId && selectedPlayer.playerId === gameSession.gameState.activePlayerIds[0] ? 'mirror-pulse' : ''}"
                         onclick={() => gameSession.zoomCard(cardId, imageUrl)}
-                        onpointerenter={(event) => gameSession.previewCard(event, cardId, imageUrl)}
-                        onpointerleave={() => gameSession.clearCardPreview()}
+                        onpointerenter={(event) => gameSession.pointAtCard(event, cardId)}
+                        onpointerleave={(event) => gameSession.pointAtCard(event, undefined)}
                     >
                         <StackedUnder
                             underUrl={selectedPlayer.stackedCards?.[cardId] ? imageFor(selectedPlayer.stackedCards[cardId]!) : undefined}
