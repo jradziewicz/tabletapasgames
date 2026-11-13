@@ -366,7 +366,7 @@
             const token = state.board.mines[nodeId]?.token
             // A face-down mine turning up (a mine re-drawn after extracting already had a token, so it isn't new).
             if (token) {
-                events.push({ actionCount, text: `mine revealed at ${BoardNodesById[nodeId]?.name ?? nodeId}`, iconUrl: mineTokenImageUrl(token) })
+                events.push({ actionCount, text: `mine revealed at ${BoardNodesById[nodeId]?.name ?? nodeId}`, iconUrl: mineTokenImageUrl(token), nodeId })
             }
         }
         if (events.length) session.viewerEvents = [...session.viewerEvents, ...events]

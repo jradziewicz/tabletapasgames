@@ -42,7 +42,7 @@
     const gameSession = getGameSession()
 
     type Zoom = { x: number; y: number; width: number; height: number }
-    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string }; track?: { companyId: string; points: { x: number; y: number }[]; cost: number; count: number; free: boolean }; kind?: string; iconUrl?: string; pin?: { x: number; y: number; url: string }; footer?: { text: string; logoUrl?: string } }
+    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string }; track?: { companyId: string; points: { x: number; y: number }[]; cost: number; count: number; free: boolean }; kind?: string; iconUrl?: string; pin?: { x: number; y: number; url: string }; footer?: { text: string; logoUrl?: string }; rings?: { x: number; y: number }[] }
 
     const ZoomAspect = 4 / 3
 
@@ -511,7 +511,10 @@
                 .map((event) => ({
                     text: event.text,
                     imageUrl: event.imageUrl,
-                    iconUrl: event.iconUrl ?? (event.tokenKind ? weaponTokenImageUrl(event.tokenKind as WeaponTokenKind) : undefined)
+                    iconUrl: event.iconUrl ?? (event.tokenKind ? weaponTokenImageUrl(event.tokenKind as WeaponTokenKind) : undefined),
+                    // A newly revealed mine: show where on the map, ringed.
+                    zoom: event.nodeId ? around(nodePoint(event.nodeId)) : undefined,
+                    rings: event.nodeId ? nodePoint(event.nodeId) : undefined
                 }))
         }
         return turn.flatMap((action) => [...stepsOf(action), ...eventsAfter(action), ...enteredAfter(action)])
@@ -724,6 +727,14 @@
                     {#if entry.zoom}
                         <svg viewBox="{entry.zoom.x} {entry.zoom.y} {entry.zoom.width} {entry.zoom.height}" class="block aspect-[4/3] w-full mx-auto rounded-lg border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
                             <use href="#rv-board-svg" />
+                            {#if entry.rings}
+                                {#each entry.rings as point, ringIndex (ringIndex)}
+                                    <g class="track-pulse">
+                                        <circle cx={point.x} cy={point.y} r="34" fill="none" stroke="#111" stroke-width="12" opacity="0.85" />
+                                        <circle cx={point.x} cy={point.y} r="34" fill="none" stroke="#ffd166" stroke-width="6" />
+                                    </g>
+                                {/each}
+                            {/if}
                             {#if entry.pin}
                                 <circle cx={entry.pin.x} cy={entry.pin.y} r="27" fill="#1b140c" />
                                 <image href={entry.pin.url} x={entry.pin.x - 25} y={entry.pin.y - 25} width="50" height="50" />
