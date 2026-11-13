@@ -441,7 +441,29 @@
 
     // Once the turn has passed, the history closes with a final line until the next player starts.
     const finished = $derived(watching && actorId !== activeId && steps.length > 0)
-    const entries = $derived(live ? [...steps, live] : finished ? [...steps, { text: 'finished their turn', live: true }] : steps)
+    // Steps come in one a second, so a quick chain (a claim and its hunt) plays out instead of landing at once.
+    const StepMs = 1000
+    let shown = $state(0)
+    let shownFor: string | undefined
+    let paceTimer: ReturnType<typeof setTimeout> | undefined
+    $effect(() => {
+        const total = steps.length
+        if (shownFor !== actorId) {
+            // A new player's history starts from its first step.
+            shownFor = actorId
+            shown = Math.min(total, 1)
+        }
+        if (shown > total) shown = total
+        clearTimeout(paceTimer)
+        if (shown < total) paceTimer = setTimeout(() => (shown += 1), StepMs)
+    })
+    $effect(() => () => clearTimeout(paceTimer))
+
+    const paced = $derived(steps.slice(0, shown))
+    const caughtUp = $derived(shown >= steps.length)
+    const entries = $derived(
+        !caughtUp ? paced : live ? [...paced, live] : finished ? [...paced, { text: 'finished their turn', live: true }] : paced
+    )
 
     // Keep the newest entry in view as the history grows.
     let feedEl: HTMLDivElement | undefined = $state()
