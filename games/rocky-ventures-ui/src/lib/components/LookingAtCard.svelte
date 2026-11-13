@@ -130,7 +130,9 @@
         const turnStart = state.actionCount - turn.length
         const extracts = state.statEvents.filter((event) => event.kind === StatKind.MineExtract && event.playerId === activeId && event.action >= turnStart)
         const player = activeId ? state.findPlayerState(activeId) : undefined
+        const claims = state.statEvents.filter((event) => event.kind === StatKind.MineClaim && event.playerId === activeId && event.action >= turnStart)
         let extractIndex = 0
+        let claimIndex = 0
         let huntRegion = ''
         return turn.flatMap((action): Step[] => {
             const data = action as GameAction & Record<string, unknown>
@@ -142,7 +144,10 @@
                 case ActionType.Tax:
                     return [{ text: 'taxed' }]
                 case ActionType.ClaimMine:
-                    return [{ text: `claimed ${BoardNodesById[data.nodeId as string]?.name ?? 'a mine'}`, zoom: around(nodePoint(data.nodeId as string)) }]
+                {
+                    const cost = claims[claimIndex++]?.amount
+                    return [{ text: `claimed ${BoardNodesById[data.nodeId as string]?.name ?? 'a mine'}${cost === undefined ? '' : ` for $${cost}`}`, zoom: around(nodePoint(data.nodeId as string)) }]
+                }
                 case ActionType.LayTrack:
                 case ActionType.LayFreeTrack: {
                     const location = BoardBoxLocations.find((candidate) => candidate.box.id === data.boxId)
@@ -227,7 +232,7 @@
         {#if steps.length}
             <ol class="flex flex-col gap-0.5 border-t border-[#8a6d3b] pt-1">
                 {#each steps as step, index (index)}
-                    <li class={index === steps.length - 1 ? 'font-semibold text-[#ffd166]' : 'text-[#c9a961]'}>{index + 1}. {step.text}</li>
+                    <li class={index === steps.length - 1 ? 'font-semibold text-[#ffd166]' : 'text-[#c9a961]'}>{index + 1}. {step.text.charAt(0).toUpperCase()}{step.text.slice(1)}</li>
                 {/each}
             </ol>
         {/if}
