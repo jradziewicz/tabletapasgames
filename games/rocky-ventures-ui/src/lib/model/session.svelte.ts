@@ -89,6 +89,9 @@ export type LiveSelection = {
     extractNodeId?: string
     extractCityId?: string
     extractCreditCompanyId?: string
+    extractHoverNodeId?: string
+    extractHoverCityId?: string
+    extractCustomRoute?: string[]
 }
 
 const ActionTypeByCardAction: Record<CardActionKind, ActionType> = {
@@ -679,6 +682,9 @@ export class RockyVenturesGameSession extends GameSession<
         this.extractNodeId = selection.extractNodeId
         this.extractCityId = selection.extractCityId as DeliveryCityId | undefined
         this.extractCreditCompanyId = selection.extractCreditCompanyId as CompanyId | undefined
+        this.extractHoverNodeId = selection.extractHoverNodeId
+        this.extractHoverCityId = selection.extractHoverCityId as DeliveryCityId | undefined
+        this.extractCustomRoute = selection.extractCustomRoute ? [...selection.extractCustomRoute] : undefined
     }
 
     // Live play: everything the current player has done this turn stays marked until the next turn:
@@ -758,7 +764,10 @@ export class RockyVenturesGameSession extends GameSession<
             trackCompanyId: this.trackCompanyId,
             extractNodeId: this.extractNodeId,
             extractCityId: this.extractCityId,
-            extractCreditCompanyId: this.extractCreditCompanyId
+            extractCreditCompanyId: this.extractCreditCompanyId,
+            extractHoverNodeId: this.extractHoverNodeId,
+            extractHoverCityId: this.extractHoverCityId,
+            extractCustomRoute: this.extractCustomRoute ? [...this.extractCustomRoute] : undefined
         }
     }
 
@@ -835,6 +844,8 @@ export class RockyVenturesGameSession extends GameSession<
 
     // Live play: the routes the current player is looking at, for everyone watching.
     get watchedRoutePreviews(): { cityId: DeliveryCityId; routeNodeIds: string[]; net: number }[] {
+        // While mirroring, the mirrored previews are exactly what the player sees (hovered mine, chosen city).
+        if (this.mirroring) return this.extractRoutePreviews
         const selection = this.livePlay && !this.isMyTurn ? this.watchedSelection : undefined
         const playerId = this.gameState.activePlayerIds[0]
         const nodeId = selection?.extractNodeId
