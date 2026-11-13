@@ -256,8 +256,8 @@
                 {/each}
             </div>
         {/if}
-        {#if player}
-            <!-- Watch the active player's row, pawn included, while it isn't your turn -->
+        {#if player && !gameSession.livePlay}
+            <!-- Watch the active player's row, pawn included, while it isn't your turn (Live play has the watcher box instead) -->
             <div class="mt-2 flex items-end gap-2 overflow-x-auto pb-1">
                 {#each player.tableau as cardId, index (cardId)}
                     <div class="relative shrink-0">
