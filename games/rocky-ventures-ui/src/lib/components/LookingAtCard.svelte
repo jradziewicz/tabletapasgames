@@ -222,6 +222,7 @@
             actionId: recent.action.id,
             lines: saleLines(planExtraction(recent.before, actorId, recent.action as never)),
             tokenUrl: token ? mineTokenImageUrl(token) : undefined,
+            tokenId: token?.id,
             companyId: recent.action.creditCompanyId
         }
     }
@@ -361,7 +362,14 @@
                     const mine = BoardNodesById[data.nodeId as string]?.name ?? 'a mine'
                     const city = BoardNodesById[detail['city'] ?? '']?.name
                     const route = (gameSession.turnMarks.routes.find((nodes) => nodes[0] === data.nodeId) ?? [data.nodeId as string]).flatMap(nodePoint)
-                    const companyId = data.creditCompanyId as CompanyId | undefined
+                    // The railroad credited with the delivery: picked by the player, or the only one that could take it
+                    // (found by the gold token now sitting in that railroad's deliveries).
+                    const deliveredTokenId = lastExtract?.actionId === action.id ? lastExtract.tokenId : undefined
+                    const companyId =
+                        (data.creditCompanyId as CompanyId | undefined) ??
+                        (deliveredTokenId
+                            ? (gameSession.gameState.companies.find((company) => company.deliveredMineTokenIds.includes(deliveredTokenId))?.id as CompanyId | undefined)
+                            : undefined)
                     // The mine draws a new token once its ore is taken: show what came up, if it changed.
                     const nowToken = gameSession.gameState.board.getMine(data.nodeId as string).token
                     const drew: Step[] =
@@ -396,6 +404,7 @@
                             kind: 'extract',
                             text: `extracted ${detail['ore'] ?? ''} ${ore} from ${mine}${city ? `, sold to ${city}` : ''}${companyId ? ` via ${CompanyNames[companyId]}` : ''}${event ? `: ${money(event.amount)}` : ''}`.replace('  ', ' '),
                             logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
+                            detail: companyId ? `Delivery credited to ${CompanyNames[companyId]}` : undefined,
                             lines,
                             pin,
                             zoom: around(route)
