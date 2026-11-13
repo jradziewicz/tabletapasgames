@@ -70,6 +70,11 @@
     const canAct = $derived(gameSession.seesActiveView && !gameSession.isViewingHistory)
     const validTypes = $derived(gameSession.offeredActionTypes)
     const playerColor = $derived(activeId ? gameSession.colors.getPlayerBgColorValue(activeId) : '#888888')
+    // Live play: while waiting, your own row stays up top so you can plan your next move.
+    const shownRowPlayer = $derived(gameSession.livePlay ? (gameSession.myPlayer ? gameState.findPlayerState(gameSession.myPlayer.id) : undefined) : player)
+    const shownRowColor = $derived(
+        gameSession.livePlay && gameSession.myPlayer ? gameSession.colors.getPlayerBgColorValue(gameSession.myPlayer.id) : playerColor
+    )
 
     function regionLabel(region: string): string {
         if (region === DragonHuntRegion) {
@@ -115,6 +120,18 @@
     function stackedUnderUrl(cardId: string): string | undefined {
         const underId = player?.stackedCards?.[cardId]
         return underId === undefined ? undefined : thumbUrl(underId)
+    }
+
+    // The waiting row's cards, in the colours of whoever's row it is.
+    function rowThumbUrl(cardId: string): string | undefined {
+        const card = getCard(cardId)
+        const ownerId = gameSession.livePlay ? gameSession.myPlayer?.id : activeId
+        return card.kind === CardKind.Player ? playerCardImageUrl(cardId, ownerId ? gameSession.colors.getPlayerColor(ownerId) : undefined) : cardImageUrl(cardId)
+    }
+
+    function rowStackedUrl(cardId: string): string | undefined {
+        const underId = shownRowPlayer?.stackedCards?.[cardId]
+        return underId === undefined ? undefined : rowThumbUrl(underId)
     }
 
     function mirrorPulse(cardId: string): string {
@@ -256,24 +273,24 @@
                 {/each}
             </div>
         {/if}
-        {#if player && !gameSession.livePlay}
-            <!-- Watch the active player's row, pawn included, while it isn't your turn (Live play has the watcher box instead) -->
+        {#if shownRowPlayer}
+            <!-- While it isn't your turn: the active player's row, or in Live play your own row to plan from -->
             <div class="mt-2 flex items-end gap-2 overflow-x-auto pb-1">
-                {#each player.tableau as cardId, index (cardId)}
+                {#each shownRowPlayer.tableau as cardId, index (cardId)}
                     <div class="relative shrink-0">
-                        {#if player.pawnIndex === index}
+                        {#if shownRowPlayer.pawnIndex === index}
                             <div class="pointer-events-none absolute bottom-2 left-1/2 z-20 -translate-x-1/2">
-                                <Pawn fill={playerColor} height={52} />
+                                <Pawn fill={shownRowColor} height={52} />
                             </div>
                         {/if}
                         <button
                             type="button"
-                            class="tableau-card relative block overflow-hidden rounded border-2 {player.pawnIndex === index ? 'border-[#ffd166]' : 'border-[#4a3620]'}"
-                            onclick={() => gameSession.zoomCard(cardId, thumbUrl(cardId))}
+                            class="tableau-card relative block overflow-hidden rounded border-2 {shownRowPlayer.pawnIndex === index ? 'border-[#ffd166]' : 'border-[#4a3620]'}"
+                            onclick={() => gameSession.zoomCard(cardId, rowThumbUrl(cardId))}
                         >
-                            <StackedUnder underUrl={stackedUnderUrl(cardId)} class="h-[53px]" imageClass="h-[112px] w-auto" />
-                            <img src={thumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[112px] w-auto max-w-none" draggable="false" />
-                            {#if cardId === StartingPlayerCardId}<MatGems gems={player.gems} />{/if}
+                            <StackedUnder underUrl={rowStackedUrl(cardId)} class="h-[53px]" imageClass="h-[112px] w-auto" />
+                            <img src={rowThumbUrl(cardId)} alt={cardLabel(cardId)} class="block h-[112px] w-auto max-w-none" draggable="false" />
+                            {#if cardId === StartingPlayerCardId}<MatGems gems={shownRowPlayer.gems} />{/if}
                         </button>
                     </div>
                 {/each}
