@@ -377,8 +377,6 @@
                     return [
                         {
                             text: `extracted ${detail['ore'] ?? ''} ${ore} from ${mine}${city ? `, sold to ${city}` : ''}${companyId ? ` via ${CompanyNames[companyId]}` : ''}${event ? `: ${money(event.amount)}` : ''}`.replace('  ', ' '),
-                            // The token as it was before extracting (the mine may have flipped since).
-                            imageUrl: lastExtract?.actionId === action.id ? lastExtract.tokenUrl : undefined,
                             logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
                             lines,
                             zoom: around(route)
@@ -497,7 +495,6 @@
             return {
                 text: `is extracting from ${BoardNodesById[mineId]?.name ?? 'a mine'}${cityId ? ` to ${BoardNodesById[cityId]?.name ?? cityId}` : ''}`,
                 detail: cityId ? (companyId ? `Via ${CompanyNames[companyId]}` : 'Choosing a railroad to credit') : 'Choosing a city',
-                imageUrl: token ? mineTokenImageUrl(token) : undefined,
                 logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
                 lines: plan ? saleLines(plan) : undefined,
                 // Close in on the mine until a city is picked, then pull back to show the route.
