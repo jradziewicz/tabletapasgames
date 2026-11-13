@@ -42,7 +42,7 @@
     const gameSession = getGameSession()
 
     type Zoom = { x: number; y: number; width: number; height: number }
-    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string }; track?: { companyId: string; points: { x: number; y: number }[]; cost: number; count: number; free: boolean } }
+    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string }; track?: { companyId: string; points: { x: number; y: number }[]; cost: number; count: number; free: boolean }; kind?: string }
 
     const ZoomAspect = 4 / 3
 
@@ -376,6 +376,7 @@
                         : undefined
                     return [
                         {
+                            kind: 'extract',
                             text: `extracted ${detail['ore'] ?? ''} ${ore} from ${mine}${city ? `, sold to ${city}` : ''}${companyId ? ` via ${CompanyNames[companyId]}` : ''}${event ? `: ${money(event.amount)}` : ''}`.replace('  ', ' '),
                             logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
                             lines,
@@ -493,6 +494,7 @@
             const token = state.board.getMine(mineId).token
             const plan = cityId && activeId ? planExtraction(state, activeId, { nodeId: mineId, cityId, creditCompanyId: companyId }) : undefined
             return {
+                kind: 'extract',
                 text: `is extracting from ${BoardNodesById[mineId]?.name ?? 'a mine'}${cityId ? ` to ${BoardNodesById[cityId]?.name ?? cityId}` : ''}`,
                 detail: cityId ? (companyId ? `Via ${CompanyNames[companyId]}` : 'Choosing a railroad to credit') : 'Choosing a city',
                 logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
@@ -546,7 +548,11 @@
         if (total === 0) return
         if (shown > total) shown = total
         clearTimeout(paceTimer)
-        if (shown < total) {
+        if (shown < total && heldLive && heldLive.at === shown && heldLive.step.kind && steps[shown]?.kind === heldLive.step.kind) {
+            // The choice they were making just landed: fill in the same entry (with its numbers) right away.
+            shown += 1
+            liveAfter = -1
+        } else if (shown < total) {
             paceTimer = setTimeout(() => (shown += 1), StepMs)
         } else if (liveAfter !== shown) {
             // The live entry (what they're doing now) also waits its second after the last step lands.
