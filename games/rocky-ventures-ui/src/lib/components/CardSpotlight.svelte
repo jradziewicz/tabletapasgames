@@ -21,6 +21,7 @@
     import { mineTokenImageUrl } from '$lib/utils/tokenImages.js'
     import { companyLogoUrl } from '$lib/utils/companyLogos.js'
     import { GridRegion } from '$lib/utils/trackLayout.js'
+    import { shareImageUrl } from '$lib/utils/shareImages.js'
     import { recentOtherPlayerAction } from '$lib/utils/recentAction.js'
 
     // Live play: a card someone buys or taxes, a hunt, or a mine claim pops up big for everyone
@@ -29,7 +30,7 @@
 
     const PopUpMs = 2500
     const HighlightMs = 1500
-    const Watched = [ActionType.Invest, ActionType.Tax, ActionType.ResolveHunt, ActionType.ClaimMine, ActionType.ExtractAndSell, ActionType.Acquire] as string[]
+    const Watched = [ActionType.Invest, ActionType.Tax, ActionType.ResolveHunt, ActionType.ClaimMine, ActionType.ExtractAndSell, ActionType.Acquire, ActionType.ChooseShare] as string[]
 
     let lastSeen = gameSession.actions.at(-1)?.id
     let timers: ReturnType<typeof setTimeout>[] = []
@@ -69,6 +70,22 @@
         } else if (type === ActionType.ClaimMine && nodeId) {
             const cost = state.statEvents.findLast((event) => event.kind === StatKind.MineClaim && event.playerId === playerId)?.amount ?? 0
             next = { kind: 'claim', playerId, nodeId, phase: 'up', claim: { mine: BoardNodesById[nodeId]?.name ?? nodeId, cost } }
+        } else if (type === ActionType.ChooseShare) {
+            const recent = recentOtherPlayerAction<{ companyId: CompanyId }>(gameSession, ActionType.ChooseShare, { includeMine: true })
+            if (recent) {
+                const company = recent.before.getCompany(recent.action.companyId)
+                const index = company.nextShareIndex
+                next = {
+                    kind: 'share',
+                    playerId,
+                    phase: 'up',
+                    share: {
+                        company: CompanyNames[recent.action.companyId],
+                        multiplier: company.multiplierForShare(index),
+                        imageUrl: shareImageUrl(recent.action.companyId, index, company.sharesFlipped)
+                    }
+                }
+            }
         } else if (type === ActionType.Acquire) {
             const recent = recentOtherPlayerAction<{ choice: 'weapon' | 'tool' }>(gameSession, ActionType.Acquire, { includeMine: true })
             if (recent) {
@@ -143,19 +160,36 @@
             }
         }
         if (!next) return
+        // One pop-up at a time: a move made while one is up (a share right after a card) waits its turn.
+        queue.push(next)
+        if (!popping) present()
+    }
+
+    let queue: NonNullable<typeof gameSession.spotlight>[] = []
+    let popping = false
+
+    function present() {
+        const next = queue.shift()
+        if (!next) {
+            popping = false
+            return
+        }
+        popping = true
         // The player who made the move already knows what they did, so they skip the pop-up.
-        const mine = playerId === gameSession.myPlayer?.id
+        const mine = next.playerId === gameSession.myPlayer?.id
         const shown: typeof next = mine ? { ...next, phase: 'landed' } : next
-        for (const timer of timers) clearTimeout(timer)
         gameSession.spotlight = shown
-        timers = [
+        timers.push(
             setTimeout(() => {
                 if (gameSession.spotlight === shown) gameSession.spotlight = { ...shown, phase: 'landed' }
+                present()
             }, mine ? 0 : PopUpMs),
             setTimeout(() => {
-                if (gameSession.spotlight?.playerId === shown.playerId && gameSession.spotlight.kind === shown.kind) gameSession.spotlight = undefined
+                if (gameSession.spotlight?.playerId === shown.playerId && gameSession.spotlight.kind === shown.kind && gameSession.spotlight.phase === 'landed') {
+                    gameSession.spotlight = undefined
+                }
             }, (mine ? 0 : PopUpMs) + HighlightMs)
-        ]
+        )
     }
 
     $effect(() => () => {
@@ -182,10 +216,13 @@
         <div class="spotlight-panel flex max-w-[90vw] flex-col items-center gap-3 rounded-xl border-2 border-[#ffd166] bg-[#1b140c]/95 p-5 text-[#f1e6cf] shadow-2xl">
             <div class="text-base">
                 <strong class="capitalize">{gameSession.getPlayerName(shown.playerId)}</strong>
-                {#if shown.kind === 'card'}took this card{:else if shown.kind === 'level'}raised their <strong>{shown.level?.choice}</strong> to level <strong>{shown.level?.to}</strong>{:else if shown.kind === 'delivery'}delivered <strong>{shown.delivery?.amount}</strong> from <strong>{shown.delivery?.mine}</strong>{#if shown.delivery?.city}&nbsp;to <strong>{shown.delivery.city}</strong>{/if}{:else if shown.kind === 'claim'}claimed <strong>{shown.claim?.mine}</strong>{#if shown.claim?.cost}&nbsp;for ${shown.claim.cost}{/if}{:else}hunted <strong>{regionLabel(shown.hunt?.region ?? '')}</strong>{/if}
+                {#if shown.kind === 'card'}took this card{:else if shown.kind === 'share'}took a <strong>{shown.share?.company}</strong> share{:else if shown.kind === 'level'}raised their <strong>{shown.level?.choice}</strong> to level <strong>{shown.level?.to}</strong>{:else if shown.kind === 'delivery'}delivered <strong>{shown.delivery?.amount}</strong> from <strong>{shown.delivery?.mine}</strong>{#if shown.delivery?.city}&nbsp;to <strong>{shown.delivery.city}</strong>{/if}{:else if shown.kind === 'claim'}claimed <strong>{shown.claim?.mine}</strong>{#if shown.claim?.cost}&nbsp;for ${shown.claim.cost}{/if}{:else}hunted <strong>{regionLabel(shown.hunt?.region ?? '')}</strong>{/if}
             </div>
             {#if shown.kind === 'card' && cardUrl}
                 <img src={cardUrl} alt={shown.cardId} class="max-h-[55vh] w-auto rounded-xl" draggable="false" />
+            {:else if shown.kind === 'share' && shown.share}
+                {#if shown.share.imageUrl}<img src={shown.share.imageUrl} alt={shown.share.company} class="max-h-[45vh] w-auto rounded-xl" draggable="false" />{/if}
+                <div class="text-3xl font-bold text-[#ffd166]">{shown.share.multiplier}x share</div>
             {:else if shown.kind === 'level' && shown.level}
                 <svg viewBox="{GridRegion.x} {GridRegion.y} {GridRegion.width} {GridRegion.height}" class="block w-[min(80vw,640px)] rounded-lg border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
                     <use href="#rv-board-svg" />
