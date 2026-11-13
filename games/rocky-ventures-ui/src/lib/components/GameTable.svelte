@@ -21,6 +21,7 @@
     import GridPanel from '$lib/components/GridPanel.svelte'
     import DragonPanel from '$lib/components/DragonPanel.svelte'
     import CardZoom from '$lib/components/CardZoom.svelte'
+    import CardSpotlight from '$lib/components/CardSpotlight.svelte'
     import GridZoom from '$lib/components/GridZoom.svelte'
     import AgreementChoice from '$lib/components/AgreementChoice.svelte'
     import StackChoice from '$lib/components/StackChoice.svelte'
@@ -464,6 +465,7 @@
     {#if session.gridZoomOpen}
         <GridZoom onclose={() => (session.gridZoomOpen = false)} />
     {/if}
+    <CardSpotlight />
     {#if session.zoomedImage}
         <CardZoom imageUrl={session.zoomedImage.url} alt={session.zoomedImage.alt} onclose={() => (session.zoomedImage = undefined)} />
     {/if}

@@ -29,6 +29,12 @@
     const oreCapacity = $derived(OreCapacityByToolLevel[playerState.toolLevel])
     const huntRule = $derived(HuntDrawRuleByWeaponLevel[playerState.weaponLevel])
 
+    // Live play: the card this player just bought or taxed glows briefly where it landed.
+    function spotlit(cardId: string | undefined): boolean {
+        const spotlight = gameSession.spotlight
+        return spotlight?.kind === 'card' && spotlight.phase === 'landed' && spotlight.playerId === player.id && spotlight.cardId === cardId
+    }
+
     function tableauImageUrl(cardId: string): string | undefined {
         return getCard(cardId).kind === CardKind.Player
             ? playerCardImageUrl(cardId, gameSession.colors.getPlayerColor(player.id))
@@ -145,7 +151,7 @@
             {@const imageUrl = tableauImageUrl(cardId)}
             <button
                 type="button"
-                class="relative flex h-7 w-6 items-center justify-center rounded border text-[11px] font-bold"
+                class="relative flex h-7 w-6 items-center justify-center rounded border text-[11px] font-bold {spotlit(cardId) ? 'spotlit' : ''}"
                 style="background: {cardChipBackground(cardId, playerState.stackedCards?.[cardId], gameSession.gameState.revisedCards)}; color: #111; border-color: #8a6d3b;"
                 title={cardActionsTooltip(cardId, gameSession.gameState.revisedCards)}
                 onclick={() => gameSession.zoomCard(cardId, imageUrl)}
@@ -161,7 +167,7 @@
             </button>
         {/each}
         {#if playerState.tuckedCardIds.length > 0}
-            <span class="ml-1 text-[11px]" style="color: #7f88ad;">+{playerState.tuckedCardIds.length} tucked</span>
+            <span class="ml-1 rounded px-0.5 text-[11px] {spotlit(playerState.tuckedCardIds.at(-1)) ? 'spotlit' : ''}" style="color: #7f88ad;">+{playerState.tuckedCardIds.length} tucked</span>
         {/if}
         {#if playerState.pawnIndex === undefined}
             <span class="ml-auto flex items-center gap-1 text-[11px]" style="color: #7f88ad;">
@@ -196,3 +202,9 @@
         <div class="px-3 pb-1 text-[10px]" style="color: #7f88ad;">id: {player.id}</div>
     {/if}
 </div>
+
+<style>
+    .spotlit {
+        box-shadow: 0 0 0 3px #ffd166, 0 0 12px 4px rgba(255, 209, 102, 0.8);
+    }
+</style>

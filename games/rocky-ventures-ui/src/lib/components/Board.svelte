@@ -534,6 +534,10 @@
                     pointer-events="none"
                 />
             {/if}
+            {#if gameSession.spotlight?.phase === 'landed' && gameSession.spotlight.nodeId === node.id}
+                <!-- Live play: the mine just claimed glows for a moment -->
+                <circle cx={node.x} cy={node.y} r={MineTokenRadius + 12} fill="none" stroke="#ffd166" stroke-width="18" filter="url(#mine-halo-blur)" class="mine-halo" pointer-events="none" />
+            {/if}
             {#if (claimable || extractable || newlyRevealed) && !extractSelected && !flipping}
                 <!-- SVG-native halo: iPhone Safari ignores CSS drop-shadow on SVG images, and on a
                      phone-sized map a few px of shadow vanishes, so draw a blurred ring in map units -->

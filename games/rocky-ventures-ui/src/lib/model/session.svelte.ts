@@ -99,6 +99,19 @@ export class RockyVenturesGameSession extends GameSession<
 > {
     lastActionError: string | undefined = $state()
 
+    // Live play: a card just bought or taxed, popping up and then highlighted where it landed.
+    spotlight:
+        | {
+              kind: 'card' | 'hunt' | 'claim'
+              playerId: string
+              phase: 'up' | 'landed'
+              cardId?: string
+              nodeId?: string
+              hunt?: { region: string; tokens: { kind: string; applied: boolean }[]; hitTargets: string[]; gains: string[] }
+              claim?: { mine: string; cost: number }
+          }
+        | undefined = $state()
+
     // Live play: what the current player has selected but not confirmed yet.
     private remoteSelection: LiveSelection | undefined = $state()
 

@@ -23,13 +23,17 @@ export type RecentAction<T> = {
 // Another player's latest action of this type with the game as it stood either side of it.
 // It counts through the rest of their turn and until the next player acts, so nobody misses
 // it when the turn passes.
-export function recentOtherPlayerAction<T>(session: RockyVenturesGameSession, type: string): RecentAction<T> | undefined {
+export function recentOtherPlayerAction<T>(
+    session: RockyVenturesGameSession,
+    type: string,
+    options: { includeMine?: boolean } = {}
+): RecentAction<T> | undefined {
     if (session.isViewingHistory) return undefined
     const actions = session.actions
     const index = actions.findLastIndex((action) => action.type === type)
     const action = actions[index]
     const playerId = action?.playerId
-    if (!action || !playerId || playerId === session.myPlayer?.id) return undefined
+    if (!action || !playerId || (!options.includeMine && playerId === session.myPlayer?.id)) return undefined
     if (actions.slice(index + 1).some((later) => later.playerId && later.playerId !== playerId)) return undefined
 
     try {
