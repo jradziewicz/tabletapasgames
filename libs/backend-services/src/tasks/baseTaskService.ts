@@ -1,11 +1,11 @@
 import { AccountChangeType } from '../email/emailService.js'
 import type { ContentReportEmail } from '../moderation/contentReports.js'
-import {
+import type {
     CreatePushTaskOptions,
     TaskService,
-    type VerificationEmailTask,
-    type EmailChangeVerificationTask
-} from './taskService'
+    VerificationEmailTask,
+    EmailChangeVerificationTask
+} from './taskService.js'
 
 export abstract class BaseTaskService implements TaskService {
     abstract createPushTask<T>(options: CreatePushTaskOptions<T>): Promise<void>
