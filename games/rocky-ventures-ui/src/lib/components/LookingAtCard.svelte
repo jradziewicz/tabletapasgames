@@ -46,16 +46,23 @@
     const ZoomAspect = 4 / 3
 
     const activeId = $derived(gameSession.gameState.activePlayerIds[0])
-    const watching = $derived(gameSession.livePlay && !gameSession.isMyTurn && !gameSession.isViewingHistory && activeId !== undefined)
     // Whose history to show: the player on turn, or until they start, the player who just finished,
-    // so the last turn's summary stays up instead of vanishing the moment the turn passes.
+    // so the last turn's summary stays up instead of vanishing the moment the turn passes. That holds
+    // for the next player too: their own screen keeps the summary until they pick their card.
     const actorId = $derived.by(() => {
-        const last = gameSession.actions.at(-1)
+        // The last move someone made (game-run steps have no player).
+        const lastPlayerId = gameSession.actions.findLast((action) => action.playerId)?.playerId
         // The next player has started once they commit their first move (picking their card and action).
-        const started = last?.playerId === activeId
-        if (started || !last?.playerId || last.playerId === gameSession.myPlayer?.id) return activeId
-        return last.playerId
+        if (!lastPlayerId || lastPlayerId === activeId) return activeId
+        return lastPlayerId
     })
+    const watching = $derived(
+        gameSession.livePlay &&
+            !gameSession.isViewingHistory &&
+            activeId !== undefined &&
+            actorId !== undefined &&
+            actorId !== gameSession.myPlayer?.id
+    )
     const name = $derived(actorId ? gameSession.getPlayerName(actorId) : '')
 
     function cardUrl(cardId: string | undefined): string | undefined {
