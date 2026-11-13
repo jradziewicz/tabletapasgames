@@ -168,6 +168,7 @@
         }
     })
     let previousScourgeIds: Set<string> | undefined
+    let scourgeSeenCount: number | undefined
     let pendingScourge: { region: (typeof RegionIds)[number]; scourgeId: string } | undefined = $state()
     let scourgeWaitedFor: string | undefined = $state()
     let scourgeOverlayTimer: ReturnType<typeof setTimeout> | undefined
@@ -312,12 +313,16 @@
         }
         const previous = previousScourgeIds
         previousScourgeIds = new Set(current.keys())
-        if (!previous || session.isViewingHistory) {
+        const scourgeUndo = scourgeSeenCount !== undefined && session.gameState.actionCount <= scourgeSeenCount
+        scourgeSeenCount = session.gameState.actionCount
+        if (!previous || session.isViewingHistory || scourgeUndo) {
             return
         }
         for (const [scourgeId, region] of current) {
             if (!previous.has(scourgeId)) {
-                session.enteredScourges = [...session.enteredScourges, { scourgeId, region, actionCount: session.gameState.actionCount }]
+                if (!session.enteredScourges.some((entered) => entered.scourgeId === scourgeId && entered.actionCount === session.gameState.actionCount)) {
+                    session.enteredScourges = [...session.enteredScourges, { scourgeId, region, actionCount: session.gameState.actionCount }]
+                }
                 if (session.livePlay) {
                     // Live play: no full-screen reveal; the watcher box shows the scourge coming out.
                 } else {
@@ -332,6 +337,7 @@
     let previousSlots: string[] | undefined
     let previousRevealed: Set<string> | undefined
     let previousDummyTucked: number | undefined
+    let marketSeenCount: number | undefined
     $effect(() => {
         const state = session.gameState
         const slots = [...state.market.slots]
@@ -344,7 +350,10 @@
         previousSlots = slots
         previousRevealed = revealed
         previousDummyTucked = dummyTucked
-        if (!hadPrevious || !session.livePlay || session.isViewingHistory) return
+        const undone = marketSeenCount !== undefined && state.actionCount <= marketSeenCount
+        marketSeenCount = state.actionCount
+        // An undo brings old cards and mines back; they aren't new.
+        if (!hadPrevious || undone || !session.livePlay || session.isViewingHistory) return
         const actionCount = state.actionCount
         const events: typeof session.viewerEvents = []
         if (dummyTucked !== undefined && oldDummy !== undefined && dummyTucked > oldDummy && state.dummy?.lastAction) {
@@ -361,6 +370,17 @@
             }
         }
         if (events.length) session.viewerEvents = [...session.viewerEvents, ...events]
+    })
+
+    // An undo takes moves back: forget what those moves brought out, so it isn't listed again on redo.
+    let lastActionCount: number | undefined
+    $effect(() => {
+        const count = session.gameState.actionCount
+        if (lastActionCount !== undefined && count < lastActionCount) {
+            session.enteredScourges = session.enteredScourges.filter((entered) => entered.actionCount <= count)
+            session.viewerEvents = session.viewerEvents.filter((event) => event.actionCount <= count)
+        }
+        lastActionCount = count
     })
 
     let turnEndScourges: { region: (typeof RegionIds)[number]; scourgeId: string; playerId: string | undefined }[] = $state([])

@@ -650,7 +650,7 @@
     {/each}
 
     <!-- Extract & Sell: hovering a silver mine shows what extracting it would pay -->
-    {#if gameSession.isMyTurn && !gameSession.isViewingHistory && gameSession.extractActive && gameSession.extractHoverNodeId && gameSession.gameState.board.mines[gameSession.extractHoverNodeId]?.token?.ore === OreKind.Silver}
+    {#if gameSession.isMyTurn && !gameSession.isViewingHistory && gameSession.extractHoverNodeId && gameSession.extractableNodeIds.includes(gameSession.extractHoverNodeId) && gameSession.gameState.board.mines[gameSession.extractHoverNodeId]?.token?.ore === OreKind.Silver}
         {@const hoverId = gameSession.extractHoverNodeId}
         {@const node = BoardNodesById[hoverId]}
         {@const activeId = gameSession.gameState.activePlayerIds[0]}

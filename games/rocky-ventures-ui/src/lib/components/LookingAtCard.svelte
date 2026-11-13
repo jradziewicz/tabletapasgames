@@ -58,11 +58,23 @@
         return lastPlayerId
     })
     // The player now on turn can click the last turn's summary away; it stays gone for that summary.
-    let dismissedKey: string | undefined = $state()
-    const summaryKey = $derived(`${actorId}:${gameSession.actions.findLast((action) => action.playerId)?.id ?? ''}`)
+    // A summary is known by whose turn it was and the move that opened it, so an undo doesn't make it new.
+    // Once closed, or once the next player has moved, it stays gone even if they undo back.
+    let dismissedKeys: string[] = $state([])
+    const summaryKey = $derived(
+        `${actorId}:${gameSession.actions.findLast((action) => action.playerId === actorId && action.type === ActionType.MovePawn)?.id ?? ''}`
+    )
     const canDismiss = $derived(gameSession.isMyTurn && actorId !== activeId)
+    let lastPassedSummary: string | undefined
+    $effect(() => {
+        if (actorId !== activeId) {
+            lastPassedSummary = summaryKey
+        } else if (lastPassedSummary && !dismissedKeys.includes(lastPassedSummary)) {
+            dismissedKeys = [...dismissedKeys, lastPassedSummary]
+        }
+    })
     const watching = $derived(
-        dismissedKey !== summaryKey &&
+        (actorId === activeId || !dismissedKeys.includes(summaryKey)) &&
         gameSession.livePlay &&
             !gameSession.isViewingHistory &&
             activeId !== undefined &&
@@ -664,7 +676,7 @@
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <div
-        onclick={() => canDismiss && (dismissedKey = summaryKey)}
+        onclick={() => canDismiss && (dismissedKeys = [...dismissedKeys, summaryKey])}
         title={canDismiss ? 'Click to dismiss' : undefined}
         class="{canDismiss ? 'cursor-pointer' : 'pointer-events-none'} fixed bottom-4 right-4 z-40 flex w-80 max-w-[calc(100vw-2rem)] flex-col rounded-xl border-2 border-[#ffd166] bg-[#1b140c]/95 text-xs text-[#f1e6cf] shadow-2xl">
         <div class="border-b border-[#8a6d3b] px-2 py-1 text-sm"><strong class="capitalize">{name}</strong>'s turn{#if canDismiss}<span class="float-right text-xs text-[#c9a961]">click to dismiss ✕</span>{/if}</div>

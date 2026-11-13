@@ -874,9 +874,25 @@ export class RockyVenturesGameSession extends GameSession<
         )
     }
 
+    // Your mines can be clicked to extract straight away whenever Extract & Sell is on offer,
+    // without first pressing the Extract & Sell button (it switches the mode on for you).
+    get extractAvailable(): boolean {
+        if (this.extractActive) return true
+        return (
+            this.seesActiveView &&
+            this.gameState.machineState === MachineState.TakeActions &&
+            !this.trackMode &&
+            !this.huntMode &&
+            !this.acquireMode &&
+            !this.investPickerOpen &&
+            this.offeredActionTypes.includes(ActionType.ExtractAndSell) &&
+            !this.passedActionTypes.includes(ActionType.ExtractAndSell)
+        )
+    }
+
     get extractableNodeIds(): string[] {
         const playerId = this.gameState.activePlayerIds[0]
-        if (!this.extractActive || playerId === undefined || !this.seesActiveView) {
+        if (!this.extractAvailable || playerId === undefined || !this.seesActiveView) {
             return []
         }
         return extractableMineIds(this.gameState, playerId)
@@ -900,7 +916,7 @@ export class RockyVenturesGameSession extends GameSession<
     get extractRoutePreviews(): { cityId: DeliveryCityId; routeNodeIds: string[]; net: number }[] {
         const playerId = this.gameState.activePlayerIds[0]
         const nodeId = this.extractHoverNodeId ?? this.extractNodeId
-        if (!this.extractActive || playerId === undefined || nodeId === undefined || !this.seesActiveView) {
+        if (!this.extractAvailable || playerId === undefined || nodeId === undefined || !this.seesActiveView) {
             return []
         }
         if (this.gameState.board.mines[nodeId]?.token?.ore !== 'gold') {
@@ -1016,6 +1032,7 @@ export class RockyVenturesGameSession extends GameSession<
         if (!this.extractableNodeIds.includes(nodeId)) {
             return
         }
+        this.extractMode = true
         this.extractNodeId = nodeId
         this.extractCityId = undefined
         this.extractCreditCompanyId = undefined
