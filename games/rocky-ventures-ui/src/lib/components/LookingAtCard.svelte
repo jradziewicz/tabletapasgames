@@ -565,8 +565,23 @@
             return entry
         })
     }
+    // When a choice is committed (a city picked, tokens applied), what they were doing stays on screen
+    // until the step that records it lands, instead of the box going blank in between.
+    let heldLive: { step: Step; at: number } | undefined = $state()
+    $effect(() => {
+        if (caughtUp && live) heldLive = { step: live, at: shown }
+        else if (caughtUp && !live) heldLive = undefined
+    })
     const entries = $derived(
-        !caughtUp ? paced : live ? [...paced, live] : finished ? [...paced, { text: 'finished their turn', live: true }] : paced
+        !caughtUp
+            ? heldLive && heldLive.at === shown
+                ? [...paced, heldLive.step]
+                : paced
+            : live
+              ? [...paced, live]
+              : finished
+                ? [...paced, { text: 'finished their turn', live: true }]
+                : paced
     )
 
     // Keep the newest entry in view as the history grows.
