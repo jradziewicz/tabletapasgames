@@ -9,6 +9,7 @@
         RegionNames,
         StatKind,
         getCard,
+        planExtraction,
         type CompanyId,
         type WeaponTokenKind
     } from '@tabletop/rocky-ventures'
@@ -75,6 +76,19 @@
                 const ore = event.source === 'gold' ? 'Gold' : event.source === 'silver' ? 'Silver' : 'ore'
                 const token = recent.before.board.getMine(recent.action.nodeId).token
                 const companyId = recent.action.creditCompanyId
+                // Recreate the sale on the state before it, for the money breakdown.
+                const plan = planExtraction(recent.before, playerId, recent.action as never)
+                const lines =
+                    typeof plan === 'string'
+                        ? []
+                        : [
+                              { label: `Sale (${plan.oreCount} × $${plan.price})`, amount: plan.sale },
+                              { label: 'Agreement bonus', amount: plan.agreementBonus },
+                              { label: 'Transportation', amount: -plan.transport },
+                              { label: 'Security', amount: -plan.security },
+                              { label: 'Dragon', amount: -plan.dragon },
+                              { label: 'Agreement discount', amount: plan.discount }
+                          ].filter((line) => line.amount !== 0 || line.label.startsWith('Sale'))
                 next = {
                     kind: 'delivery',
                     playerId,
@@ -88,7 +102,8 @@
                         companyId,
                         earned: event.amount ?? 0,
                         vp: recent.after.getPlayerState(playerId).victoryPoints - recent.before.getPlayerState(playerId).victoryPoints,
-                        tokenUrl: token ? mineTokenImageUrl(token) : undefined
+                        tokenUrl: token ? mineTokenImageUrl(token) : undefined,
+                        lines
                     }
                 }
             }
@@ -172,6 +187,14 @@
                     <div class="flex items-center gap-2 text-base">
                         {#if logo}<img src={logo} alt={shown.delivery.railroad} class="h-10 w-auto" draggable="false" />{/if}
                         <span>via <strong>{shown.delivery.railroad}</strong></span>
+                    </div>
+                {/if}
+                {#if shown.delivery.lines.length}
+                    <div class="grid grid-cols-[auto_auto] gap-x-6 text-base">
+                        {#each shown.delivery.lines as line (line.label)}
+                            <span>{line.label}</span>
+                            <span class="text-right font-mono {line.amount < 0 ? 'text-[#ff8a7a]' : ''}">{line.amount < 0 ? `-$${-line.amount}` : `$${line.amount}`}</span>
+                        {/each}
                     </div>
                 {/if}
                 <div class="text-3xl font-bold text-[#ffd166]">

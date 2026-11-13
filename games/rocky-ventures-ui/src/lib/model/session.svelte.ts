@@ -120,7 +120,7 @@ export class RockyVenturesGameSession extends GameSession<
               nodeId?: string
               hunt?: { region: string; tokens: { kind: string; applied: boolean }[]; hitTargets: string[]; gains: string[] }
               claim?: { mine: string; cost: number }
-              delivery?: { amount: string; mine: string; city?: string; railroad?: string; companyId?: string; earned: number; vp: number; tokenUrl?: string }
+              delivery?: { amount: string; mine: string; city?: string; railroad?: string; companyId?: string; earned: number; vp: number; tokenUrl?: string; lines: { label: string; amount: number }[] }
           }
         | undefined = $state()
 
