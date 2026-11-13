@@ -119,3 +119,5 @@ export * from './game/definition/gameMetadata.js'
 
 export * from './site/gameStats.js'
 export * from './site/siteStats.js'
+export * from './game/model/gamePace.js'
+export * from './util/time.js'

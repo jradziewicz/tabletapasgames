@@ -1,6 +1,7 @@
 import { enqueueTournamentTask } from '../competitions/tournamentTasks.js'
 import { Timed, measure, measureSync, countTiming } from '../diagnostics/requestTimings.js'
 import {
+    snapPaceMinutes,
     GameCreationOptions,
     deriveGameSeeds,
     generateMasterSeed,
@@ -232,9 +233,12 @@ export class GameService {
 
         const newGame = definition.runtime.initializer.initializeGame(game, definition)
         delete newGame.protectedInformation
-        // Titles bundle their own initializer, which may predate unlisted games.
+        // Titles bundle their own initializer, which may predate unlisted games and pace.
         if (game.unlisted) newGame.unlisted = true
         else delete newGame.unlisted
+        if (game.paceMinutes !== undefined && !newGame.hotseat)
+            newGame.paceMinutes = snapPaceMinutes(game.paceMinutes)
+        else delete newGame.paceMinutes
 
         // Check the specified players and populate them with user data
         const usersByPlayerId = await this.validateAndPopulatePlayers(newGame.players, owner)
@@ -678,6 +682,10 @@ export class GameService {
             throw new UnauthorizedAccessError({ user, gameId })
         }
         const owner = user.id === game.ownerId ? user : await this.userService.getUser(game.ownerId)
+
+        if (fields.paceMinutes !== undefined) {
+            fields.paceMinutes = snapPaceMinutes(fields.paceMinutes)
+        }
 
         if (fields.name !== undefined) {
             fields.name = fields.name.trim()

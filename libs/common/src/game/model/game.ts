@@ -81,6 +81,8 @@ export const Game = Type.Object({
     activePlayerIds: Type.Optional(Type.Array(Type.String())),
     lastActionPlayerId: Type.Optional(Type.String()),
     lastActionAt: Type.Optional(DateType()),
+    paceMinutes: Type.Optional(Type.Integer({ minimum: 1, maximum: 4_320 })),
+    turnStartedAt: Type.Optional(Type.Record(Type.String(), DateType())),
     progress: Type.Optional(GameProgress),
     result: Type.Optional(Type.Enum(GameResult)),
     winningPlayerIds: Type.Array(Type.String()),
