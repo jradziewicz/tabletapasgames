@@ -134,6 +134,8 @@ export class RockyVenturesGameSession extends GameSession<
     heldMovePick: { playerId: string; cardId: string } | undefined = $state()
     // Live play: scourges as they come onto the board, keyed to the move that brought them out.
     enteredScourges: { scourgeId: string; region: string; actionCount: number }[] = $state([])
+    // Live play: true while the watcher box is still playing a turn through; big overlays wait for it.
+    viewerHold = $state(false)
     private lastMovePick: { playerId: string; cardId: string } | undefined
     private heldMoveTimer: ReturnType<typeof setTimeout> | undefined
 

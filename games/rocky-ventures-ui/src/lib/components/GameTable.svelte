@@ -167,6 +167,22 @@
     let pendingScourge: { region: (typeof RegionIds)[number]; scourgeId: string } | undefined = $state()
     let scourgeWaitedFor: string | undefined = $state()
     let scourgeOverlayTimer: ReturnType<typeof setTimeout> | undefined
+    // Live play: big overlays (scourge reveal, dragon, dragon bonus) only start 1.5 seconds after the
+    // watcher box has played the whole turn through, so they never cover the turn as it happens.
+    let overlaysAllowed = $state(true)
+    let overlayGateTimer: ReturnType<typeof setTimeout> | undefined
+    $effect(() => {
+        const hold = session.livePlay && session.viewerHold
+        clearTimeout(overlayGateTimer)
+        if (hold) {
+            overlaysAllowed = false
+        } else if (session.livePlay) {
+            overlayGateTimer = setTimeout(() => (overlaysAllowed = true), 1500)
+        } else {
+            overlaysAllowed = true
+        }
+    })
+
     let previousDragonSummoned: boolean | undefined
     let dragonOverlayOpen = $state(false)
     let gameOverOpen = $state(false)
@@ -215,6 +231,7 @@
         if (session.livePlay) {
             if (session.spotlight?.phase === 'up') return
             if (bonus.playerId && session.gameState.activePlayerIds[0] === bonus.playerId && !session.gameState.result) return
+            if (!overlaysAllowed) return
         }
         pendingBonus = undefined
         const tokens = bonus.tokens
@@ -225,8 +242,7 @@
                 bonusOverlayTokens = undefined
             }, 2600 + tokens.length * 350)
         }
-        if (session.livePlay) setTimeout(show, 800)
-        else show()
+        show()
     })
 
     $effect(() => {
@@ -234,12 +250,29 @@
         const previous = previousDragonSummoned
         previousDragonSummoned = summoned
         if (previous === false && summoned && !session.isViewingHistory) {
-            dragonOverlayOpen = true
-            clearTimeout(dragonOverlayTimer)
-            dragonOverlayTimer = setTimeout(() => {
-                dragonOverlayOpen = false
-            }, 6500)
+            if (session.livePlay) {
+                pendingDragonBy = session.actions.findLast((action) => action.playerId)?.playerId ?? ''
+            } else {
+                openDragonOverlay()
+            }
         }
+    })
+
+    function openDragonOverlay() {
+        dragonOverlayOpen = true
+        clearTimeout(dragonOverlayTimer)
+        dragonOverlayTimer = setTimeout(() => {
+            dragonOverlayOpen = false
+        }, 6500)
+    }
+
+    // Live play: the dragon's arrival waits for the turn that summoned it to end and the viewer to finish.
+    let pendingDragonBy: string | undefined = $state()
+    $effect(() => {
+        if (pendingDragonBy === undefined || !overlaysAllowed) return
+        if (pendingDragonBy && session.gameState.activePlayerIds[0] === pendingDragonBy && !session.gameState.result) return
+        pendingDragonBy = undefined
+        openDragonOverlay()
     })
 
     $effect(() => {
@@ -270,7 +303,7 @@
     let turnEndScourges: { region: (typeof RegionIds)[number]; scourgeId: string; playerId: string | undefined }[] = $state([])
     $effect(() => {
         const next = turnEndScourges[0]
-        if (!next || pendingScourge || session.revealScourgeId !== undefined) return
+        if (!next || pendingScourge || session.revealScourgeId !== undefined || !overlaysAllowed) return
         const activeId = session.gameState.activePlayerIds[0]
         if (next.playerId && activeId === next.playerId && !session.gameState.result) return
         turnEndScourges = turnEndScourges.slice(1)

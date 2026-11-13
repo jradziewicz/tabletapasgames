@@ -553,6 +553,10 @@
 
     // Once the turn has passed, the history closes with a final line until the next player starts.
     const finished = $derived(watching && actorId !== activeId && steps.length > 0)
+    // Tell the table to hold big overlays until this box has played the turn through to its end.
+    $effect(() => {
+        gameSession.viewerHold = watching && entries.length > 0 && !(finished && caughtUp)
+    })
     // Steps come in one a second, so a quick chain (a claim and its hunt) plays out instead of landing at once.
     const StepMs = 2000
     let shown = $state(0)
