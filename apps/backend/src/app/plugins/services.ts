@@ -33,7 +33,7 @@ import {
     RedisService,
     ChatService,
     FirestoreChatStore,
-    ResendEmailService,
+    BrevoEmailService,
     PubSubTransport,
     EnvService,
     TournamentService,
@@ -84,7 +84,7 @@ const useAbly = !!process.env['ABLY_API_KEY']
 
 export default fp(async (fastify: FastifyInstance) => {
     const secretsService = new EnvSecretsService()
-    const emailService = await ResendEmailService.createEmailService(secretsService)
+    const emailService = await BrevoEmailService.createEmailService(secretsService)
     const redisService = await RedisService.createRedisService(secretsService)
     fastify.addHook('onClose', async () => redisService.destroy())
     const redisCacheService = new RedisCacheService(redisService)

@@ -14,7 +14,7 @@ This service handles interactions received via HTTP. A Bot is not used to handle
 
 **Email**
 
-This service implements the ability to send emails to users. The default implementation provided uses [Resend](https://resend.com).
+This service implements the ability to send emails to users. The default implementation provided uses [Brevo](https://www.brevo.com) transactional email (upstream uses Resend).
 
 **Games**
 

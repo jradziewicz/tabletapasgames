@@ -15,60 +15,102 @@ import {
     yourTurnText
 } from '@tabletop/email'
 
-import { Resend } from 'resend'
 import { SecretsService } from '../secrets/secretsService'
 import { Game, GameDefinition, User } from '@tabletop/common'
 import { AccountChangeType, EmailService } from './emailService.js'
 import { NullEmailService } from './nullEmailService.js'
 
-export class ResendEmailService implements EmailService {
-    private resend!: Resend
+const BREVO_SEND_URL = 'https://api.brevo.com/v3/smtp/email'
+const DEFAULT_SENDER_EMAIL = 'noreply@playtest.tabletapasgames.com'
+const DEFAULT_SENDER_NAME = 'TableTapas Games'
+
+/**
+ * Sends the site's transactional email through Brevo's HTTP API
+ * (https://developers.brevo.com/reference/sendtransacemail).
+ *
+ * Config (env / secrets):
+ * - BREVO_API_KEY: required. An empty value disables email (NullEmailService).
+ * - BREVO_SENDER_EMAIL: optional, must be a sender or domain verified in Brevo.
+ * - BREVO_SENDER_NAME: optional display name.
+ *
+ * The per-email methods mirror upstream's ResendEmailService so upstream
+ * changes port over by swapping `this.resend.emails.send` for `this.send`.
+ */
+export class BrevoEmailService implements EmailService {
+    private apiKey!: string
+    private sender!: { email: string; name: string }
     private constructor() {}
 
     static async createEmailService(secretsService: SecretsService): Promise<EmailService> {
-        const emailService = new ResendEmailService()
-        const resendKey = await secretsService.getSecret('RESEND_API_KEY')
-        if (!resendKey) {
+        const emailService = new BrevoEmailService()
+        const apiKey = await secretsService.getSecret('BREVO_API_KEY')
+        if (!apiKey) {
             return new NullEmailService()
         }
-        emailService.resend = new Resend(resendKey)
+        emailService.apiKey = apiKey
+        emailService.sender = {
+            email: process.env['BREVO_SENDER_EMAIL'] || DEFAULT_SENDER_EMAIL,
+            name: process.env['BREVO_SENDER_NAME'] || DEFAULT_SENDER_NAME
+        }
         return emailService
+    }
+
+    private async send({
+        to,
+        subject,
+        html,
+        text
+    }: {
+        to: string
+        subject: string
+        html: string
+        text: string
+    }): Promise<void> {
+        const response = await fetch(BREVO_SEND_URL, {
+            method: 'POST',
+            headers: {
+                'api-key': this.apiKey,
+                'content-type': 'application/json',
+                accept: 'application/json'
+            },
+            body: JSON.stringify({
+                sender: this.sender,
+                to: [{ email: to }],
+                subject,
+                htmlContent: html,
+                textContent: text,
+                headers: {
+                    'X-Entity-Ref-ID': nanoid()
+                }
+            }),
+            signal: AbortSignal.timeout(15_000)
+        })
+        if (!response.ok) {
+            const detail = await response.text().catch(() => '')
+            throw new Error(`Failed to send email via Brevo: ${response.status} ${detail}`)
+        }
     }
 
     async sendVerificationEmail(token: string, toEmail: string): Promise<void> {
         const emailHTML = await render(EmailVerification({ token }))
         const emailText = emailVerificationText({ token })
-        const { error } = await this.resend.emails.send({
-            from: 'noreply@playtest.tabletapasgames.com',
+        await this.send({
             to: toEmail,
             subject: 'Verify your email address',
             html: emailHTML,
-            text: emailText,
-            headers: {
-                'X-Entity-Ref-ID': nanoid()
-            }
+            text: emailText
         })
-        if (error) {
-            throw new Error(`Failed to send email via Resend: ${error.message}`)
-        }
     }
 
     async sendPasswordResetEmail(token: string, url: string, toEmail: string): Promise<void> {
         const emailHTML = await render(PasswordReset({ url }))
         const emailText = passwordResetText({ url })
-        const { error } = await this.resend.emails.send({
-            from: 'noreply@playtest.tabletapasgames.com',
+        await this.send({
             to: toEmail,
             subject: 'Reset your password',
             html: emailHTML,
-            text: emailText,
-            headers: {
-                'X-Entity-Ref-ID': nanoid()
-            }
+            text: emailText
         })
-        if (error) {
-            throw new Error(`Failed to send email via Resend: ${error.message}`)
-        }
     }
 
     async sendAccountChangedNotificationEmail(
@@ -78,19 +120,12 @@ export class ResendEmailService implements EmailService {
     ): Promise<void> {
         const emailHTML = await render(AccountChangeNotification({ changeType, timestamp }))
         const emailText = accountChangeNotificationText({ changeType, timestamp })
-        const { error } = await this.resend.emails.send({
-            from: 'noreply@playtest.tabletapasgames.com',
+        await this.send({
             to: toEmail,
             subject: 'Account change notification',
             html: emailHTML,
-            text: emailText,
-            headers: {
-                'X-Entity-Ref-ID': nanoid()
-            }
+            text: emailText
         })
-        if (error) {
-            throw new Error(`Failed to send email via Resend: ${error.message}`)
-        }
     }
 
     async sendGameInvitationEmail({
@@ -114,19 +149,12 @@ export class ResendEmailService implements EmailService {
         }
         const emailHTML = await render(GameInvitation(invitation))
         const emailText = gameInvitationText(invitation)
-        const { error } = await this.resend.emails.send({
-            from: 'noreply@playtest.tabletapasgames.com',
+        await this.send({
             to: toEmail,
             subject: `Join ${owner.username}'s game of ${definition.info.metadata.name}`,
             html: emailHTML,
-            text: emailText,
-            headers: {
-                'X-Entity-Ref-ID': nanoid()
-            }
+            text: emailText
         })
-        if (error) {
-            throw new Error(`Failed to send email via Resend: ${error.message}`)
-        }
     }
 
     async sendGameEndEmail({
@@ -156,19 +184,12 @@ export class ResendEmailService implements EmailService {
         }
         const emailHTML = await render(GameEnd(ending))
         const emailText = gameEndText(ending)
-        const { error } = await this.resend.emails.send({
-            from: 'noreply@playtest.tabletapasgames.com',
+        await this.send({
             to: toEmail,
             subject: `Your game of ${definition.info.metadata.name} ${game.name} has ended`,
             html: emailHTML,
-            text: emailText,
-            headers: {
-                'X-Entity-Ref-ID': nanoid()
-            }
+            text: emailText
         })
-        if (error) {
-            throw new Error(`Failed to send email via Resend: ${error.message}`)
-        }
     }
 
     async sendTurnNotificationEmail({
@@ -184,18 +205,11 @@ export class ResendEmailService implements EmailService {
     }): Promise<void> {
         const emailHTML = await render(YourTurn({ title, gameName, url }))
         const emailText = yourTurnText({ title, gameName, url })
-        const { error } = await this.resend.emails.send({
-            from: 'noreply@playtest.tabletapasgames.com',
+        await this.send({
             to: toEmail,
             subject: `It's your turn in ${gameName}!`,
             html: emailHTML,
-            text: emailText,
-            headers: {
-                'X-Entity-Ref-ID': nanoid()
-            }
+            text: emailText
         })
-        if (error) {
-            throw new Error(`Failed to send email via Resend: ${error.message}`)
-        }
     }
 }

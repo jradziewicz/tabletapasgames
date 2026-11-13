@@ -67,8 +67,8 @@ The focused hosted-game command intentionally does not watch game source. Stop a
 ### First Time Running Notes
 
 The first time the site is run locally, there are no users at all. You will be presented with the login screen and can use
-the sign up link to navigate to the sign up form. After entering your information you will be prompted to entire a confirmation code that was emailed to you. If you have not signed up for an account with Resend and added your API
-key to the apps/backend/.env.local file you will not receive any email. That said, if you look in the logs of the backend
+the sign up link to navigate to the sign up form. After entering your information you will be prompted to entire a confirmation code that was emailed to you. If you have not signed up for an account with Brevo and added your API
+key (`BREVO_API_KEY`) to the apps/backend/.env.local file you will not receive any email. That said, if you look in the logs of the backend
 process you will the confirmation code logged there and can enter it. The first user created is automatically created as a site admin.
 
 ## Architecture

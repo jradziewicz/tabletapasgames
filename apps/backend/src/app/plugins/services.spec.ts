@@ -57,7 +57,7 @@ vi.mock('@tabletop/backend-services', async () => {
                 return undefined
             }
         },
-        ResendEmailService: { createEmailService: async () => ({}) },
+        BrevoEmailService: { createEmailService: async () => ({}) },
         LibraryService: class {
             async getTitlesMap() {
                 return {}
