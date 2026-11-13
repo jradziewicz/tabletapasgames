@@ -9,6 +9,7 @@
         RegionIds,
         RegionNames,
         StatKind,
+        cardActionsFor,
         getCard,
         type CompanyId,
         type RegionId
@@ -19,6 +20,7 @@
     import { playerCardImageUrl } from '$lib/utils/playerCardImages.js'
     import { GridRegion, gridCellPosition } from '$lib/utils/trackLayout.js'
     import { regionLabelPoint } from '$lib/utils/regionMap.js'
+    import { cardActionText } from '$lib/utils/cardActionText.js'
 
     // Live play: the watcher box. While someone else plays it keeps their selected card up until the turn
     // is done, zooms into the map for what they're choosing or just did, and lists each step in words.
@@ -106,6 +108,23 @@
         return player && player.pawnIndex !== undefined ? player.tableau[player.pawnIndex] : undefined
     })
 
+    // The actions on a card in short words, e.g. "Tax or Invest" for a card that offers one of them.
+    function cardActions(cardId: string | undefined): string | undefined {
+        if (!cardId) return undefined
+        try {
+            const card = getCard(cardId)
+            if (card.kind !== CardKind.Player && card.kind !== CardKind.Development) return undefined
+            const names = cardActionsFor(card, gameSession.gameState.revisedCards).map((action) => cardActionText(action).split(':')[0])
+            if (!names.length) return undefined
+            const exclusive = card.kind === CardKind.Player && card.exclusiveActions
+            return exclusive ? names.join(' or ') : names.join(', then ')
+        } catch {
+            return undefined
+        }
+    }
+
+    const selectedActions = $derived(cardActions(selectedCardId))
+
     const steps = $derived.by((): Step[] => {
         const state = gameSession.gameState
         const turnStart = state.actionCount - turn.length
@@ -117,7 +136,7 @@
             const data = action as GameAction & Record<string, unknown>
             switch (action.type) {
                 case ActionType.MovePawn:
-                    return [{ text: 'selected this card' }]
+                    return [{ text: selectedActions ? `selected ${selectedActions}` : 'selected a card' }]
                 case ActionType.Invest:
                     return [{ text: 'bought a card' }]
                 case ActionType.Tax:
@@ -190,6 +209,9 @@
     <div class="pointer-events-none fixed bottom-4 right-4 z-40 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-xl border-2 border-[#ffd166] bg-[#1b140c]/95 p-2 text-xs text-[#f1e6cf] shadow-2xl">
         {#if shownCardUrl}
             <div><strong class="capitalize">{name}</strong> {lookingAtId && lookingAtId !== selectedCardId ? 'is looking at' : 'selected'}</div>
+            {#if (!lookingAtId || lookingAtId === selectedCardId) && selectedActions}
+                <div class="text-center text-base font-bold text-[#ffd166]">{selectedActions}</div>
+            {/if}
             <img src={shownCardUrl} alt={shownCardId} class="mx-auto {focus?.zoom ? 'h-40' : 'h-56'} w-auto rounded-lg max-sm:h-28" draggable="false" />
         {/if}
         {#if focus?.zoom}
