@@ -23,6 +23,7 @@
     import { regionLabelPoint } from '$lib/utils/regionMap.js'
     import { cardActionText } from '$lib/utils/cardActionText.js'
     import { weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
+    import { recentOtherPlayerAction } from '$lib/utils/recentAction.js'
 
     // Live play: the watcher box. While someone else plays it keeps their selected card up until the turn
     // is done, zooms into the map for what they're choosing or just did, and lists each step in words.
@@ -127,6 +128,24 @@
 
     const selectedActions = $derived(cardActions(selectedCardId))
 
+    // What the latest hunt this turn paid out, e.g. "+2 VP, +$3".
+    const huntBonus = $derived.by(() => {
+        if (!turn.some((action) => action.type === ActionType.ResolveHunt) || !activeId) return undefined
+        const recent = recentOtherPlayerAction(gameSession, ActionType.ResolveHunt, { includeMine: true })
+        if (!recent) return undefined
+        const before = recent.before.getPlayerState(activeId)
+        const after = recent.after.getPlayerState(activeId)
+        const gain = (amount: number, text: (n: number) => string) => (amount > 0 ? text(amount) : undefined)
+        return [
+            gain(after.victoryPoints - before.victoryPoints, (n) => `${n} VP`),
+            gain(after.money - before.money, (n) => `$${n}`),
+            gain(after.gems - before.gems, (n) => `${n} ${n === 1 ? 'gem' : 'gems'}`),
+            gain(after.weaponLevel - before.weaponLevel, (n) => `${n} weapon ${n === 1 ? 'level' : 'levels'}`)
+        ]
+            .filter((text) => text !== undefined)
+            .join(', ')
+    })
+
     const steps = $derived.by((): Step[] => {
         const state = gameSession.gameState
         const turnStart = state.actionCount - turn.length
@@ -175,7 +194,8 @@
                     return [{ text: huntRegion === DragonHuntRegion ? 'hunt the Dragon' : `hunt in ${regionName(huntRegion)}`, zoom: regionZoom(huntRegion) }]
                 case ActionType.ResolveHunt: {
                     const hits = (data.hitTargets as string[] | undefined)?.length ?? 0
-                    return [{ text: hits ? `hit ${hits} ${hits === 1 ? 'time' : 'times'}` : 'missed', zoom: regionZoom(huntRegion) }]
+                    const bonus = huntBonus ? ` and claimed ${huntBonus}` : ''
+                    return [{ text: hits ? `applied ${hits} ${hits === 1 ? 'hit' : 'hits'}${bonus}` : `missed${bonus}`, zoom: regionZoom(huntRegion) }]
                 }
                 case ActionType.Acquire: {
                     const choice = data.choice as 'weapon' | 'tool'
