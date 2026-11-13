@@ -30,6 +30,7 @@
     import { shareImageUrl } from '$lib/utils/shareImages.js'
     import { companyLogoUrl } from '$lib/utils/companyLogos.js'
     import { mineTokenImageUrl } from '$lib/utils/tokenImages.js'
+    import { MarketSlotBoxes } from '$lib/utils/marketLayout.js'
     import { tick } from 'svelte'
 
     // Live play: the watcher box. While someone else plays it keeps their selected card up until the turn
@@ -218,6 +219,8 @@
         const claims = ofKind(StatKind.MineClaim)
         const purchases = ofKind(StatKind.Purchase)
         const tracks = ofKind(StatKind.Track)
+        const cash = ofKind(StatKind.Cash)
+        let taxIndex = 0
         let trackIndex = 0
         const player = actorId ? state.findPlayerState(actorId) : undefined
         let extractIndex = 0
@@ -236,10 +239,13 @@
                     return [{ text: selectedActions ? `selected ${selectedActions}` : 'selected a card', imageUrl: cardUrl(selectedCardId) }]
                 case ActionType.Invest: {
                     const cardId = purchases[purchaseIndex++]?.cardId
-                    return [{ text: 'bought a card', imageUrl: cardUrl(cardId) }]
+                    const cost = cash.find((event) => event.source === 'purchase' && event.cardId === cardId)?.amount
+                    return [{ text: `bought a card${cost === undefined ? '' : ` for $${-cost}`}`, imageUrl: cardUrl(cardId) }]
                 }
-                case ActionType.Tax:
-                    return [{ text: 'taxed', imageUrl: cardUrl(player?.tuckedCardIds.at(-1)) }]
+                case ActionType.Tax: {
+                    const income = cash.filter((event) => event.source === 'tax')[taxIndex++]?.amount
+                    return [{ text: `taxed${income === undefined ? '' : ` for $${income}`}`, detail: 'Tucked this card under the mat', imageUrl: cardUrl(player?.tuckedCardIds.at(-1)) }]
+                }
                 case ActionType.ClaimMine: {
                     const cost = claims[claimIndex++]?.amount
                     return [{ text: `claimed ${BoardNodesById[data.nodeId as string]?.name ?? 'a mine'}${cost === undefined ? '' : ` for $${cost}`}`, zoom: around(nodePoint(data.nodeId as string)) }]
@@ -323,8 +329,24 @@
                     const index = Math.max(0, company.nextShareIndex - 1)
                     return [{ text: `took a ${CompanyNames[companyId] ?? ''} share (${company.multiplierForShare(index)}x)`, imageUrl: shareImageUrl(companyId, index, company.sharesFlipped) }]
                 }
-                case ActionType.GemAction:
-                    return [{ text: 'used a gem' }]
+                case ActionType.GemAction: {
+                    const labels: Record<string, [string, number]> = {
+                        repeat: ['to repeat their card', 2],
+                        market: ['to take a market card', 2],
+                        swap: ['to swap', 1],
+                        movePawn: ['to move their pawn', 1]
+                    }
+                    const [what, cost] = labels[data.kind as string] ?? ['', 1]
+                    return [{ text: `spent ${cost} ${cost === 1 ? 'gem' : 'gems'} ${what}`.trim() }]
+                }
+                case ActionType.PointBuy:
+                    return [{ text: `bought points at the Feast (${data.bundles as number} ${(data.bundles as number) === 1 ? 'bundle' : 'bundles'})` }]
+                case ActionType.SellVictoryPoints:
+                    return [{ text: `sold ${data.amount as number} VP` }]
+                case ActionType.SkipBonusInvest:
+                    return [{ text: 'skipped the bonus invest' }]
+                case ActionType.DiscardAgreement:
+                    return [{ text: `discarded a ${BoardNodesById[data.cityId as string]?.name ?? ''} agreement`.replace('  ', ' ') }]
                 case ActionType.AgreementPointBuy:
                     return [{ text: data.buy ? 'bought VP from the agreement' : 'skipped the agreement VP' }]
                 default:
@@ -395,6 +417,9 @@
                 zoom: around(options),
                 live: true
             }
+        }
+        if (selection.step === 'Invest') {
+            return { text: 'is choosing a card to buy', zoom: around(MarketSlotBoxes.map((box) => ({ x: box.x + box.width / 2, y: box.y + box.height / 2 }))), live: true }
         }
         if (selection.step) return { text: `is choosing ${selection.step}`, live: true }
         return undefined
