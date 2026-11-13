@@ -94,7 +94,7 @@ export type LiveSelection = {
     extractCustomRoute?: string[]
 }
 
-const LiveSelectionHoldMs = 1000
+const LiveSelectionHoldMs = 2000
 
 const ActionTypeByCardAction: Record<CardActionKind, ActionType> = {
     [CardActionKind.Tax]: ActionType.Tax,
