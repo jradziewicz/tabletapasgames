@@ -154,7 +154,20 @@
     const selectedActions = $derived(cardActions(selectedCardId))
 
     // What the latest hunt this turn paid out, e.g. "+2 VP, +$3".
-    const huntBonus = $derived.by(() => {
+    // Replaying an older move to read what it did gets less reliable as later moves pile up (and
+    // the next turn starts), so each result is kept from the moment its move was the latest one.
+    const replayCache = new Map<string, unknown>()
+    function fresh<T>(type: string, compute: () => T): T {
+        const actions = gameSession.actions
+        const index = actions.findLastIndex((action) => action.type === type)
+        const key = `${type}:${actions[index]?.id ?? index}`
+        if (replayCache.has(key)) return replayCache.get(key) as T
+        const result = compute()
+        if (index >= 0 && index === actions.length - 1 && result !== undefined) replayCache.set(key, result)
+        return result
+    }
+
+    function compute_huntBonus() {
         if (!turn.some((action) => action.type === ActionType.ResolveHunt) || !actorId) return undefined
         const recent = recentOtherPlayerAction(gameSession, ActionType.ResolveHunt, { includeMine: true })
         if (!recent) return undefined
@@ -178,7 +191,8 @@
             .map((scourgeId) => ({ text: `killed the ${ScourgeDefinitionsById[scourgeId]?.name ?? 'scourge'}`, imageUrl: scourgeImageUrl(scourgeId) }))
         if (!recent.before.dragon.killed && recent.after.dragon.killed) killed.push({ text: 'killed the Dragon', imageUrl: DragonTileImageUrl })
         return { text, tokens, region: recent.before.pendingHunt?.region, hitsFrom: before.huntHits ?? 0, hitsTo: after.huntHits ?? 0, killed, actionId: recent.action.id }
-    })
+    }
+    const huntBonus = $derived(fresh(ActionType.ResolveHunt, compute_huntBonus))
 
     // The money lines of a sale: what the ore sold for and what the route cost.
     function saleLines(plan: ReturnType<typeof planExtraction>): { label: string; amount: number }[] {
@@ -193,7 +207,7 @@
     }
 
     // The latest Extract & Sell this turn, replayed on the state before it for its breakdown.
-    const lastExtract = $derived.by(() => {
+    function compute_lastExtract() {
         if (!turn.some((action) => action.type === ActionType.ExtractAndSell) || !actorId) return undefined
         const recent = recentOtherPlayerAction<{ nodeId: string; creditCompanyId?: CompanyId }>(gameSession, ActionType.ExtractAndSell, { includeMine: true })
         if (!recent) return undefined
@@ -204,10 +218,11 @@
             tokenUrl: token ? mineTokenImageUrl(token) : undefined,
             companyId: recent.action.creditCompanyId
         }
-    })
+    }
+    const lastExtract = $derived(fresh(ActionType.ExtractAndSell, compute_lastExtract))
 
     // What the latest Acquire this turn earned beyond the level: an unlock, a gem or points.
-    const lastAcquire = $derived.by(() => {
+    function compute_lastAcquire() {
         if (!turn.some((action) => action.type === ActionType.Acquire) || !actorId) return undefined
         const recent = recentOtherPlayerAction(gameSession, ActionType.Acquire, { includeMine: true })
         if (!recent) return undefined
@@ -220,10 +235,11 @@
             after.victoryPoints > before.victoryPoints ? `Scored ${after.victoryPoints - before.victoryPoints} VP` : undefined
         ].filter((text) => text !== undefined)
         return { actionId: recent.action.id, detail: gains.join(', ') }
-    })
+    }
+    const lastAcquire = $derived(fresh(ActionType.Acquire, compute_lastAcquire))
 
     // What moving the pawn cost: money paid to skip cards and cards discarded instead.
-    const moveCost = $derived.by(() => {
+    function compute_moveCost() {
         if (!turn.some((action) => action.type === ActionType.MovePawn) || !actorId) return undefined
         const recent = recentOtherPlayerAction<{ discardIndexes?: number[] }>(gameSession, ActionType.MovePawn, { includeMine: true })
         if (!recent) return undefined
@@ -234,7 +250,18 @@
             discarded > 0 ? `Discarded ${discarded} skipped ${discarded === 1 ? 'card' : 'cards'}` : undefined
         ].filter((part) => part !== undefined)
         return parts.length ? parts.join(', ') : undefined
-    })
+    }
+    const moveCost = $derived(fresh(ActionType.MovePawn, compute_moveCost))
+
+    // What a hunt's hits killed: a hit scourge that's no longer on the board, or the Dragon once slain.
+    function killedBy(targets: string[] | undefined): Step[] {
+        const state = gameSession.gameState
+        const onBoard = new Set(Object.values(state.board.scourgesByRegion).flatMap((list) => (list ?? []).map((scourge) => scourge.scourgeId)))
+        return [...new Set(targets ?? [])].flatMap((target): Step[] => {
+            if (target === DragonHuntRegion) return state.dragon.killed ? [{ text: 'killed the Dragon', imageUrl: DragonTileImageUrl }] : []
+            return onBoard.has(target) ? [] : [{ text: `killed the ${ScourgeDefinitionsById[target]?.name ?? 'scourge'}`, imageUrl: scourgeImageUrl(target) }]
+        })
+    }
 
     function huntStep(region: string): Step {
         return { text: region === DragonHuntRegion ? 'hunt the Dragon' : `hunt in ${regionName(region)}`, zoom: regionZoom(region) }
@@ -301,14 +328,26 @@
                     const mine = BoardNodesById[data.nodeId as string]?.name ?? 'a mine'
                     const city = BoardNodesById[detail['city'] ?? '']?.name
                     const route = (gameSession.turnMarks.routes.find((nodes) => nodes[0] === data.nodeId) ?? [data.nodeId as string]).flatMap(nodePoint)
-                    const last = lastExtract?.actionId === action.id ? lastExtract : undefined
-                    const companyId = (data.creditCompanyId as CompanyId | undefined) ?? last?.companyId
+                    const companyId = data.creditCompanyId as CompanyId | undefined
+                    const oreCount = Number(detail['ore'] ?? 0)
+                    const sale = Number(detail['sale'] ?? 0)
+                    const bonus = cash.filter((other) => other.source === 'agreement' && other.action === event?.action).reduce((sum, other) => sum + other.amount, 0)
+                    const price = sale + bonus
+                    const net = event?.amount ?? 0
+                    const lines = event
+                        ? [
+                              { label: `${ore} price (${oreCount} × $${oreCount ? Math.round(sale / oreCount) : 0}${bonus ? ` + $${bonus} agreement` : ''})`, amount: price },
+                              { label: 'Expenses (transport & security)', amount: -(price - net) },
+                              { label: 'Profit', amount: net }
+                          ]
+                        : undefined
                     return [
                         {
                             text: `extracted ${detail['ore'] ?? ''} ${ore} from ${mine}${city ? `, sold to ${city}` : ''}${companyId ? ` via ${CompanyNames[companyId]}` : ''}${event ? `: ${money(event.amount)}` : ''}`.replace('  ', ' '),
-                            imageUrl: last?.tokenUrl,
+                            // The token as it was before extracting (the mine may have flipped since).
+                            imageUrl: lastExtract?.actionId === action.id ? lastExtract.tokenUrl : undefined,
                             logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
-                            lines: last?.lines,
+                            lines,
                             zoom: around(route)
                         }
                     ]
@@ -329,7 +368,7 @@
                             ? [{ text: `moved the battle axe up to ${huntBonus.hitsTo} ${huntBonus.hitsTo === 1 ? 'hit' : 'hits'}`, zoom: around([victoryPointPosition(huntBonus.hitsFrom), victoryPointPosition(huntBonus.hitsTo)], 360) }]
                             : []
                     return [
-                        ...lead,{ text: hits ? `applied ${hits} ${hits === 1 ? 'hit' : 'hits'}${bonus}` : `missed${bonus}`, tokens: huntBonus?.tokens }, ...(huntBonus?.actionId === action.id ? huntBonus.killed : []), ...axe]
+                        ...lead,{ text: hits ? `applied ${hits} ${hits === 1 ? 'hit' : 'hits'}${bonus}` : `missed${bonus}`, tokens: huntBonus?.tokens }, ...killedBy(data.hitTargets as string[] | undefined), ...axe]
                 }
                 case ActionType.Acquire: {
                     const choice = data.choice as 'weapon' | 'tool'
