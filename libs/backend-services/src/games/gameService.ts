@@ -1,6 +1,7 @@
 import { enqueueTournamentTask } from '../competitions/tournamentTasks.js'
 import { Timed, measure, measureSync, countTiming } from '../diagnostics/requestTimings.js'
 import {
+    receivesGameAndCompetitionEmail,
     snapPaceMinutes,
     GameCreationOptions,
     deriveGameSeeds,
@@ -937,6 +938,8 @@ export class GameService {
         if (!user.email || user.status !== UserStatus.Active) {
             throw new InvalidPlayerUserError({ user })
         }
+
+        if (!receivesGameAndCompetitionEmail(user)) return
 
         const invitationData = { gameId: game.id, userId: user.id }
         //TODO fix expiration
@@ -2387,7 +2390,7 @@ export class GameService {
             // I'm not sure why we send the email through the task, when
             // it could just get it on the other end.
             const user = await this.userService.getUser(userId)
-            if (user && user.email) {
+            if (user && receivesGameAndCompetitionEmail(user)) {
                 await this.taskService.sendGameEndEmail({
                     userId: user.id,
                     gameId: game.id,

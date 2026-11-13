@@ -72,6 +72,9 @@ export const UserPreferences = Type.Object({
     // behaves as true (on) so existing users keep getting emails until they explicitly turn
     // it off; only an explicit false suppresses them.
     emailNotificationsEnabled: Type.Optional(Type.Boolean()),
+    // Opts out of game emails other than turn alerts: invitations and finished games. Undefined
+    // behaves as true (on); account and security emails always go out.
+    gameAndCompetitionEmails: Type.Optional(Type.Boolean()),
     // One-time in-app announcement flags. Each is set true the moment the announcement is
     // shown (not waiting on the user to dismiss it), so it never shows more than once per
     // user - see the "showOnceAnnouncement" effect in the site layout.
@@ -81,6 +84,10 @@ export const UserPreferences = Type.Object({
     // means no preference: reminders go out at any hour, so existing users are unaffected.
     reminderHours: Type.Optional(ReminderHours)
 })
+
+export function wantsGameAndCompetitionEmails(preferences: UserPreferences | undefined): boolean {
+    return preferences?.gameAndCompetitionEmails !== false
+}
 
 export type User = Type.Static<typeof User>
 export const User = Type.Object({
@@ -105,6 +112,12 @@ export const User = Type.Object({
     activatedAt: Type.Optional(DateType()),
     sessionGeneration: Type.Optional(Type.Integer({ minimum: 0 }))
 })
+
+export function receivesGameAndCompetitionEmail<T extends Pick<User, 'email' | 'preferences'>>(
+    user: T
+): user is T & { email: string } {
+    return Boolean(user.email) && wantsGameAndCompetitionEmails(user.preferences)
+}
 
 export function sessionGenerationOf(user: Pick<User, 'sessionGeneration'>): number {
     return user.sessionGeneration ?? 0
