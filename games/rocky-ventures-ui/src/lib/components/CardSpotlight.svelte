@@ -175,8 +175,9 @@
             return
         }
         popping = true
-        // The player who made the move already knows what they did, so they skip the pop-up.
-        const mine = next.playerId === gameSession.myPlayer?.id
+        // Pop-ups are switched off (the watcher box tells the story); everyone just gets the glow
+        // where the card, mine or share landed.
+        const mine = true
         const shown: typeof next = mine ? { ...next, phase: 'landed' } : next
         gameSession.spotlight = shown
         timers.push(
