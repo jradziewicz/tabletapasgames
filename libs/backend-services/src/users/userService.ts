@@ -152,7 +152,11 @@ export class UserService {
         }
     }
 
-    async createUser(user: User, password: string): Promise<User> {
+    async createUser(
+        user: User,
+        password: string,
+        options: { confirmAge?: boolean } = {}
+    ): Promise<User> {
         const cleanPassword = password.trim()
         if (cleanPassword.length < 12) {
             throw new InvalidPasswordError()
@@ -160,7 +164,7 @@ export class UserService {
 
         await this.assertUsernameAllowed(user.username)
 
-        const createdUser = await this.userStore.createUser(user, cleanPassword)
+        const createdUser = await this.userStore.createUser(user, cleanPassword, options)
 
         if (createdUser.email && !createdUser.emailVerified) {
             await this.sendVerificationEmail(createdUser)
@@ -210,7 +214,8 @@ export class UserService {
     async updateUser(
         session: AuthenticatedSession,
         fields: Partial<User>,
-        password?: string
+        password?: string,
+        { confirmAge = false }: { confirmAge?: boolean } = {}
     ): Promise<User> {
         const userId = session.userId
         await this.assertUsernameAllowed(fields.username)
@@ -219,6 +224,7 @@ export class UserService {
             userId,
             fields,
             password,
+            confirmAge,
             validator: (existingUser, fieldsToUpdate) => {
                 const changesEmail = Boolean(
                     fieldsToUpdate.email && fieldsToUpdate.email !== existingUser.email

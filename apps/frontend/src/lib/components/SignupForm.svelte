@@ -6,6 +6,7 @@
     import PasswordInput from '$lib/components/PasswordInput.svelte'
     import AuthLink from '$lib/components/AuthLink.svelte'
     import UsernameReviewPrompt from '$lib/components/UsernameReviewPrompt.svelte'
+    import AgeConfirmation from '$lib/components/AgeConfirmation.svelte'
     import { focusFirstInput } from '$lib/utils/focusFirstInput'
     import { INAPPROPRIATE_USERNAME_ERROR, isInappropriateUsername } from '@tabletop/common'
 
@@ -20,11 +21,15 @@
     let username = $state('')
     let password = $state('')
     let email = $state('')
+    let ageConfirmed = $state(false)
+
+    const ageConfirmationMessage = 'Confirm you are 13 or older to create an account'
 
     const createUserSchema = z.object({
         username: z.string().trim().min(1),
         password: z.string().trim().min(12),
-        email: z.string().trim().email()
+        email: z.string().trim().email(),
+        ageConfirmed: z.literal(true, { message: ageConfirmationMessage })
     })
 
     async function submit(event: SubmitEvent) {
@@ -33,7 +38,7 @@
         unexpectedError = false
         errors = {}
         blockedUsername = undefined
-        const result = createUserSchema.safeParse({ username, password, email })
+        const result = createUserSchema.safeParse({ username, password, email, ageConfirmed })
         if (!result.success) {
             errors = result.error.flatten().fieldErrors
             return
@@ -134,6 +139,7 @@
             {/if}
         </Helper>
     </div>
+    <AgeConfirmation bind:checked={ageConfirmed} errors={errors.ageConfirmed} />
     <div class="flex items-center justify-between gap-4 mt-4">
         <p class="auth-secondary text-sm text-gray-600 dark:text-gray-300">
             Have an account? <AuthLink href="/login" onactivate={onsignin}>Sign in</AuthLink>

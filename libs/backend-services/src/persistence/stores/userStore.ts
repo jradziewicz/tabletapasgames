@@ -17,7 +17,7 @@ export interface UserStore {
     findAllUsernames(): Promise<string[]>
     findAllUsers(): Promise<User[]>
 
-    createUser(user: User, password?: string): Promise<User>
+    createUser(user: User, password?: string, options?: { confirmAge?: boolean }): Promise<User>
     updatePassword(userId: string, password: string, options?: PasswordUpdateOptions): Promise<User>
 
     updateUser({
@@ -26,7 +26,8 @@ export interface UserStore {
         password,
         currentPassword,
         validator,
-        participant
+        participant,
+        confirmAge
     }: {
         userId: string
         fields: Partial<User>
@@ -34,6 +35,7 @@ export interface UserStore {
         currentPassword?: string
         validator?: UpdateValidator<StoredUser>
         participant?: TransactionParticipant
+        confirmAge?: boolean
     }): Promise<[User, string[], User]>
 
     addExternalId({

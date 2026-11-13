@@ -5,8 +5,9 @@
         INAPPROPRIATE_USERNAME_ERROR,
         isInappropriateUsername,
         UserStatus,
-        type User
+        type UserUpdateRequest
     } from '@tabletop/common'
+    import AgeConfirmation from '$lib/components/AgeConfirmation.svelte'
     import { getAppContext } from '@tabletop/frontend-components'
     import UsernameReviewPrompt from '$lib/components/UsernameReviewPrompt.svelte'
     import { challengeExpiryText } from '$lib/utils/challengeExpiry'
@@ -23,6 +24,7 @@
     let blockedUsername: string | undefined = $state()
     let username: string | undefined = $state(undefined)
     let email: string | undefined = $state(undefined)
+    let ageConfirmed = $state(false)
     let verificationToken: string | undefined = $state(undefined)
     let verificationError = $state(false)
     let newEmailSent = $state(false)
@@ -36,15 +38,21 @@
         email = email?.trim()
 
         blockedUsername = undefined
+        errors = {}
+        if (user && !user.ageConfirmedAt && !ageConfirmed) {
+            errors.ageConfirmed = ['Confirm you are 13 or older to create an account']
+            return
+        }
         if (username && isInappropriateUsername(username)) {
             errors.username = ['That username is not allowed. Please choose another.']
             blockedUsername = username
             return
         }
 
-        const payload = {
+        const payload: UserUpdateRequest = {
             username,
-            email
+            email,
+            ageConfirmed: ageConfirmed ? true : undefined
         }
         await reauthentication.run({
             description: email ? 'update your email address' : 'complete your profile',
@@ -52,7 +60,7 @@
         })
     }
 
-    async function saveProfile(payload: Pick<User, 'username' | 'email'>) {
+    async function saveProfile(payload: UserUpdateRequest) {
         try {
             let updatedUser = await api.updateUser(payload)
             authorizationService.setSessionUser(updatedUser)
@@ -221,6 +229,9 @@
                         We’ll never share your email publicly. It is only used for account recovery
                         and notifications.
                     </Helper>
+                {/if}
+                {#if user && !user.ageConfirmedAt}
+                    <AgeConfirmation bind:checked={ageConfirmed} errors={errors.ageConfirmed} />
                 {/if}
                 <div class="flex justify-end"><Button type="submit" class="">Submit</Button></div>
             </form>
