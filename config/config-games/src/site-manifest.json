@@ -1,26 +1,26 @@
 {
   "frontend": {
-    "version": "19.5.21",
+    "version": "19.5.23",
     "priorVersions": [
+      "19.5.22",
+      "19.5.21",
       "19.5.20",
       "19.5.19",
-      "19.5.18",
-      "19.5.17",
-      "19.5.16"
+      "19.5.18"
     ]
   },
   "games": [
     {
       "gameId": "stellarventures",
       "packageId": "stellar-ventures",
-      "logicVersion": "1.0.12",
+      "logicVersion": "1.0.13",
       "uiVersion": "1.0.42",
       "priorLogicVersions": [
+        "1.0.12",
         "1.0.11",
         "1.0.10",
         "1.0.9",
-        "1.0.8",
-        "1.0.7"
+        "1.0.8"
       ],
       "priorUiVersions": [
         "1.0.41",
@@ -33,29 +33,31 @@
     {
       "gameId": "rockyventures",
       "packageId": "rocky-ventures",
-      "logicVersion": "0.0.26",
-      "uiVersion": "0.0.53",
+      "logicVersion": "0.0.29",
+      "uiVersion": "0.0.55",
       "priorLogicVersions": [
+        "0.0.28",
+        "0.0.27",
+        "0.0.26",
         "0.0.25",
-        "0.0.24",
-        "0.0.23",
-        "0.0.22",
-        "0.0.21"
+        "0.0.24"
       ],
       "priorUiVersions": [
+        "0.0.54",
+        "0.0.53",
         "0.0.52",
         "0.0.51",
-        "0.0.50",
-        "0.0.49",
-        "0.0.48"
+        "0.0.50"
       ]
     },
     {
       "gameId": "locust",
       "packageId": "locust",
-      "logicVersion": "0.0.1",
+      "logicVersion": "0.0.2",
       "uiVersion": "0.0.2",
-      "priorLogicVersions": [],
+      "priorLogicVersions": [
+        "0.0.1"
+      ],
       "priorUiVersions": [
         "0.0.1"
       ]

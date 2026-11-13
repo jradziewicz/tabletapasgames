@@ -8,6 +8,7 @@ import type {
 import rawBody from 'fastify-raw-body'
 import { restartable, type ApplicationFactory } from '@fastify/restartable'
 import { app } from './app/app.js'
+import { LoggingBoundary } from './app/lib/logging.js'
 import { ajvOptions } from './runtime/ajvOptions.js'
 import * as http2 from 'node:http2'
 import * as http from 'node:http'
@@ -17,7 +18,11 @@ const port = process.env['PORT'] ? Number(process.env['PORT']) : 3000
 
 const service: string = process.env['K_SERVICE'] ?? 'local'
 
+// Masks credential paths, query parameters and fields in every log line and serialized error
+const logging = new LoggingBoundary()
+
 const registerApp = async <Server extends RawServerBase>(server: FastifyInstance<Server>) => {
+    logging.observeRoutes(server)
     await server.register(rawBody, {
         global: false,
         runFirst: true
@@ -57,7 +62,7 @@ if (service === 'backend') {
         createHttp2App,
         {
             http2: true,
-            logger: true,
+            logger: logging.loggerOptions,
             ajv: ajvOptions,
             pluginTimeout: 20000
         } as FastifyHttp2Options<http2.Http2Server>,
@@ -69,7 +74,7 @@ if (service === 'backend') {
     const server = await restartable(
         createHttpApp,
         {
-            logger: true,
+            logger: logging.loggerOptions,
             ajv: ajvOptions
         } as FastifyHttpOptions<http.Server>,
         Fastify

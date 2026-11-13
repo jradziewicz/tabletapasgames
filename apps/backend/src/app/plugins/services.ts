@@ -13,6 +13,8 @@ import {
     SiteStatsService,
     TokenService,
     UserService,
+    AccountDeletion,
+    AbandonedSignUps,
     SecretsService,
     EnvSecretsService,
     FirestoreGameStore,
@@ -42,7 +44,12 @@ import {
     FirestorePreferenceStore,
     BugReportService,
     FirestoreBugReportStore,
-    UsernameReviewService
+    FirestoreSessionStore,
+    SessionService,
+    type DiscordOAuth,
+    DiscordOAuthClient,
+    UsernameReviewService,
+    ContentReports
 } from '@tabletop/backend-services'
 import type { GameDefinition } from '@tabletop/common'
 
@@ -53,7 +60,11 @@ declare module 'fastify' {
     interface FastifyInstance {
         taskService: TaskService
         tokenService: TokenService
+        sessionService: SessionService
+        discordOAuth: DiscordOAuth
         userService: UserService
+        accountDeletion: AccountDeletion
+        abandonedSignUps: AbandonedSignUps
         emailService: EmailService
         secretsService: SecretsService
         gameService: GameService
@@ -71,6 +82,7 @@ declare module 'fastify' {
         bugReportService: BugReportService
         usernameReviewService: UsernameReviewService
         siteStatsService: SiteStatsService
+        contentReports: ContentReports | undefined
     }
 }
 
@@ -81,6 +93,7 @@ const SITE_MANIFEST_PATH =
     process.env['SITE_MANIFEST_PATH'] ?? path.join(STATIC_ROOT, 'config', 'site-manifest.json')
 
 const useAbly = !!process.env['ABLY_API_KEY']
+const MODERATION_EMAIL = process.env['MODERATION_EMAIL']
 
 export default fp(async (fastify: FastifyInstance) => {
     const secretsService = new EnvSecretsService()
@@ -112,7 +125,14 @@ export default fp(async (fastify: FastifyInstance) => {
         fastify.firestore,
         service === 'local'
     )
+    const sessionService = new SessionService(
+        new FirestoreSessionStore(redisCacheService, fastify.firestore)
+    )
     const userService = new UserService(userStore, tokenService, taskService)
+    const discordOAuth = new DiscordOAuthClient({
+        clientId: process.env['DISCORD_CLIENT_ID'] ?? '',
+        clientSecret: () => secretsService.getSecret('DISCORD_SECRET')
+    })
 
     let pubSubService: PubSubService = new NullPubSubService()
     if (!useAbly) {
@@ -204,10 +224,26 @@ export default fp(async (fastify: FastifyInstance) => {
         if (taskService instanceof LocalTaskService) taskService.close()
     })
     fastify.decorate('tokenService', tokenService)
+    fastify.decorate('sessionService', sessionService)
+    fastify.decorate('discordOAuth', discordOAuth)
     const usernameReviewService = new UsernameReviewService(fastify.firestore)
     userService.isUsernameApproved = (username) => usernameReviewService.isApproved(username)
     fastify.decorate('usernameReviewService', usernameReviewService)
     fastify.decorate('userService', userService)
+    const accountDeletion = new AccountDeletion({
+        users: userService,
+        games: gameService,
+        sessions: sessionService,
+        tokens: tokenService,
+        preferences: userStore,
+        notifications: notificationService,
+        tasks: taskService
+    })
+    fastify.decorate('accountDeletion', accountDeletion)
+    fastify.decorate(
+        'abandonedSignUps',
+        new AbandonedSignUps(userStore, gameStore, accountDeletion)
+    )
     fastify.decorate('emailService', emailService)
     fastify.decorate('secretsService', secretsService)
     fastify.decorate('gameService', gameService)
@@ -224,7 +260,30 @@ export default fp(async (fastify: FastifyInstance) => {
         new PreferenceService(new FirestorePreferenceStore(fastify.firestore), redisCacheService)
     )
     fastify.decorate(
+        'contentReports',
+        MODERATION_EMAIL
+            ? new ContentReports(
+                  gameService,
+                  chatService,
+                  userService,
+                  taskService,
+                  MODERATION_EMAIL,
+                  process.env['FRONTEND_HOST'] ?? ''
+              )
+            : undefined
+    )
+    fastify.decorate(
         'bugReportService',
-        new BugReportService(gameService, new FirestoreBugReportStore(fastify.firestore))
+        new BugReportService(
+            gameService,
+            new FirestoreBugReportStore(fastify.firestore),
+            MODERATION_EMAIL
+                ? {
+                      tasks: taskService,
+                      toEmail: MODERATION_EMAIL,
+                      frontendHost: process.env['FRONTEND_HOST'] ?? ''
+                  }
+                : undefined
+        )
     )
 })

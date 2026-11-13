@@ -119,6 +119,11 @@
                 <span style="color: #4a5175;">·</span>
                 <span>Keep <span class="font-mono">{huntRule.apply}</span></span>
             </div>
+            {#if gameSession.gameState.huntHitsScoreAtFeasts}
+                <div class="mt-0.5 text-xs" title="Battle axe: hits dealt so far. Each Feast scores this many points.">
+                    🪓 <span class="font-mono font-semibold">{playerState.huntHits ?? 0}</span> hits
+                </div>
+            {/if}
         </div>
         <div class="px-3 py-2" style="background-color: #12162b;">
             <div class="text-[10px] uppercase tracking-widest" style="color: #7f88ad;">Extract</div>

@@ -249,9 +249,12 @@ function createService(source: ReturnType<typeof createSource>) {
     const tasks: TaskService = {
         createPushTask: unused,
         sendVerificationEmail: unused,
+        sendEmailChangeVerificationEmail: unused,
         sendPasswordResetEmail: unused,
         sendAuthVerificationEmail: unused,
         sendAccountChangeNotificationEmail: unused,
+        sendContentReportEmail: unused,
+        sendBugReportEmail: unused,
         sendGameInvitationEmail: unused,
         sendGameEndEmail: unused
     }

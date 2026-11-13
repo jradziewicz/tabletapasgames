@@ -27,7 +27,7 @@
     import CardHoverPreview from '$lib/components/CardHoverPreview.svelte'
     import GameOverOverlay from '$lib/components/GameOverOverlay.svelte'
     import PointSources from '$lib/components/PointSources.svelte'
-    import { setRevisedCardArt } from '$lib/utils/cardImages.js'
+    import { setFeastBonusArt, setRevisedCardArt } from '$lib/utils/cardImages.js'
     import { setAgreementDeliveryScoring, setAgreementDiscardAllowed } from '$lib/utils/agreementImages.js'
     import DragonOverlay from '$lib/components/DragonOverlay.svelte'
     import DragonBonusOverlay from '$lib/components/DragonBonusOverlay.svelte'
@@ -48,6 +48,7 @@
     const session = gameSession as RockyVenturesGameSession
     setGameSession(session)
     setRevisedCardArt(session.gameState.revisedCards === true)
+    setFeastBonusArt(session.gameState.feastBuyerBonus === true)
     setAgreementDeliveryScoring(session.gameState.agreementsScoreOnDelivery === true)
     setAgreementDiscardAllowed(session.gameState.noAgreementDiscard !== true)
 

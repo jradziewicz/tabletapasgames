@@ -32,6 +32,7 @@ export * from './operations/acquire.js'
 export * from './actions/skipBonusInvest.js'
 export * from './operations/hunt.js'
 export * from './operations/grid.js'
+export * from './operations/feastBonus.js'
 export * from './actions/endTurn.js'
 export * from './operations/extract.js'
 

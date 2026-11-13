@@ -64,6 +64,7 @@ export interface GameStore {
     getGameEtag(gameId: string): Promise<string | undefined>
     hasCachedActiveGames(user: User): Promise<boolean>
     findGamesForUser(user: User, category: GameStatusCategory): Promise<Game[]>
+    hasGamesForUser(userId: string): Promise<boolean>
     findGameHistory(user: User, before?: GameHistoryCursor): Promise<GameHistoryPage>
     findGameStats(user: User): Promise<UserGameStats>
     findOpenGamesForTitle(titleId: string): Promise<Game[]>

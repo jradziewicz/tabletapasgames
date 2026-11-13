@@ -4,6 +4,7 @@ import { MarketSize, MarketSlotPrices } from '../data/setup.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { revealMine } from './mines.js'
 import { startPointBuy } from './turn.js'
+import { scoreHuntHitsAtFeast } from './hunt.js'
 
 // Draws the top card of the draw pile into the newest market slot. The Game Over card is never
 // drawn: it stays face up at the bottom of the pile as the deck-exhausted end trigger. Drawing a
@@ -52,6 +53,7 @@ function resolveEndOfEraPair(state: HydratedRockyVenturesGameState, random: Rand
         state.market.slots = slots.filter(
             (cardId) => cardId !== ThirdEraCardId && cardId !== FirstEraCardId && cardId !== SecondEraCardId
         )
+        scoreHuntHitsAtFeast(state, ThirdEraCardId)
         state.eraThreeTriggered = true
         return
     }

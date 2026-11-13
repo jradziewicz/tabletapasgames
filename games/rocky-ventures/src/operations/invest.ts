@@ -6,6 +6,7 @@ import type { DeliveryCityId } from '../data/board.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { marketCardCost, removeFromMarket } from './market.js'
 import { startPointBuy } from './turn.js'
+import { scoreFeastBuyerBonus } from './feastBonus.js'
 import { recordActionStat, recordCash, recordGems, recordStat } from './stats.js'
 import { StatKind } from '../model/stats.js'
 import { type AgreementLetter, isTwoSidedAgreement } from '../data/agreements.js'
@@ -145,6 +146,7 @@ export function investInMarketCard(
 
     if (card.kind === CardKind.EndOfEra) {
         player.tuckedCardIds.push(cardId)
+        scoreFeastBuyerBonus(state, playerId, cardId)
         startPointBuy(state, cardId)
         return
     }

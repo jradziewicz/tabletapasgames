@@ -1,6 +1,12 @@
 import { ExternalAuthService, User } from '@tabletop/common'
 import { StoredUser } from '../model/storedUser'
 import { UpdateValidator } from './validator'
+import { TransactionParticipant } from './transaction'
+
+export type PasswordUpdateOptions = {
+    validate?: (existing: StoredUser) => void
+    participant?: TransactionParticipant
+}
 
 export interface UserStore {
     findByUsername(username: string): Promise<User | undefined>
@@ -10,22 +16,27 @@ export interface UserStore {
     findByUsernameAndPassword(username: string, password: string): Promise<User | undefined>
     findAllUsernames(): Promise<string[]>
     findAllUsers(): Promise<User[]>
+    findIncompleteUsers(): Promise<User[]>
 
-    createUser(user: User, password?: string): Promise<User>
-    updatePassword(userId: string, password: string): Promise<void>
+    createUser(user: User, password?: string, options?: { confirmAge?: boolean }): Promise<User>
+    updatePassword(userId: string, password: string, options?: PasswordUpdateOptions): Promise<User>
 
     updateUser({
         userId,
         fields,
         password,
         currentPassword,
-        validator
+        validator,
+        participant,
+        confirmAge
     }: {
         userId: string
         fields: Partial<User>
         password?: string
         currentPassword?: string
         validator?: UpdateValidator<StoredUser>
+        participant?: TransactionParticipant
+        confirmAge?: boolean
     }): Promise<[User, string[], User]>
 
     addExternalId({
@@ -38,4 +49,9 @@ export interface UserStore {
         service: ExternalAuthService
     }): Promise<User>
     removeExternalId(userId: string, externalId: string): Promise<User>
+
+    // Replaces the account with a tombstone (id, status and dates) and releases its username,
+    // email and linked logins. Returns [tombstone, account as it was].
+    deleteUser(userId: string, validate?: (existing: StoredUser) => void): Promise<[User, User]>
+    deletePreferences(userId: string): Promise<void>
 }

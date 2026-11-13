@@ -1,14 +1,30 @@
 import { AccountChangeType } from '../email/emailService.js'
-import { CreatePushTaskOptions, TaskService } from './taskService'
+import type { ContentReportEmail } from '../moderation/contentReports.js'
+import type { BugReportEmail } from '../bugReports/bugReportEmail.js'
+import type {
+    CreatePushTaskOptions,
+    TaskService,
+    VerificationEmailTask,
+    EmailChangeVerificationTask
+} from './taskService.js'
 
 export abstract class BaseTaskService implements TaskService {
     abstract createPushTask<T>(options: CreatePushTaskOptions<T>): Promise<void>
 
-    async sendVerificationEmail({ userId, token }: { userId: string; token: string }) {
+    async sendVerificationEmail(task: VerificationEmailTask) {
         await this.createPushTask({
             queue: 'verification-email',
             path: '/email/sendVerificationEmail',
-            payload: { userId, token }
+            payload: task
+        })
+    }
+
+    async sendEmailChangeVerificationEmail(task: EmailChangeVerificationTask) {
+        await this.createPushTask({
+            queue: 'verification-email',
+            // A distinct route makes older workers retry instead of mailing the current address.
+            path: '/email/sendEmailChangeVerification',
+            payload: task
         })
     }
 
@@ -41,6 +57,22 @@ export abstract class BaseTaskService implements TaskService {
             queue: 'account-notification-email',
             path: '/email/sendAccountChangedNotificationEmail',
             payload: { email, changeType, timestamp }
+        })
+    }
+
+    async sendContentReportEmail(report: ContentReportEmail) {
+        await this.createPushTask({
+            queue: 'maintenance',
+            path: '/email/sendContentReportEmail',
+            payload: report
+        })
+    }
+
+    async sendBugReportEmail(report: BugReportEmail) {
+        await this.createPushTask({
+            queue: 'maintenance',
+            path: '/email/sendBugReportEmail',
+            payload: report
         })
     }
 

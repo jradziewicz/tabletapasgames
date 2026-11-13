@@ -1,5 +1,6 @@
 import RequestTimingsPlugin from './plugins/requestTimings.js'
 import { measure } from '@tabletop/backend-services/diagnostics'
+import { SESSION_LIFETIME_SECONDS } from '@tabletop/backend-services'
 import * as path from 'path'
 import { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify'
 import AutoLoad from '@fastify/autoload'
@@ -10,7 +11,7 @@ import FastifyFormbody from '@fastify/formbody'
 import fastifyPrintRoutes from 'fastify-print-routes'
 import fastifyStatic from '@fastify/static'
 import fastifyRateLimit from '@fastify/rate-limit'
-import { errorStatusCode } from './lib/errorStatusCode.js'
+import { replyStatusCode } from './lib/errorStatusCode.js'
 import { FastifySSEPlugin } from 'fastify-sse-v2'
 import AuthorizationPlugin from './plugins/authorization.js'
 import FirestorePlugin from './plugins/firestore.js'
@@ -32,7 +33,6 @@ const GCLOUD_PROJECT = process.env['GCLOUD_PROJECT'] ?? ''
 const STATIC_ROOT = process.env['STATIC_ROOT'] ?? path.join(__dirname, '../../../../.local-static')
 const FRONTEND_VERSION_OVERRIDE = process.env['FRONTEND_VERSION'] ?? null
 const MIN_RESTART_INTERVAL_MS = 30_000
-const SESSION_EXPIRY_SECONDS = 30 * 24 * 60 * 60
 
 const SESSION_SECRET = process.env['SESSION_SECRET']
     ? process.env['SESSION_SECRET']
@@ -73,14 +73,18 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
             return `ip:${clientIp}`
         },
         onExceeded: (request: FastifyRequest, key: string) => {
-            console.log('REQUEST LIMIT EXCEEDED to', request.url, 'for key', key)
+            // The route pattern, not the URL: a URL can carry a credential in its path or query
+            console.log(
+                'REQUEST LIMIT EXCEEDED to',
+                request.routeOptions.url ?? 'an unknown route',
+                'for key',
+                key
+            )
         }
     })
 
     fastify.setErrorHandler(async function (error, req, rep) {
-        if (!rep.statusCode || rep.statusCode < 400) {
-            void rep.code(errorStatusCode(error))
-        }
+        void rep.code(replyStatusCode(error, rep.statusCode))
 
         if (rep.statusCode >= 500) {
             req.log.error({ err: error }, 'Request failed')
@@ -129,7 +133,7 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
         ],
         credentials: true,
         methods: ['GET', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
-        exposedHeaders: ['X-Tabletop-Version']
+        exposedHeaders: ['X-Tabletop-Version', 'Retry-After']
     })
 
     await fastify.register(SecureSession, {
@@ -137,13 +141,13 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
         cookieName: '__session',
         secret: SESSION_SECRET,
         salt: SESSION_SALT,
-        expiry: SESSION_EXPIRY_SECONDS,
+        expiry: SESSION_LIFETIME_SECONDS,
         cookie: {
             path: '/',
             httpOnly: true,
             secure: service === 'local' ? false : true,
             sameSite: service === 'local' ? false : true,
-            maxAge: SESSION_EXPIRY_SECONDS
+            maxAge: SESSION_LIFETIME_SECONDS
         }
     })
 
@@ -369,7 +373,7 @@ export async function app(fastify: FastifyInstance, opts: AppOptions) {
             if (request.url.startsWith(API_PREFIX) || request.url.startsWith(TASKS_PREFIX)) {
                 await reply.code(404).send({ message: 'Not Found' })
             } else if (frontendStaticReady) {
-                console.log('Serving index.html for unknown frontend path:', request.url)
+                request.log.info('Serving index.html for an unknown frontend path')
                 setNoCacheHeaders(reply)
                 await reply.sendFile('index.html', { cacheControl: false })
             } else {

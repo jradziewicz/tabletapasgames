@@ -1,6 +1,7 @@
 import * as Type from 'typebox'
 import { DateType } from '../util/typebox.js'
 import { Color } from '../game/model/colors.js'
+import { MILLISECONDS_PER_DAY } from './siteStats.js'
 
 export enum Role {
     User = 'user',
@@ -23,6 +24,10 @@ export enum ExternalAuthService {
     Google = 'google',
     Apple = 'apple',
     Discord = 'discord'
+}
+
+export function externalIdentityProvider(externalId: string): string {
+    return externalId.split(':', 2)[0]
 }
 
 export const REMINDER_DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
@@ -68,6 +73,9 @@ export const UserPreferences = Type.Object({
     // behaves as true (on) so existing users keep getting emails until they explicitly turn
     // it off; only an explicit false suppresses them.
     emailNotificationsEnabled: Type.Optional(Type.Boolean()),
+    // Opts out of game emails other than turn alerts: invitations and finished games. Undefined
+    // behaves as true (on); account and security emails always go out.
+    gameAndCompetitionEmails: Type.Optional(Type.Boolean()),
     // One-time in-app announcement flags. Each is set true the moment the announcement is
     // shown (not waiting on the user to dismiss it), so it never shows more than once per
     // user - see the "showOnceAnnouncement" effect in the site layout.
@@ -77,6 +85,10 @@ export const UserPreferences = Type.Object({
     // means no preference: reminders go out at any hour, so existing users are unaffected.
     reminderHours: Type.Optional(ReminderHours)
 })
+
+export function wantsGameAndCompetitionEmails(preferences: UserPreferences | undefined): boolean {
+    return preferences?.gameAndCompetitionEmails !== false
+}
 
 export type User = Type.Static<typeof User>
 export const User = Type.Object({
@@ -98,8 +110,110 @@ export const User = Type.Object({
     createdAt: Type.Optional(DateType()),
     updatedAt: Type.Optional(DateType()),
     // Accounts activated before this field existed lack it until their next update
-    activatedAt: Type.Optional(DateType())
+    activatedAt: Type.Optional(DateType()),
+    ageConfirmedAt: Type.Optional(DateType()),
+    sessionGeneration: Type.Optional(Type.Integer({ minimum: 0 }))
 })
+
+export function receivesGameAndCompetitionEmail<T extends Pick<User, 'email' | 'preferences'>>(
+    user: T
+): user is T & { email: string } {
+    return Boolean(user.email) && wantsGameAndCompetitionEmails(user.preferences)
+}
+
+export type UserCreateRequest = Type.Static<typeof UserCreateRequest>
+export const UserCreateRequest = Type.Evaluate(
+    Type.Intersect(
+        [
+            Type.Required(Type.Pick(User, ['username', 'email'])),
+            Type.Object({
+                password: Type.String(),
+                ageConfirmed: Type.Optional(Type.Literal(true))
+            })
+        ],
+        { additionalProperties: false }
+    )
+)
+
+export type UserUpdateRequest = Type.Static<typeof UserUpdateRequest>
+export const UserUpdateRequest = Type.Evaluate(
+    Type.Intersect(
+        [
+            Type.Pick(User, ['username', 'email']),
+            Type.Object({
+                password: Type.Optional(Type.String()),
+                ageConfirmed: Type.Optional(Type.Literal(true))
+            })
+        ],
+        { additionalProperties: false }
+    )
+)
+
+export function sessionGenerationOf(user: Pick<User, 'sessionGeneration'>): number {
+    return user.sessionGeneration ?? 0
+}
+
+export function nextSessionGeneration(user: Pick<User, 'sessionGeneration'>): number {
+    return sessionGenerationOf(user) + 1
+}
+
+export const ABANDONED_SIGN_UP_DAYS = 3
+
+// A sign-up never finished within ABANDONED_SIGN_UP_DAYS is deleted. An account that was ever
+// Active is not a sign-up, even if it is Incomplete again.
+export function isAbandonedSignUp(
+    user: Pick<User, 'status' | 'createdAt' | 'activatedAt'>,
+    now: Date
+): boolean {
+    return (
+        user.status === UserStatus.Incomplete &&
+        !user.activatedAt &&
+        user.createdAt instanceof Date &&
+        now.getTime() - user.createdAt.getTime() >= ABANDONED_SIGN_UP_DAYS * MILLISECONDS_PER_DAY
+    )
+}
+
+// Deleted accounts appear in games as "Deleted player N", so no live account may pose as one.
+export function isReservedUsername(username: string): boolean {
+    return username
+        .toLowerCase()
+        .replace(/[^a-z]/g, '')
+        .includes('deletedplayer')
+}
+
+// What is kept of a deleted account: its id, status and dates. Everything that identifies the
+// person (username, email, linked logins, preferences) is dropped.
+export function deletedAccountRecord(
+    existing: Pick<User, 'id' | 'sessionGeneration' | 'createdAt' | 'activatedAt'>,
+    now: Date
+): User & Required<Pick<User, 'updatedAt' | 'deletedAt'>> {
+    return {
+        id: existing.id,
+        status: UserStatus.Deleted,
+        deleted: true,
+        deletedAt: now,
+        roles: [],
+        externalIds: [],
+        sessionGeneration: nextSessionGeneration(existing),
+        updatedAt: now,
+        ...(existing.createdAt ? { createdAt: existing.createdAt } : {}),
+        ...(existing.activatedAt ? { activatedAt: existing.activatedAt } : {})
+    }
+}
+
+export function canHoldAuthenticatedSession(user: Pick<User, 'status'>): boolean {
+    return user.status === UserStatus.Active || user.status === UserStatus.Incomplete
+}
+
+export function accountStatusAfterCompletionCheck(
+    status: UserStatus,
+    satisfiesCompletion: boolean
+): UserStatus {
+    if (status !== UserStatus.Incomplete && status !== UserStatus.Active) {
+        return status
+    }
+    return satisfiesCompletion ? UserStatus.Active : UserStatus.Incomplete
+}
 
 export const ADMIN_ASSIGNABLE_ROLES = [Role.AlphaTester, Role.BetaTester, Role.Developer] as const
 export type AdminAssignableRole = (typeof ADMIN_ASSIGNABLE_ROLES)[number]

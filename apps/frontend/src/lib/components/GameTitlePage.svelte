@@ -16,6 +16,7 @@
         UsersOutline
     } from 'flowbite-svelte-icons'
     import TitleGames from '$lib/components/TitleGames.svelte'
+    import { titleMaturityLabel } from '$lib/utils/libraryTitles'
 
     // Rules pages for titles that have one, keyed by game id.
     const RULES_URLS: Record<string, string> = {
@@ -34,6 +35,7 @@
     let created = $state(false)
     let gamesSection: ReturnType<typeof TitleGames> | undefined = $state()
     const metadata = $derived(title.info.metadata)
+    const maturityLabel = $derived(titleMaturityLabel(metadata))
     const paragraphs = $derived(metadata.description.split('\n').filter((line) => line.trim()))
 
     async function onGameCreated(game: Game) {
@@ -66,7 +68,9 @@
                     ><UsersOutline class="h-4 w-4" />
                     {metadata.minPlayers}{#if metadata.maxPlayers !== metadata.minPlayers}–{metadata.maxPlayers}{/if}
                     players</span
-                ><span>{metadata.year}</span>{#if metadata.beta}<span class="beta">Beta</span>{/if}
+                ><span>{metadata.year}</span>{#if maturityLabel}<span class="maturity-label"
+                        >{maturityLabel}</span
+                    >{/if}
             </div>
             <h1 id="title-heading">{metadata.name}</h1>
             <p class="designer">Designed by <span>{metadata.designer}</span></p>
@@ -168,7 +172,7 @@
         align-items: center;
         gap: 7px;
     }
-    .facts .beta {
+    .facts .maturity-label {
         color: var(--color-orange-300);
     }
     h1 {

@@ -1,7 +1,12 @@
 <script lang="ts">
     import { onMount } from 'svelte'
     import { Card, Hr, Label, Input, Button, Alert, Toggle } from 'flowbite-svelte'
-    import { Color, ExternalAuthService, type UserPreferences } from '@tabletop/common'
+    import {
+        Color,
+        ExternalAuthService,
+        wantsGameAndCompetitionEmails,
+        type UserPreferences
+    } from '@tabletop/common'
     import { getAppContext } from '@tabletop/frontend-components'
     import DiscordSignIn, {
         isEnabled as isDiscordSigninEnabled
@@ -27,10 +32,13 @@
     let emailNotificationsEnabled = $state(
         currentPreferences().emailNotificationsEnabled !== false
     )
+    let gameEmailsEnabled = $state(wantsGameAndCompetitionEmails(currentPreferences()))
     let emailPrefSaving = $state(false)
     let emailPrefError: string | undefined = $state(undefined)
 
-    async function saveEmailPreference(enabled: boolean) {
+    type EmailPreference = 'emailNotificationsEnabled' | 'gameAndCompetitionEmails'
+
+    async function saveEmailPreference(field: EmailPreference, enabled: boolean) {
         emailPrefError = undefined
         emailPrefSaving = true
         try {
@@ -38,12 +46,13 @@
             if (!user) return
             const updatedUser = await api.updateUserPreferences(user.id, {
                 ...currentPreferences(),
-                emailNotificationsEnabled: enabled
+                [field]: enabled
             })
             authorizationService.setSessionUser(updatedUser)
         } catch (e) {
             console.log(e)
-            emailNotificationsEnabled = !enabled
+            if (field === 'emailNotificationsEnabled') emailNotificationsEnabled = !enabled
+            else gameEmailsEnabled = !enabled
             emailPrefError = 'Could not save that. Please try again.'
         } finally {
             emailPrefSaving = false
@@ -54,7 +63,14 @@
         if (!(event.currentTarget instanceof HTMLInputElement)) return
         const enabled = event.currentTarget.checked
         emailNotificationsEnabled = enabled
-        void saveEmailPreference(enabled)
+        void saveEmailPreference('emailNotificationsEnabled', enabled)
+    }
+
+    function onToggleGameEmails(event: Event) {
+        if (!(event.currentTarget instanceof HTMLInputElement)) return
+        const enabled = event.currentTarget.checked
+        gameEmailsEnabled = enabled
+        void saveEmailPreference('gameAndCompetitionEmails', enabled)
     }
 
     // Discord direct messages - the site's own bot DMs the player's linked Discord account.
@@ -467,6 +483,12 @@
             >
                 Email me about my turn and reminders
             </Toggle>
+            <Toggle checked={gameEmailsEnabled} disabled={emailPrefSaving} onchange={onToggleGameEmails}>
+                Email me about invitations and finished games
+            </Toggle>
+            <div class="text-white-600 text-sm dark:text-gray-300">
+                Account and security emails, such as password resets, always go out.
+            </div>
 
             <Hr class="my-4" />
             <h3 class="text-xl font-medium text-gray-900 dark:text-white">Reminder Hours</h3>

@@ -15,3 +15,23 @@ export const Player = Type.Object({
     name: Type.String(),
     status: Type.Enum(PlayerStatus)
 })
+
+const DELETED_PLAYER_NAME = /^Deleted player \d+$/
+
+export function isDeletedPlayerName(name: string): boolean {
+    return DELETED_PLAYER_NAME.test(name)
+}
+
+// Renames a deleted account's seat to "Deleted player N", numbered within each game so its
+// history stays readable. Undefined when the account has no seat or it is already renamed.
+export function playersWithDeletedAccount(
+    players: readonly Player[],
+    userId: string
+): Player[] | undefined {
+    const seat = players.find((player) => player.userId === userId)
+    if (!seat || DELETED_PLAYER_NAME.test(seat.name)) return undefined
+    const number = players.filter((player) => DELETED_PLAYER_NAME.test(player.name)).length + 1
+    return players.map((player) =>
+        player === seat ? { ...player, name: `Deleted player ${number}` } : player
+    )
+}

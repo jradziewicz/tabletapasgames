@@ -37,5 +37,6 @@ export class HarnessAuthorizationService implements AuthorizationService {
     setSessionUser(user: User) {}
     clearSessionUser() {}
     async onLogin(user: User) {}
+    async logout() {}
     async onLogout() {}
 }

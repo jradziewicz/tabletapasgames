@@ -49,10 +49,13 @@ import image46 from './d29-revised.png'
 import image47 from './d29.png'
 import image48 from './d30-revised.png'
 import image49 from './d30.png'
-import image50 from './era1.png'
-import image51 from './era2.png'
-import image52 from './era3.png'
-import image53 from './gameOver.png'
+import image50 from './era1-bonus.png'
+import image51 from './era1.png'
+import image52 from './era2-bonus.png'
+import image53 from './era2.png'
+import image54 from './era3-bonus.png'
+import image55 from './era3.png'
+import image56 from './gameOver.png'
 
 // Image URL by file name (without .png)
 export const Images: Record<string, string> = {
@@ -106,8 +109,11 @@ export const Images: Record<string, string> = {
     'd29': image47,
     'd30-revised': image48,
     'd30': image49,
-    'era1': image50,
-    'era2': image51,
-    'era3': image52,
-    'gameOver': image53,
+    'era1-bonus': image50,
+    'era1': image51,
+    'era2-bonus': image52,
+    'era2': image53,
+    'era3-bonus': image54,
+    'era3': image55,
+    'gameOver': image56,
 }

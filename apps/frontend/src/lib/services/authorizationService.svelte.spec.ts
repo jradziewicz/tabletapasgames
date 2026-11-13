@@ -2,6 +2,10 @@ import { describe, expect, it, vi } from 'vitest'
 import { Role, UserStatus, type User } from '@tabletop/common'
 import { TabletopApi } from '@tabletop/frontend-components'
 import { AuthorizationService } from './authorizationService.svelte.js'
+import { reauthentication } from '$lib/stores/reauthentication.svelte'
+import { goto } from '$app/navigation'
+
+vi.mock('$app/navigation', () => ({ goto: vi.fn() }))
 
 function createUser(roles: Role[]): User {
     return {
@@ -66,4 +70,38 @@ describe('AuthorizationService session lifecycle', () => {
             expect(api.getSelf).toHaveBeenCalledTimes(1)
         }
     )
+
+    it('cancels a pending confirmation when the session user changes or signs out', () => {
+        const service = new AuthorizationService(new TabletopApi(), vi.fn())
+        const action = { description: 'change your password', retry: async () => {} }
+        service.setSessionUser(createUser([Role.User]))
+        reauthentication.request(action)
+        service.setSessionUser(createUser([Role.User]))
+        expect(reauthentication.pending).toEqual(action)
+        service.setSessionUser({ ...createUser([Role.User]), id: 'another-user' })
+        expect(reauthentication.pending).toBeUndefined()
+        reauthentication.request(action)
+        service.clearSessionUser()
+        expect(reauthentication.pending).toBeUndefined()
+    })
+
+    it('forgets the user before the session ends when signing out', async () => {
+        const api = new TabletopApi()
+        let endSession: () => void = () => {}
+        vi.spyOn(api, 'logout').mockReturnValue(
+            new Promise((resolve) => {
+                endSession = resolve
+            })
+        )
+        const service = new AuthorizationService(api, vi.fn())
+        service.setSessionUser(createUser([Role.User]))
+
+        const signingOut = service.logout()
+        expect(service.getSessionUser()).toBeUndefined()
+        expect(api.logout).toHaveBeenCalledTimes(1)
+
+        endSession()
+        await signingOut
+        expect(goto).toHaveBeenCalledWith('/')
+    })
 })

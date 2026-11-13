@@ -98,7 +98,7 @@ export function claimMineAt(
     player.spendMoney(cost)
     player.claimTokens -= 1
     recordActionStat(state, playerId, 'ClaimMine')
-    recordStat(state, { kind: StatKind.MineClaim, playerId, amount: cost, nodeId })
+    recordStat(state, { kind: StatKind.MineClaim, playerId, amount: cost, nodeId, source: state.board.getMine(nodeId).token?.ore })
     recordCash(state, playerId, -cost, 'claim', { nodeId })
     state.board.getMine(nodeId).ownerPlayerId = playerId
     state.turnActionsTaken.push(CardActionKind.ClaimMine)

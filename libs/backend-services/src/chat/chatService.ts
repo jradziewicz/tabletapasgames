@@ -14,7 +14,10 @@ import { GameNotFoundError, UserIsNotAllowedPlayerError } from '../games/errors.
 
 export class ChatService {
     constructor(
-        private readonly gameService: GameService,
+        private readonly gameService: Pick<
+            GameService,
+            'getGame' | 'findValidPlayerForUser' | 'notifyGameInstance'
+        >,
         private readonly chatStore: ChatStore
     ) {}
 
@@ -39,6 +42,10 @@ export class ChatService {
             }
         }
 
+        // Only a moderator's redaction marks a message; a submitted one never carries the flag.
+        message = { ...message }
+        delete message.redacted
+        delete message.admin
         const chat = await this.chatStore.addGameChatMessage(message, gameId)
         const updatedMessage = chat.messages.find((m) => m.id === message.id)
         if (!updatedMessage) {
@@ -65,6 +72,43 @@ export class ChatService {
             })
 
         return chat
+    }
+
+    async redactGameChatMessage(
+        administrator: User,
+        gameId: string,
+        messageId: string
+    ): Promise<GameChatMessage> {
+        const game = await this.gameService.getGame({ gameId })
+        if (!game) {
+            throw new GameNotFoundError({ id: gameId })
+        }
+        const { chat, message, originalText, alreadyRedacted } =
+            await this.chatStore.redactGameChatMessage(gameId, messageId)
+        if (alreadyRedacted) return message
+
+        // The moderation record an appeal is reviewed against.
+        console.log(
+            JSON.stringify({
+                event: 'chat_message_redacted',
+                gameId,
+                messageId,
+                authorUserId: message.userId,
+                administratorId: administrator.id,
+                originalText
+            })
+        )
+        const notificationData: GameNotificationChatData = {
+            game,
+            message,
+            checksum: chat.checksum
+        }
+        await this.gameService
+            .notifyGameInstance(GameNotificationAction.Chat, notificationData)
+            .catch((error) => {
+                console.error('Failed to send chat redaction notification', error)
+            })
+        return message
     }
 
     async getGameChatEtag(gameId: string): Promise<string | undefined> {

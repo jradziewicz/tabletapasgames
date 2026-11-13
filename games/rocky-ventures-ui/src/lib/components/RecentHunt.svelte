@@ -36,7 +36,8 @@
                 gain(after.victoryPoints - before.victoryPoints, 'VP'),
                 gain(after.money - before.money, undefined, '$'),
                 gain(after.gems - before.gems, 'gem'),
-                gain(after.weaponLevel - before.weaponLevel, 'weapon level')
+                gain(after.weaponLevel - before.weaponLevel, 'weapon level'),
+                gain((after.huntHits ?? 0) - (before.huntHits ?? 0), 'axe')
             ].filter((text) => text !== undefined)
         }
     })

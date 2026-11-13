@@ -18,6 +18,7 @@ import { MachineContext } from './machineContext.js'
 import { type MachineStateHandler } from './machineStateHandler.js'
 import { type GameRuntime } from '../definition/gameDefinition.js'
 import { calculateActionChecksum } from '../../util/checksum.js'
+import { reportGameProgress } from '../definition/gameProgression.js'
 import { nanoid } from 'nanoid'
 import { generateSeed } from '../../util/prng.js'
 import { assert, assertExists } from '../../util/assertions.js'
@@ -158,6 +159,7 @@ export class GameEngine<
 
         const state = initialState.dehydrate()
         this.validateCanonicalState(state)
+        startedGame.progress = reportGameProgress(this.runtime, state)
         return { startedGame, initialState: state }
     }
 

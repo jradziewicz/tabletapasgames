@@ -8,6 +8,7 @@
         GameCallKind,
         GameOutcome,
         gameOutcome,
+        gamePaceOf,
         ownerMayDeleteGame
     } from '@tabletop/common'
     import { gameCardOptions } from '$lib/utils/gameOptions'
@@ -16,12 +17,15 @@
     import { canShareJoinLink as isShareableForJoining, joinLinkUrl } from '$lib/utils/joinLink'
     import { bgStatsPlayUrl, canPostToBgStats, meaningfulFinalScores } from '$lib/utils/bgStats'
     import { startCountdownText } from '$lib/utils/startCountdown'
-    import { secondClock, timeSince } from '$lib/utils/clock.svelte'
+    import { minuteClock, secondClock, timeSince } from '$lib/utils/clock.svelte'
+    import { turnWaitDisplay } from '$lib/utils/gamePace'
+    import TurnWait from './TurnWait.svelte'
     import { goto } from '$app/navigation'
     import { fade, slide } from 'svelte/transition'
     import DeleteModal from './DeleteModal.svelte'
-    import { GameEditForm, getAppContext } from '@tabletop/frontend-components'
+    import { GAME_PACE_LABELS, GameEditForm, getAppContext } from '@tabletop/frontend-components'
     import { toast } from 'svelte-sonner'
+    import GameProgressBar from './GameProgressBar.svelte'
 
     let {
         game,
@@ -98,6 +102,15 @@
             isMine &&
             myPlayer?.status === PlayerStatus.Joined
     )
+
+    let isOpen = $derived(
+        game.status === GameStatus.WaitingForPlayers || game.status === GameStatus.WaitingToStart
+    )
+    // Pace is how quickly players are expected to move; hotseat games are played at one screen.
+    let paceLabels = $derived(GAME_PACE_LABELS[gamePaceOf(game).pace])
+    let pacedOpen = $derived(isOpen && !game.hotseat)
+    let pacedStarted = $derived(game.status === GameStatus.Started && !game.hotseat)
+    let turnWait = $derived(pacedStarted ? turnWaitDisplay(game, minuteClock.now) : undefined)
 
     let canEdit = $derived(
         !game.tournament &&
@@ -347,6 +360,9 @@
                             <h1 class="text-lg font-light text-left dark:text-gray-200 leading-5">
                                 {game.name}
                             </h1>
+                            {#if pacedStarted}
+                                <div class="mt-0.5 text-xs text-gray-400">{paceLabels.line}</div>
+                            {/if}
                             {#if game.tournament}<a
                                     class="mt-1 text-xs text-gray-500 underline decoration-gray-400/50 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
                                     href={`/tournaments/${game.tournament.tournamentId}`}
@@ -402,6 +418,9 @@
                             </div>
                         {/if}
                     </div>
+                    {#if game.status === GameStatus.Started && game.progress}
+                        <GameProgressBar progress={game.progress} class="pb-1.5" />
+                    {/if}
                     <div class="flex flex-row justify-between items-start text-white">
                         {#if game.status === GameStatus.Started}
                             <div class="flex flex-col justify-start items-start">
@@ -440,6 +459,19 @@
                                 </div>
                             </div>
                         {/if}
+                        {#if pacedOpen}
+                            <div class="flex flex-col justify-center items-center">
+                                <div
+                                    class="text-gray-600"
+                                    style="font-size:.7rem; line-height:.8rem"
+                                >
+                                    Pace
+                                </div>
+                                <div class="text-xs text-nowrap text-gray-400">
+                                    {paceLabels.summary}
+                                </div>
+                            </div>
+                        {/if}
                         {#if game.hotseat}
                             <div class="flex flex-col justify-center items-end">
                                 <div
@@ -449,6 +481,22 @@
                                     Mode
                                 </div>
                                 <div class="text-xs text-green-400">Hotseat</div>
+                            </div>
+                        {:else if turnWait}
+                            <div class="ms-3 flex shrink-0 flex-col justify-center items-end">
+                                <div
+                                    class="text-gray-600"
+                                    style="font-size:.7rem; line-height:.8rem"
+                                >
+                                    Waiting
+                                </div>
+                                <div
+                                    class="text-xs text-nowrap {turnWait.pastPace
+                                        ? 'text-amber-400'
+                                        : 'text-gray-400'}"
+                                >
+                                    <TurnWait wait={turnWait} />
+                                </div>
                             </div>
                         {:else if game.status === GameStatus.Started && game.lastActionAt}
                             <div class="flex flex-col justify-center items-end">

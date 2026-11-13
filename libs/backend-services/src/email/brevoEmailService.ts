@@ -7,6 +7,7 @@ import {
     GameInvitation,
     GameEnd,
     YourTurn,
+    ContentReport,
     emailVerificationText,
     passwordResetText,
     accountChangeNotificationText,
@@ -16,9 +17,29 @@ import {
 } from '@tabletop/email'
 
 import { SecretsService } from '../secrets/secretsService'
-import { Game, GameDefinition, User } from '@tabletop/common'
+import {
+    AUTHENTICATION_CHALLENGE_LIFETIME_SECONDS,
+    CONTENT_REPORT_REASON_LABELS,
+    CONTENT_REPORT_TARGET_LABELS,
+    Game,
+    GameDefinition,
+    User
+} from '@tabletop/common'
 import { AccountChangeType, EmailService } from './emailService.js'
 import { NullEmailService } from './nullEmailService.js'
+import type { ContentReportEmail } from '../moderation/contentReports.js'
+import {
+    bugReportEmailHtml,
+    bugReportEmailSubject,
+    bugReportEmailText,
+    type BugReportEmail
+} from '../bugReports/bugReportEmail.js'
+
+function formatReportTime(time: Date): string {
+    return `${time.toISOString().slice(0, 16).replace('T', ' ')} UTC`
+}
+
+const CHALLENGE_LIFETIME_MINUTES = AUTHENTICATION_CHALLENGE_LIFETIME_SECONDS / 60
 
 const BREVO_SEND_URL = 'https://api.brevo.com/v3/smtp/email'
 const DEFAULT_SENDER_EMAIL = 'noreply@playtest.tabletapasgames.com'
@@ -92,8 +113,13 @@ export class BrevoEmailService implements EmailService {
     }
 
     async sendVerificationEmail(token: string, toEmail: string): Promise<void> {
-        const emailHTML = await render(EmailVerification({ token }))
-        const emailText = emailVerificationText({ token })
+        const emailHTML = await render(
+            EmailVerification({ token, expiresInMinutes: CHALLENGE_LIFETIME_MINUTES })
+        )
+        const emailText = emailVerificationText({
+            token,
+            expiresInMinutes: CHALLENGE_LIFETIME_MINUTES
+        })
         await this.send({
             to: toEmail,
             subject: 'Verify your email address',
@@ -103,8 +129,10 @@ export class BrevoEmailService implements EmailService {
     }
 
     async sendPasswordResetEmail(token: string, url: string, toEmail: string): Promise<void> {
-        const emailHTML = await render(PasswordReset({ url }))
-        const emailText = passwordResetText({ url })
+        const emailHTML = await render(
+            PasswordReset({ url, expiresInMinutes: CHALLENGE_LIFETIME_MINUTES })
+        )
+        const emailText = passwordResetText({ url, expiresInMinutes: CHALLENGE_LIFETIME_MINUTES })
         await this.send({
             to: toEmail,
             subject: 'Reset your password',
@@ -187,6 +215,45 @@ export class BrevoEmailService implements EmailService {
         await this.send({
             to: toEmail,
             subject: `Your game of ${definition.info.metadata.name} ${game.name} has ended`,
+            html: emailHTML,
+            text: emailText
+        })
+    }
+
+    // Sent to the moderation inbox when a player files a bug report.
+    async sendBugReportEmail(report: BugReportEmail): Promise<void> {
+        await this.send({
+            to: report.toEmail,
+            subject: bugReportEmailSubject(report),
+            html: bugReportEmailHtml(report),
+            text: bugReportEmailText(report)
+        })
+    }
+
+    // Sent to the moderation inbox; the reported player is never told who reported them.
+    async sendContentReportEmail(report: ContentReportEmail): Promise<void> {
+        const targetLabel = CONTENT_REPORT_TARGET_LABELS[report.targetKind]
+        const reasonLabel = CONTENT_REPORT_REASON_LABELS[report.reason]
+        const emailHTML = await render(
+            ContentReport({
+                ...report,
+                targetLabel,
+                reasonLabel,
+                reportedAt: formatReportTime(new Date(report.reportedAt))
+            })
+        )
+        const emailText = await render(
+            ContentReport({
+                ...report,
+                targetLabel,
+                reasonLabel,
+                reportedAt: formatReportTime(new Date(report.reportedAt))
+            }),
+            { plainText: true }
+        )
+        await this.send({
+            to: report.toEmail,
+            subject: `Report: ${targetLabel}, ${reasonLabel}`,
             html: emailHTML,
             text: emailText
         })

@@ -71,3 +71,4 @@ export type { WorkspaceInitialSplit, SplitAxis } from './components/tabWorkspace
 export type { SavedWorkspace, SavedPane } from './components/workspacePersistence.js'
 export { restoreWorkspace, saveWorkspace } from './components/workspacePersistence.js'
 export { workspaceLayout } from './components/tabWorkspace.js'
+export * from './utils/gamePaceLabels.js'

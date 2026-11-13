@@ -10,6 +10,7 @@ import { LocustConfigurator } from './configurator.js'
 import { LocustPreferenceDefinition } from './preferences.js'
 import { GAME_VERSION } from './version.js'
 import { MaxPlayers, MinPlayers } from '../data/rules.js'
+import { LocustProgression } from './progression.js'
 
 // The export MUST be named Definition and be of type GameDefinition
 export const Definition: GameDefinition<LocustGameState, HydratedLocustGameState> = {
@@ -39,6 +40,7 @@ export const Definition: GameDefinition<LocustGameState, HydratedLocustGameState
         apiActions: LocustApiActions,
         playerColors: LocustColors,
         canonicalStateValidator: LocustGameStateValidator,
-        stateLogger: new DefaultStateLogger()
+        stateLogger: new DefaultStateLogger(),
+        progression: new LocustProgression()
     }
 }

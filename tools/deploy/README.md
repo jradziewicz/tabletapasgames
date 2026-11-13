@@ -129,7 +129,6 @@ Environment overrides:
 - `TABLETOP_BACKEND_ADMIN_URL`
 - `TABLETOP_BACKEND_ADMIN_USER`
 - `TABLETOP_BACKEND_ADMIN_PASSWORD`
-- `TABLETOP_BACKEND_ADMIN_TOKEN`
 - `TABLETOP_BACKEND_ADMIN_COOKIE`
 - `TABLETOP_BACKEND_IMAGE`
 - `TABLETOP_BACKEND_SERVICE`
@@ -141,7 +140,8 @@ Environment overrides:
 
 Notes:
 - `backend.image` is required for backend deploy in the TUI; it is used for the docker build/tag/push flow.
-- `backendAdmin` is required to invalidate the manifest cache after deploys; provide a cookie, token, or username/password.
+- `backendAdmin` is used to invalidate the manifest cache after deploys; provide `username` and `password` for an Administrator Account, or an existing session `cookie`. The tool signs in with `POST /api/v1/auth/login` and sends the session cookie to the invalidate URL.
+- `backendAdmin.token` and `TABLETOP_BACKEND_ADMIN_TOKEN` are no longer supported: the backend's challenge-token login was removed because emailed challenges are now single-use and bound to one operation. A leftover token is ignored and reported, never sent. To migrate, put the Administrator's `username` and `password` in `deploy.config.json` (or the environment overrides above) and delete the token.
 - When `CLOUDSDK_PYTHON` is unset, deploy commands automatically pick the first supported local Python (`python3.12`, `python3.11`, `python3.10`, then `python3`) and use it for `gcloud`/`gsutil`.
 
 ## Notes

@@ -34,6 +34,8 @@ export const RockyVenturesPlayerState = Type.Evaluate(
             weaponLevel: Type.Number(),
             toolLevel: Type.Number(),
             redMinesUnlocked: Type.Boolean(),
+            // Battle axe token: hits dealt so far, scored at every Feast (new games from 2026-11-13).
+            huntHits: Type.Optional(Type.Number()),
             blueMinesUnlocked: Type.Boolean(),
             tableau: Type.Array(Type.String()),
             tuckedCardIds: Type.Array(Type.String()),
@@ -58,6 +60,7 @@ export class HydratedRockyVenturesPlayerState
     declare gems: number
     declare claimTokens: number
     declare victoryPoints: number
+    declare huntHits?: number
     declare weaponLevel: number
     declare toolLevel: number
     declare redMinesUnlocked: boolean

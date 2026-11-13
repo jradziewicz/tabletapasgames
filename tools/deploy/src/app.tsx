@@ -3,7 +3,11 @@ import { Box, Text, useApp, useInput, useStdout } from 'ink'
 import type { ChildProcess } from 'node:child_process'
 import fs from 'node:fs/promises'
 import { readManifest, writeManifest } from './lib/manifest.js'
-import { fetchBackendManifest, invalidateBackendManifestCache } from './lib/backend.js'
+import {
+    describeIgnoredBackendAdminSettings,
+    fetchBackendManifest,
+    invalidateBackendManifestCache
+} from './lib/backend.js'
 import { checkFrontendDeployed, checkGameDeployed, GcsStatus } from './lib/gcs.js'
 import { mergeEnvConfig, readDeployConfig } from './lib/config.js'
 import {
@@ -643,8 +647,12 @@ export default function App() {
         await fs.writeFile(manifestInvalidateLogPath, '', 'utf8')
         const admin = deployConfig.backendAdmin
         const hasAdminCredentials = Boolean(
-            admin?.cookie || admin?.token || (admin?.username && admin?.password)
+            admin?.cookie || (admin?.username && admin?.password)
         )
+        const ignoredSettings = describeIgnoredBackendAdminSettings(admin)
+        if (ignoredSettings) {
+            await appendOutputWithLog(manifestInvalidateLogPath, `${ignoredSettings}\n`)
+        }
         if (!hasAdminCredentials) {
             // The backend revalidates its cached manifest against the deployed file on its own
             // (about once a minute per instance), so the admin call is only a fast path.

@@ -24,6 +24,7 @@ import {
 import {
     GameCreationOptions,
     MasterSeed,
+    turnStartsAfter,
     ActionSource,
     GameAction,
     Game,
@@ -48,6 +49,7 @@ import {
     type GameHistoryCursor,
     type UserGameStats,
     summarizeUserGames,
+    sameGameProgress,
     type TimeWindow
 } from '@tabletop/common'
 import {
@@ -124,6 +126,7 @@ export class FirestoreGameStore implements GameStore, SiteStatsGameSource {
             createdAt: date,
             updatedAt: date
         }
+        this.recordTurnStarts(undefined, storedGame, date)
         const state = storedGame.state
         delete storedGame.state
         const tournamentKeys = this.tournamentCacheKeys
@@ -511,6 +514,7 @@ export class FirestoreGameStore implements GameStore, SiteStatsGameSource {
                         return { updatedGame: existingGame, updatedFields: [], existingGame }
                 }
             }
+            this.recordTurnStarts(existingGame, fieldsToUpdate, new Date())
 
             const updatedFields = Object.keys(fieldsToUpdate)
             let stateToUpdate: GameState | undefined
@@ -801,6 +805,19 @@ export class FirestoreGameStore implements GameStore, SiteStatsGameSource {
     }
 
     // It would be nice to make the caching a little less manual here
+    async hasGamesForUser(userId: string): Promise<boolean> {
+        try {
+            const snapshot = await this.readQuery(
+                this.games.where('userIds', 'array-contains', userId).limit(1)
+            )
+            this.recordRead('game')
+            return !snapshot.empty
+        } catch (error) {
+            this.handleError(error, userId)
+            throw Error('unreachable')
+        }
+    }
+
     async findGamesForUser(user: User, category: GameStatusCategory): Promise<Game[]> {
         const cacheKey = GameCacheKeys.userList(user.id, category)
         const { value, cached } = await this.cacheService.cacheGet(cacheKey)
@@ -1167,6 +1184,7 @@ export class FirestoreGameStore implements GameStore, SiteStatsGameSource {
             const updatedGame = structuredClone(existingGame)
             gameUpdates.updatedAt = updateDate
             gameUpdates.lastActionAt = gameUpdates.updatedAt
+            this.recordTurnStarts(existingGame, gameUpdates, updateDate)
 
             if (existingState.result !== state.result) {
                 if (state.result) {
@@ -1497,6 +1515,7 @@ export class FirestoreGameStore implements GameStore, SiteStatsGameSource {
             const updatedGame = structuredClone(existingGame) as Game
             gameUpdates.updatedAt = new Date()
             gameUpdates.lastActionAt = gameUpdates.updatedAt
+            this.recordTurnStarts(existingGame, gameUpdates, gameUpdates.updatedAt)
 
             if (existingState.result !== state.result && !state.result) {
                 Object.assign(gameUpdates, this.reopenedGameFields())
@@ -2049,6 +2068,9 @@ export class FirestoreGameStore implements GameStore, SiteStatsGameSource {
         after: Game | undefined
     ): Promise<void> {
         const keys = GameCacheKeys.changedLists(before, after)
+        const tournamentId = after?.tournament?.tournamentId
+        if (tournamentId && !sameGameProgress(before?.progress, after?.progress))
+            keys.push(this.tournamentCacheKeys.key('games', tournamentId))
         if (keys.length) await locks.addKeys(keys)
     }
 
@@ -2062,6 +2084,11 @@ export class FirestoreGameStore implements GameStore, SiteStatsGameSource {
             call: undefined,
             everFinished: true
         }
+    }
+
+    private recordTurnStarts(existingGame: Game | undefined, updates: Partial<Game>, at: Date) {
+        if (updates.activePlayerIds === undefined) return
+        updates.turnStartedAt = turnStartsAfter(existingGame, updates.activePlayerIds, at)
     }
 
     private createGameUpdateDocument(fields: Partial<Game>, updatedGame: Game): DocumentData {
@@ -2081,6 +2108,11 @@ export class FirestoreGameStore implements GameStore, SiteStatsGameSource {
         }
         return result
     }
+}
+
+function storedDate(value: unknown): Date {
+    assert(value instanceof Timestamp, 'A stored game time must be a Firestore Timestamp')
+    return value.toDate()
 }
 
 const gameConverter = {
@@ -2118,6 +2150,13 @@ const gameConverter = {
         data.lastActionAt = data.lastActionAt
             ? (data.lastActionAt as Timestamp).toDate()
             : undefined
+        if (data.turnStartedAt)
+            data.turnStartedAt = Object.fromEntries(
+                Object.entries(data.turnStartedAt).map(([playerId, startedAt]) => [
+                    playerId,
+                    storedDate(startedAt)
+                ])
+            )
 
         // Default this for older records
         data.storage = GameStorage.Remote

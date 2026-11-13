@@ -1,10 +1,8 @@
-import { Game, GameDefinition, User } from '@tabletop/common'
+import { type AccountChangeType, Game, GameDefinition, User } from '@tabletop/common'
 
-export enum AccountChangeType {
-    Email = 'email',
-    Password = 'password',
-    PasswordReset = 'passwordReset'
-}
+export { AccountChangeType } from '@tabletop/common'
+import type { ContentReportEmail } from '../moderation/contentReports.js'
+import type { BugReportEmail } from '../bugReports/bugReportEmail.js'
 
 export interface EmailService {
     sendVerificationEmail(token: string, toEmail: string): Promise<void>
@@ -27,6 +25,8 @@ export interface EmailService {
         url: string
         toEmail: string
     }): Promise<void>
+    sendContentReportEmail(report: ContentReportEmail): Promise<void>
+    sendBugReportEmail(report: BugReportEmail): Promise<void>
     sendGameEndEmail({
         winners,
         game,

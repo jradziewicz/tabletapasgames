@@ -9,8 +9,19 @@ export function setRevisedCardArt(revised: boolean) {
     revisedCardArt = revised
 }
 
+// Games with the Feast buyer bonus show Feast cards that print the bonus.
+let feastBonusArt = false
+
+export function setFeastBonusArt(on: boolean) {
+    feastBonusArt = on
+}
+
 export function cardImageUrl(cardId: string): string | undefined {
-    return (revisedCardArt ? cardImagesById[`${cardId}-revised`] : undefined) ?? cardImagesById[cardId]
+    return (
+        (feastBonusArt ? cardImagesById[`${cardId}-bonus`] : undefined) ??
+        (revisedCardArt ? cardImagesById[`${cardId}-revised`] : undefined) ??
+        cardImagesById[cardId]
+    )
 }
 
 export function cardBackImageUrl(decade: number): string | undefined {

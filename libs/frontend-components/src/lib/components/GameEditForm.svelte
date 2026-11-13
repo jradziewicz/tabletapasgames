@@ -23,6 +23,8 @@
         ConfigOption,
         Game,
         GameConfig,
+        GAME_PACE_PRESETS,
+        gamePaceOf,
         GameState,
         GameStorage,
         isBooleanConfigOption,
@@ -44,11 +46,20 @@
     import { APIError } from '$lib/network/errors.js'
     import { trim } from '$lib/utils/trimInput.js'
     import Typeahead from '$lib/components/Typeahead.svelte'
+    import { GAME_PACE_LABELS } from '$lib/utils/gamePaceLabels.js'
     import { getAppContext } from '$lib/model/appContext.js'
 
     type EditableGame = Pick<
         Game,
-        'id' | 'typeId' | 'name' | 'players' | 'isPublic' | 'hotseat' | 'ownerId' | 'config'
+        | 'id'
+        | 'typeId'
+        | 'name'
+        | 'players'
+        | 'isPublic'
+        | 'paceMinutes'
+        | 'hotseat'
+        | 'ownerId'
+        | 'config'
     >
     enum EditMode {
         Create = 'create',
@@ -111,6 +122,12 @@
     let isPublic: boolean = $state(editedGame.isPublic)
     let isHotseat: boolean = $state(hotseatOnly || editedGame.hotseat)
     let isUnlisted: boolean = $state(false)
+    // Live play or turns taken over hours or days; a game with no pace reads as Daily.
+    let paceMinutes = $state(String(gamePaceOf(editedGame).minutes))
+    const paceOptions = GAME_PACE_PRESETS.map((preset) => ({
+        value: String(preset.minutes),
+        name: GAME_PACE_LABELS[preset.pace].option
+    }))
     let includeOwner: boolean = $state(true)
     let publicGame = $derived(isPublic || isUnlisted)
     // Admins and developers may recruit for a title of any visibility through an unlisted game,
@@ -248,6 +265,7 @@
             players: playersToUpload,
             isPublic: publicGame,
             ...(isUnlisted ? { unlisted: true } : {}),
+            ...(!publicGame && isHotseat ? {} : { paceMinutes: Number(paceMinutes) }),
             hotseat: !publicGame && isHotseat,
             storage: !publicGame && isHotseat ? GameStorage.Local : GameStorage.Remote,
             ownerId: editedGame.ownerId,
@@ -525,6 +543,18 @@
             {/if}
         {/each}
     </div>
+    {#if !isHotseat}
+        <div class="flex flex-col gap-2">
+            <Label for="pace">Pace</Label>
+            <Select
+                id="pace"
+                size="sm"
+                items={paceOptions}
+                bind:value={paceMinutes}
+                class="w-fit"
+            />
+        </div>
+    {/if}
     {#if showPublicToggle || showUnlistedToggle || showIncludeOwnerToggle}
         <div class="flex flex-row items-center gap-6">
             {#if showIncludeOwnerToggle}

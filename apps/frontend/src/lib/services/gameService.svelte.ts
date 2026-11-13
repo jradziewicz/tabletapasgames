@@ -24,6 +24,7 @@ import {
     GameState,
     type HydratedGameState,
     GameEngine,
+    reportGameProgress,
     createGameFork,
     GameForkError,
     GameStorage,
@@ -346,7 +347,8 @@ export class GameService implements GameServiceInterface {
             throw new Error('Can only save local games locally')
         }
 
-        await validateLocalGameState(this.libraryService, gameData, stateData)
+        const runtime = await validateLocalGameState(this.libraryService, gameData, stateData)
+        gameData.progress = reportGameProgress(runtime, stateData)
         await this.localGameStore.storeGameData({
             game: gameData,
             actions: actionsData,
