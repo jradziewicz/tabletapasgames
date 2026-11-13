@@ -854,6 +854,11 @@
                 opacity={dragonKilled ? 0.6 : undefined}
                 pointer-events="none"
             />
+            {#if gameSession.turnMarks.hitTargets.includes('dragon')}
+                <!-- Live play: dragon hit this turn, in the hunter's colour -->
+                <polygon points={hexPoints(DragonTileSpot, 12)} fill="none" stroke={gameSession.colors.getPlayerUiColor(gameSession.turnMarks.playerId ?? '')} stroke-width="16" filter="url(#mine-halo-blur)" class="mine-halo" pointer-events="none" />
+                <polygon points={hexPoints(DragonTileSpot, 8)} fill="none" stroke="#ffd166" stroke-width="3" pointer-events="none" />
+            {/if}
             <image
                 href={DragonTileImageUrl}
                 x={DragonTileSpot.x}
@@ -1055,6 +1060,35 @@
             {@const cy = box.landscape
                 ? box.y + ScourgeCardWidth / 2 + 6 + (scourges.length - 1 - index) * ScourgeStackStep
                 : box.y + ScourgeCardHeight / 2 + 9}
+            {#if imageUrl && gameSession.turnMarks.hitTargets.includes(scourge.scourgeId)}
+                <!-- Live play: hit this turn, in the hunter's colour -->
+                <rect
+                    x={cx - ScourgeCardWidth / 2 - 6}
+                    y={cy - ScourgeCardHeight / 2 - 6}
+                    width={ScourgeCardWidth + 12}
+                    height={ScourgeCardHeight + 12}
+                    rx="8"
+                    fill="none"
+                    stroke={gameSession.colors.getPlayerUiColor(gameSession.turnMarks.playerId ?? '')}
+                    stroke-width="14"
+                    filter="url(#mine-halo-blur)"
+                    class="mine-halo"
+                    transform={box.landscape ? `rotate(90, ${cx}, ${cy})` : undefined}
+                    pointer-events="none"
+                />
+                <rect
+                    x={cx - ScourgeCardWidth / 2 - 3}
+                    y={cy - ScourgeCardHeight / 2 - 3}
+                    width={ScourgeCardWidth + 6}
+                    height={ScourgeCardHeight + 6}
+                    rx="6"
+                    fill="none"
+                    stroke="#ffd166"
+                    stroke-width="3"
+                    transform={box.landscape ? `rotate(90, ${cx}, ${cy})` : undefined}
+                    pointer-events="none"
+                />
+            {/if}
             {#if imageUrl}
                 <image
                     href={imageUrl}
