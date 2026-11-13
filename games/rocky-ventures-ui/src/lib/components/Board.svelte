@@ -7,6 +7,7 @@
         BoxSize,
         BoardNodes,
         BoardNodesById,
+        ActionType,
         buildableBoxes as buildableBoxesFor,
         claimableMineIds,
         remainingActionKinds,
@@ -172,6 +173,22 @@
         const claimNext = state.actionsInOrder ? remaining[0] === CardActionKind.ClaimMine : remaining.includes(CardActionKind.ClaimMine)
         return claimNext ? claimableMineIds(state, activeId) : []
     })
+    // Live play: the track the current player has laid this turn stays highlighted until the next turn.
+    const trackLaidThisTurn = $derived.by(() => {
+        if (!gameSession.livePlay || gameSession.isViewingHistory) return []
+        const activeId = gameSession.gameState.activePlayerIds[0]
+        const boxes: { boxId: string; playerId: string }[] = []
+        for (const action of [...gameSession.actions].reverse()) {
+            if (action.playerId && action.playerId !== activeId) break
+            if (action.type === ActionType.MovePawn) break
+            const boxId = (action as { boxId?: string }).boxId
+            if ((action.type === ActionType.LayTrack || action.type === ActionType.LayFreeTrack) && boxId && action.playerId) {
+                boxes.push({ boxId, playerId: action.playerId })
+            }
+        }
+        return boxes
+    })
+
     const watchNodeIds = $derived(
         [watching?.extractNodeId, watching?.extractCityId].filter(
             (id) => id !== undefined
@@ -509,6 +526,39 @@
                     style="--glow: {glow};"
                 />
             </g>
+        {/if}
+    {/each}
+
+    <!-- Live play: track laid this turn -->
+    {#each trackLaidThisTurn as laid (laid.boxId)}
+        {@const location = BoardBoxLocations.find((candidate) => candidate.box.id === laid.boxId)}
+        {#if location}
+            <rect
+                x={location.x - BoxSize / 2 - 9}
+                y={location.y - BoxSize / 2 - 9}
+                width={BoxSize + 18}
+                height={BoxSize + 18}
+                rx="5"
+                fill="none"
+                stroke={gameSession.colors.getPlayerUiColor(laid.playerId)}
+                stroke-width="14"
+                transform="rotate({location.angle} {location.x} {location.y})"
+                filter="url(#track-halo-blur)"
+                class="mine-halo"
+                pointer-events="none"
+            />
+            <rect
+                x={location.x - BoxSize / 2 - 3}
+                y={location.y - BoxSize / 2 - 3}
+                width={BoxSize + 6}
+                height={BoxSize + 6}
+                rx="3"
+                fill="none"
+                stroke="#ffd166"
+                stroke-width="3"
+                transform="rotate({location.angle} {location.x} {location.y})"
+                pointer-events="none"
+            />
         {/if}
     {/each}
 
