@@ -450,7 +450,7 @@
     // Once the turn has passed, the history closes with a final line until the next player starts.
     const finished = $derived(watching && actorId !== activeId && steps.length > 0)
     // Steps come in one a second, so a quick chain (a claim and its hunt) plays out instead of landing at once.
-    const StepMs = 1000
+    const StepMs = 2000
     let shown = $state(0)
     let liveAfter = $state(-1)
     let shownFor: string | undefined
