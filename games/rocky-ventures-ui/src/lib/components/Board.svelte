@@ -126,6 +126,17 @@
         return groups
     })
 
+    // Battle axe tokens sit on the score track at each player's hit total (newer games).
+    const axeGroups = $derived.by(() => {
+        const groups = new Map<number, string[]>()
+        if (!gameSession.gameState.huntHitsScoreAtFeasts) return groups
+        for (const player of gameSession.gameState.players) {
+            const key = ((player.huntHits ?? 0) % 100 + 100) % 100
+            groups.set(key, [...(groups.get(key) ?? []), player.playerId])
+        }
+        return groups
+    })
+
     const victoryPointGroups = $derived.by(() => {
         const groups = new Map<number, string[]>()
         for (const player of players) {
@@ -823,6 +834,21 @@
             stroke-width="3"
         />
     {/each}
+
+    <!-- Battle axe tokens: each player's hit total on the score track -->
+    {#if gameSession.gameState.huntHitsScoreAtFeasts}
+        {#each gameSession.gameState.players as player (player.playerId)}
+            {@const hits = player.huntHits ?? 0}
+            {@const group = axeGroups.get(((hits % 100) + 100) % 100) ?? []}
+            {@const offset = stackOffset(group.indexOf(player.playerId), group.length, 2)}
+            {@const spot = victoryPointPosition(hits)}
+            <g transform="translate({spot.x + offset.dx + 14} {spot.y + offset.dy + 14})">
+                <title>{gameSession.getPlayerName(player.playerId)}'s battle axe: {hits} hits</title>
+                <rect x="-13" y="-13" width="26" height="26" rx="3" transform="rotate(45)" fill={gameSession.colors.getPlayerUiColor(player.playerId)} stroke="#111" stroke-width="3" />
+                <text text-anchor="middle" dominant-baseline="central" font-size="18">🪓</text>
+            </g>
+        {/each}
+    {/if}
 
     <!-- Agreement stacks beside the delivery cities (face up; rotated like the printed boxes) -->
     {#each [DeliveryCityId.Dornoch, DeliveryCityId.Manor] as cityId (cityId)}

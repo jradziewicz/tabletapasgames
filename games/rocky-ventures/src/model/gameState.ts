@@ -111,6 +111,8 @@ export const RockyVenturesGameState = Type.Evaluate(
             agreementsScoreOnDelivery: Type.Optional(Type.Boolean()),
             noAgreementDiscard: Type.Optional(Type.Boolean()),
             gemOnlyOnCircle: Type.Optional(Type.Boolean()),
+            huntHitsScoreAtFeasts: Type.Optional(Type.Boolean()),
+            feastBuyerBonus: Type.Optional(Type.Boolean()),
             eraThreeTriggered: Type.Optional(Type.Boolean()),
             gemsSpent: Type.Number(),
             era: Type.Number(),
@@ -173,6 +175,10 @@ export class HydratedRockyVenturesGameState
     declare noAgreementDiscard?: boolean
     // Passing above a red or blue circle unlocks its mines, but the gem needs a landing on the circle.
     declare gemOnlyOnCircle?: boolean
+    // A hit moves the hunter's battle axe up instead of scoring; each Feast scores the axe's total.
+    declare huntHitsScoreAtFeasts?: boolean
+    // Buying a Feast card scores a bonus for the buyer's rank in that Feast's category.
+    declare feastBuyerBonus?: boolean
     declare eraThreeTriggered?: boolean
     declare gemsSpent: number
     declare era: number

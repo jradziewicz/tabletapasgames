@@ -9,6 +9,7 @@
         hunt: 'Hunting',
         agreement: 'Agreements',
         pointBuy: 'Feasts',
+        feastBonus: 'Feast bonus',
         grid: 'Grid',
         vpSale: 'Sold',
         finalCash: 'Final cash'

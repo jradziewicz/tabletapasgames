@@ -188,6 +188,31 @@ function returnToBag(state: HydratedRockyVenturesGameState, kind: WeaponTokenKin
     state.weaponBag[kind] = (state.weaponBag[kind] ?? 0) + count
 }
 
+// A hit scores at once in older games; in newer ones it moves the hunter's battle axe up instead.
+function scoreHit(state: HydratedRockyVenturesGameState, playerId: string) {
+    const player = state.getPlayerState(playerId)
+    if (state.huntHitsScoreAtFeasts) {
+        player.huntHits = (player.huntHits ?? 0) + 1
+        return
+    }
+    player.victoryPoints += VictoryPointsPerHit
+    recordVictoryPoints(state, playerId, VictoryPointsPerHit, 'hunt')
+}
+
+// Every Feast scores each player's battle axe total. The axe is never reset.
+export function scoreHuntHitsAtFeast(state: HydratedRockyVenturesGameState, cardId: string) {
+    if (!state.huntHitsScoreAtFeasts) {
+        return
+    }
+    for (const player of state.players) {
+        const hits = player.huntHits ?? 0
+        if (hits > 0) {
+            player.victoryPoints += hits
+            recordVictoryPoints(state, player.playerId, hits, 'hunt', { cardId })
+        }
+    }
+}
+
 function applyHit(state: HydratedRockyVenturesGameState, playerId: string, region: string, targetId: string) {
     const player = state.getPlayerState(playerId)
     if (region === DragonHuntRegion) {
@@ -196,8 +221,7 @@ function applyHit(state: HydratedRockyVenturesGameState, playerId: string, regio
             return
         }
         state.dragon.hits += 1
-        player.victoryPoints += VictoryPointsPerHit
-        recordVictoryPoints(state, playerId, VictoryPointsPerHit, 'hunt')
+        scoreHit(state, playerId)
         if (state.dragon.hits >= DragonLevel) {
             state.dragon.killed = true
             returnToBag(state, WeaponTokenKind.Hit, DragonLevel)
@@ -211,8 +235,7 @@ function applyHit(state: HydratedRockyVenturesGameState, playerId: string, regio
         return
     }
     scourge.hits += 1
-    player.victoryPoints += VictoryPointsPerHit
-    recordVictoryPoints(state, playerId, VictoryPointsPerHit, 'hunt')
+    scoreHit(state, playerId)
     if (scourge.hits >= scourge.level) {
         state.board.scourgesByRegion[region] = scourges.filter(
             (candidate) => candidate.scourgeId !== targetId

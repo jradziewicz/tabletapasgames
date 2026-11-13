@@ -1,3 +1,4 @@
+import { scoreHuntHitsAtFeast } from './hunt.js'
 import { ThirdEraCardId } from './market.js'
 import { AcquireMode, CardActionKind, CardKind, getCard } from '../data/cards.js'
 import { MachineState } from '../definition/states.js'
@@ -138,6 +139,7 @@ export function startPointBuy(
     cardId: string,
     startPlayerId: string = currentPlayerId(state)
 ) {
+    scoreHuntHitsAtFeast(state, cardId)
     if (cardId === ThirdEraCardId) {
         state.eraThreeTriggered = true
         return

@@ -94,6 +94,8 @@ export class RockyVenturesGameInitializer
             agreementsScoreOnDelivery: true,
             noAgreementDiscard: true,
             gemOnlyOnCircle: true,
+            huntHitsScoreAtFeasts: true,
+            feastBuyerBonus: true,
             gemsSpent: 0,
             era: 1,
             turnActionsTaken: [],
