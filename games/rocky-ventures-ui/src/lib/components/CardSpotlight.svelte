@@ -90,16 +90,18 @@
             }
         }
         if (!next) return
-        const shown = next
+        // The player who made the move already knows what they did, so they skip the pop-up.
+        const mine = playerId === gameSession.myPlayer?.id
+        const shown: typeof next = mine ? { ...next, phase: 'landed' } : next
         for (const timer of timers) clearTimeout(timer)
         gameSession.spotlight = shown
         timers = [
             setTimeout(() => {
                 if (gameSession.spotlight === shown) gameSession.spotlight = { ...shown, phase: 'landed' }
-            }, PopUpMs),
+            }, mine ? 0 : PopUpMs),
             setTimeout(() => {
                 if (gameSession.spotlight?.playerId === shown.playerId && gameSession.spotlight.kind === shown.kind) gameSession.spotlight = undefined
-            }, PopUpMs + HighlightMs)
+            }, (mine ? 0 : PopUpMs) + HighlightMs)
         ]
     }
 
