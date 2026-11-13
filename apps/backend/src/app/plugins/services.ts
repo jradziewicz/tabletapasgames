@@ -274,6 +274,16 @@ export default fp(async (fastify: FastifyInstance) => {
     )
     fastify.decorate(
         'bugReportService',
-        new BugReportService(gameService, new FirestoreBugReportStore(fastify.firestore))
+        new BugReportService(
+            gameService,
+            new FirestoreBugReportStore(fastify.firestore),
+            MODERATION_EMAIL
+                ? {
+                      tasks: taskService,
+                      toEmail: MODERATION_EMAIL,
+                      frontendHost: process.env['FRONTEND_HOST'] ?? ''
+                  }
+                : undefined
+        )
     )
 })

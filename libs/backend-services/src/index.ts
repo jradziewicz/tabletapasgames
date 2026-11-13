@@ -84,6 +84,7 @@ export { GameAutoStartTask } from './games/gameAutoStart.js'
 export * from './games/catalogService.js'
 
 export * from './bugReports/bugReportService.js'
+export * from './bugReports/bugReportEmail.js'
 export * from './users/usernameReviewService.js'
 export * from './bugReports/errors.js'
 export * from './persistence/stores/bugReportStore.js'

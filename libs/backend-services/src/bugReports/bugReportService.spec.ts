@@ -172,6 +172,40 @@ describe('BugReportService', () => {
         expect(stored.createdAt).toBeInstanceOf(Date)
     })
 
+    it('emails the moderation inbox when one is set', async () => {
+        const sendBugReportEmail = vi.fn(async () => undefined)
+        service = new BugReportService(gameService, store, {
+            tasks: { sendBugReportEmail },
+            toEmail: 'justin@tabletapasgames.com',
+            frontendHost: 'https://play.example.test'
+        })
+        const stored = await service.reportBug({ user: reporter, report })
+
+        expect(sendBugReportEmail).toHaveBeenCalledWith(
+            expect.objectContaining({
+                toEmail: 'justin@tabletapasgames.com',
+                reportId: stored.id,
+                reporterName: 'alice',
+                titleName: 'Stellar Ventures',
+                seat: 'Alice',
+                description: 'The ship would not move',
+                gameUrl: 'https://play.example.test/game/game-1',
+                adminUrl: 'https://play.example.test/admin'
+            })
+        )
+    })
+
+    it('keeps the report when its email cannot be queued', async () => {
+        vi.spyOn(console, 'error').mockImplementation(() => undefined)
+        service = new BugReportService(gameService, store, {
+            tasks: { sendBugReportEmail: vi.fn(async () => Promise.reject(new Error('down'))) },
+            toEmail: 'justin@tabletapasgames.com',
+            frontendHost: ''
+        })
+        const stored = await service.reportBug({ user: reporter, report })
+        expect(store.reports.get(stored.id)).toEqual(stored)
+    })
+
     it('stores pasted screenshots beside the report and counts them on it', async () => {
         const wide = Buffer.concat([jpegBytes, Buffer.from([1, 2, 3])])
         const stored = await service.reportBug({

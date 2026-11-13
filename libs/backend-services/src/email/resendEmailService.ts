@@ -29,6 +29,12 @@ import {
 import { AccountChangeType, EmailService } from './emailService.js'
 import { NullEmailService } from './nullEmailService.js'
 import type { ContentReportEmail } from '../moderation/contentReports.js'
+import {
+    bugReportEmailHtml,
+    bugReportEmailSubject,
+    bugReportEmailText,
+    type BugReportEmail
+} from '../bugReports/bugReportEmail.js'
 
 function formatReportTime(time: Date): string {
     return `${time.toISOString().slice(0, 16).replace('T', ' ')} UTC`
@@ -184,6 +190,23 @@ export class ResendEmailService implements EmailService {
             subject: `Your game of ${definition.info.metadata.name} ${game.name} has ended`,
             html: emailHTML,
             text: emailText,
+            headers: {
+                'X-Entity-Ref-ID': nanoid()
+            }
+        })
+        if (error) {
+            throw new Error(`Failed to send email via Resend: ${error.message}`)
+        }
+    }
+
+    // Sent to the moderation inbox when a player files a bug report.
+    async sendBugReportEmail(report: BugReportEmail): Promise<void> {
+        const { error } = await this.resend.emails.send({
+            from: 'noreply@playtest.tabletapasgames.com',
+            to: report.toEmail,
+            subject: bugReportEmailSubject(report),
+            html: bugReportEmailHtml(report),
+            text: bugReportEmailText(report),
             headers: {
                 'X-Entity-Ref-ID': nanoid()
             }

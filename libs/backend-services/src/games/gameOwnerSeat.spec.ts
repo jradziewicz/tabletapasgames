@@ -58,6 +58,7 @@ function fixture(definition: typeof SyntheticDefinition = PublicSyntheticDefinit
         sendAuthVerificationEmail: unused,
         sendAccountChangeNotificationEmail: unused,
         sendContentReportEmail: unused,
+        sendBugReportEmail: unused,
         sendGameInvitationEmail: vi.fn(async () => {}),
         sendGameEndEmail: unused
     }
@@ -324,7 +325,11 @@ describe('unlisted games', () => {
         existing.players = openSeats
         acceptUpdates(store, existing)
         await expect(
-            service.updateGame({ gameId: existing.id, fields: { isPublic: false }, user: developer })
+            service.updateGame({
+                gameId: existing.id,
+                fields: { isPublic: false },
+                user: developer
+            })
         ).rejects.toThrow('must be public')
     })
 
