@@ -609,19 +609,6 @@
         <polyline {points} fill="none" stroke={color} stroke-width="26" stroke-linecap="round" stroke-linejoin="round" opacity="0.45" class="pulse-soft" style="--glow: {color};" pointer-events="none" />
         <polyline {points} fill="none" stroke={color} stroke-width="8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="14 10" pointer-events="none" />
     {/each}
-    <!-- Labels drawn after every route so no line covers them: which city, and what the sale would pay -->
-    {#each gameSession.watchedRoutePreviews as preview (preview.cityId)}
-        {@const mid = BoardNodesById[preview.routeNodeIds[Math.floor(preview.routeNodeIds.length / 2)]]}
-        {@const color = CityRouteColors[preview.cityId] ?? '#ffd166'}
-        {@const label = `Gold to ${BoardNodesById[preview.cityId]?.name ?? preview.cityId}: ${preview.net < 0 ? `-$${-preview.net}` : `+$${preview.net}`}`}
-        {#if mid}
-            <g pointer-events="none">
-                <rect x={mid.x - label.length * 7.5 - 14} y={mid.y - 22} width={label.length * 15 + 28} height="44" rx="22" fill="#1b140c" fill-opacity="0.92" stroke={color} stroke-width="4" />
-                <text x={mid.x} y={mid.y + 9} text-anchor="middle" font-size="26" font-weight="700" fill="#fff">{label}</text>
-            </g>
-        {/if}
-    {/each}
-
     {#each gameSession.extractRoutePreviews as preview (preview.cityId)}
         {@const points = routePolylinePoints(preview.routeNodeIds)}
         {@const color = CityRouteColors[preview.cityId] ?? '#ffd166'}
@@ -647,64 +634,6 @@
             stroke-dasharray="10 8"
             pointer-events="none"
         />
-    {/each}
-
-    <!-- Extract & Sell: hovering a silver mine shows what extracting it would pay -->
-    {#if gameSession.isMyTurn && !gameSession.isViewingHistory && gameSession.extractHoverNodeId && gameSession.extractableNodeIds.includes(gameSession.extractHoverNodeId) && gameSession.gameState.board.mines[gameSession.extractHoverNodeId]?.token?.ore === OreKind.Silver}
-        {@const hoverId = gameSession.extractHoverNodeId}
-        {@const node = BoardNodesById[hoverId]}
-        {@const activeId = gameSession.gameState.activePlayerIds[0]}
-        {@const plan = activeId ? planExtraction(gameSession.gameState, activeId, { nodeId: hoverId }) : undefined}
-        {#if node && plan && typeof plan !== 'string'}
-            {@const label = `${plan.oreCount} Silver: ${plan.net < 0 ? '-' : '+'}$${Math.abs(plan.net)}`}
-            <g pointer-events="none">
-                <rect x={node.x - label.length * 6.5 - 12} y={node.y + 32} width={label.length * 13 + 24} height="32" rx="16" fill="#1b140c" fill-opacity="0.92" stroke="#c0c6d0" stroke-width="3" />
-                <text x={node.x} y={node.y + 54} text-anchor="middle" font-size="20" font-weight="700" fill="#fff">{label}</text>
-            </g>
-        {/if}
-    {/if}
-
-    <!-- Extract & Sell: the delivery cities can be clicked on the map to sell there -->
-    {#if gameSession.isMyTurn && !gameSession.isViewingHistory && gameSession.extractActive && gameSession.extractNodeId && !gameSession.extractCustomRoute && gameSession.gameState.board.mines[gameSession.extractNodeId]?.token?.ore === OreKind.Gold}
-        {@const mineId = gameSession.extractNodeId}
-        {#each [DeliveryCityId.Dornoch, DeliveryCityId.Manor] as cityId (cityId)}
-            {@const node = BoardNodesById[cityId]}
-            {@const plan = gameSession.gameState.activePlayerIds[0] ? planExtraction(gameSession.gameState, gameSession.gameState.activePlayerIds[0], { nodeId: mineId, cityId }) : undefined}
-            {#if node && plan && typeof plan !== 'string'}
-                {@const color = CityRouteColors[cityId] ?? '#ffd166'}
-                <g
-                    class="city-sell"
-                    role="button"
-                    tabindex="0"
-                    aria-label="Sell to {node.name} for {plan.net < 0 ? '-' : '+'}${Math.abs(plan.net)}"
-                    onclick={() => gameSession.selectExtractCity(cityId)}
-                    onpointerenter={() => (gameSession.extractHoverCityId = cityId)}
-                    onpointerleave={() => (gameSession.extractHoverCityId = undefined)}
-                    onkeydown={(event) => {
-                        if (event.key === 'Enter' || event.key === ' ') gameSession.selectExtractCity(cityId)
-                    }}
-                    style="cursor: pointer;"
-                >
-                    <circle cx={node.x} cy={node.y} r="46" fill={color} fill-opacity="0.18" stroke={color} stroke-width="10" filter="url(#mine-halo-blur)" class="mine-halo" />
-                    <circle cx={node.x} cy={node.y} r="40" fill="transparent" stroke="#fff" stroke-width="3" />
-                    <rect x={node.x - 52} y={node.y + 44} width="104" height="30" rx="15" fill="#1b140c" fill-opacity="0.9" stroke={color} stroke-width="3" />
-                    <text x={node.x} y={node.y + 65} text-anchor="middle" font-size="18" font-weight="700" fill="#fff">Sell {plan.net < 0 ? '-' : '+'}${Math.abs(plan.net)}</text>
-                </g>
-            {/if}
-        {/each}
-    {/if}
-
-    <!-- Your own extract routes: what each city would pay, on the route itself -->
-    {#each gameSession.isMyTurn && gameSession.extractHoverNodeId ? gameSession.extractRoutePreviews : [] as preview (preview.cityId)}
-        {@const mid = BoardNodesById[preview.routeNodeIds[Math.floor(preview.routeNodeIds.length / 2)]]}
-        {@const color = CityRouteColors[preview.cityId] ?? '#ffd166'}
-        {@const label = `${BoardNodesById[preview.cityId]?.name ?? preview.cityId}: ${preview.net < 0 ? `-$${-preview.net}` : `+$${preview.net}`}`}
-        {#if mid}
-            <g pointer-events="none">
-                <rect x={mid.x - label.length * 6.5 - 12} y={mid.y - 18} width={label.length * 13 + 24} height="36" rx="18" fill="#1b140c" fill-opacity="0.92" stroke={color} stroke-width="3" />
-                <text x={mid.x} y={mid.y + 7} text-anchor="middle" font-size="20" font-weight="700" fill="#fff">{label}</text>
-            </g>
-        {/if}
     {/each}
 
     <!-- Mine tokens -->
@@ -1410,6 +1339,78 @@
             {/each}
         </g>
     {/if}
+    <!-- Labels and sell tags sit on top of everything, so mines and pawns never cover them -->
+    <!-- Labels drawn after every route so no line covers them: which city, and what the sale would pay -->
+    {#each gameSession.watchedRoutePreviews as preview (preview.cityId)}
+        {@const mid = BoardNodesById[preview.routeNodeIds[Math.floor(preview.routeNodeIds.length / 2)]]}
+        {@const color = CityRouteColors[preview.cityId] ?? '#ffd166'}
+        {@const label = `Gold to ${BoardNodesById[preview.cityId]?.name ?? preview.cityId}: ${preview.net < 0 ? `-$${-preview.net}` : `+$${preview.net}`}`}
+        {#if mid}
+            <g pointer-events="none">
+                <rect x={mid.x - label.length * 7.5 - 14} y={mid.y - 22} width={label.length * 15 + 28} height="44" rx="22" fill="#1b140c" fill-opacity="0.92" stroke={color} stroke-width="4" />
+                <text x={mid.x} y={mid.y + 9} text-anchor="middle" font-size="26" font-weight="700" fill="#fff">{label}</text>
+            </g>
+        {/if}
+    {/each}
+
+    <!-- Extract & Sell: hovering a silver mine shows what extracting it would pay -->
+    {#if gameSession.isMyTurn && !gameSession.isViewingHistory && gameSession.extractHoverNodeId && gameSession.extractableNodeIds.includes(gameSession.extractHoverNodeId) && gameSession.gameState.board.mines[gameSession.extractHoverNodeId]?.token?.ore === OreKind.Silver}
+        {@const hoverId = gameSession.extractHoverNodeId}
+        {@const node = BoardNodesById[hoverId]}
+        {@const activeId = gameSession.gameState.activePlayerIds[0]}
+        {@const plan = activeId ? planExtraction(gameSession.gameState, activeId, { nodeId: hoverId }) : undefined}
+        {#if node && plan && typeof plan !== 'string'}
+            {@const label = `${plan.oreCount} Silver: ${plan.net < 0 ? '-' : '+'}$${Math.abs(plan.net)}`}
+            <g pointer-events="none">
+                <rect x={node.x - label.length * 6.5 - 12} y={node.y + 32} width={label.length * 13 + 24} height="32" rx="16" fill="#1b140c" fill-opacity="0.92" stroke="#c0c6d0" stroke-width="3" />
+                <text x={node.x} y={node.y + 54} text-anchor="middle" font-size="20" font-weight="700" fill="#fff">{label}</text>
+            </g>
+        {/if}
+    {/if}
+
+    <!-- Extract & Sell: the delivery cities can be clicked on the map to sell there -->
+    {#if gameSession.isMyTurn && !gameSession.isViewingHistory && gameSession.extractActive && gameSession.extractNodeId && !gameSession.extractCustomRoute && gameSession.gameState.board.mines[gameSession.extractNodeId]?.token?.ore === OreKind.Gold}
+        {@const mineId = gameSession.extractNodeId}
+        {#each [DeliveryCityId.Dornoch, DeliveryCityId.Manor] as cityId (cityId)}
+            {@const node = BoardNodesById[cityId]}
+            {@const plan = gameSession.gameState.activePlayerIds[0] ? planExtraction(gameSession.gameState, gameSession.gameState.activePlayerIds[0], { nodeId: mineId, cityId }) : undefined}
+            {#if node && plan && typeof plan !== 'string'}
+                {@const color = CityRouteColors[cityId] ?? '#ffd166'}
+                <g
+                    class="city-sell"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Sell to {node.name} for {plan.net < 0 ? '-' : '+'}${Math.abs(plan.net)}"
+                    onclick={() => gameSession.selectExtractCity(cityId)}
+                    onpointerenter={() => (gameSession.extractHoverCityId = cityId)}
+                    onpointerleave={() => (gameSession.extractHoverCityId = undefined)}
+                    onkeydown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') gameSession.selectExtractCity(cityId)
+                    }}
+                    style="cursor: pointer;"
+                >
+                    <circle cx={node.x} cy={node.y} r="46" fill={color} fill-opacity="0.18" stroke={color} stroke-width="10" filter="url(#mine-halo-blur)" class="mine-halo" />
+                    <circle cx={node.x} cy={node.y} r="40" fill="transparent" stroke="#fff" stroke-width="3" />
+                    <rect x={node.x - 52} y={node.y + 44} width="104" height="30" rx="15" fill="#1b140c" fill-opacity="0.9" stroke={color} stroke-width="3" />
+                    <text x={node.x} y={node.y + 65} text-anchor="middle" font-size="18" font-weight="700" fill="#fff">Sell {plan.net < 0 ? '-' : '+'}${Math.abs(plan.net)}</text>
+                </g>
+            {/if}
+        {/each}
+    {/if}
+
+    <!-- Your own extract routes: what each city would pay, on the route itself -->
+    {#each gameSession.isMyTurn && gameSession.extractHoverNodeId ? gameSession.extractRoutePreviews : [] as preview (preview.cityId)}
+        {@const mid = BoardNodesById[preview.routeNodeIds[Math.floor(preview.routeNodeIds.length / 2)]]}
+        {@const color = CityRouteColors[preview.cityId] ?? '#ffd166'}
+        {@const label = `${BoardNodesById[preview.cityId]?.name ?? preview.cityId}: ${preview.net < 0 ? `-$${-preview.net}` : `+$${preview.net}`}`}
+        {#if mid}
+            <g pointer-events="none">
+                <rect x={mid.x - label.length * 6.5 - 12} y={mid.y - 18} width={label.length * 13 + 24} height="36" rx="18" fill="#1b140c" fill-opacity="0.92" stroke={color} stroke-width="3" />
+                <text x={mid.x} y={mid.y + 7} text-anchor="middle" font-size="20" font-weight="700" fill="#fff">{label}</text>
+            </g>
+        {/if}
+    {/each}
+
 </svg>
 
 <style>
