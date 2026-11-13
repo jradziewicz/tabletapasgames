@@ -183,7 +183,7 @@
     .tableau-card {
         transition: transform 120ms ease, box-shadow 120ms ease;
     }
-    .tableau-card:hover {
+    .tableau-card:not(:disabled):hover {
         transform: translateY(-3px);
         box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
     }
