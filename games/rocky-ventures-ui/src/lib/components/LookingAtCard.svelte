@@ -19,7 +19,7 @@
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { cardImageUrl } from '$lib/utils/cardImages.js'
     import { playerCardImageUrl } from '$lib/utils/playerCardImages.js'
-    import { GridRegion, gridCellPosition } from '$lib/utils/trackLayout.js'
+    import { GridRegion, gridCellPosition, victoryPointPosition } from '$lib/utils/trackLayout.js'
     import { regionLabelPoint } from '$lib/utils/regionMap.js'
     import { cardActionText } from '$lib/utils/cardActionText.js'
     import { weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
@@ -156,7 +156,7 @@
         ]
             .filter((part) => part !== undefined)
             .join(', ')
-        return { text, tokens, region: recent.before.pendingHunt?.region }
+        return { text, tokens, region: recent.before.pendingHunt?.region, hitsFrom: before.huntHits ?? 0, hitsTo: after.huntHits ?? 0 }
     })
 
     function huntStep(region: string): Step {
@@ -220,8 +220,13 @@
                     const region = huntRegion || huntBonus?.region || ''
                     const lead: Step[] = huntRegion || !region ? [] : [huntStep(region)]
                     huntRegion = ''
+                    // Battle axe rule: the hit marker climbs the score track.
+                    const axe: Step[] =
+                        gameSession.gameState.huntHitsScoreAtFeasts && huntBonus && huntBonus.hitsTo > huntBonus.hitsFrom
+                            ? [{ text: `moved the battle axe up to ${huntBonus.hitsTo} ${huntBonus.hitsTo === 1 ? 'hit' : 'hits'}`, zoom: around([victoryPointPosition(huntBonus.hitsFrom), victoryPointPosition(huntBonus.hitsTo)], 360) }]
+                            : []
                     return [
-                        ...lead,{ text: hits ? `applied ${hits} ${hits === 1 ? 'hit' : 'hits'}${bonus}` : `missed${bonus}`, tokens: huntBonus?.tokens }]
+                        ...lead,{ text: hits ? `applied ${hits} ${hits === 1 ? 'hit' : 'hits'}${bonus}` : `missed${bonus}`, tokens: huntBonus?.tokens }, ...axe]
                 }
                 case ActionType.Acquire: {
                     const choice = data.choice as 'weapon' | 'tool'

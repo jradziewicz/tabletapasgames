@@ -990,7 +990,8 @@
             {@const group = axeGroups.get(((hits % 100) + 100) % 100) ?? []}
             {@const offset = stackOffset(group.indexOf(player.playerId), group.length, 2)}
             {@const spot = victoryPointPosition(hits)}
-            <g transform="translate({spot.x + offset.dx + 14} {spot.y + offset.dy + 14})">
+            <!-- CSS transform so a new hit slides the axe along the track instead of jumping -->
+            <g style="transform: translate({spot.x + offset.dx + 14}px, {spot.y + offset.dy + 14}px); transition: transform 1.2s ease-in-out;">
                 <title>{gameSession.getPlayerName(player.playerId)}'s battle axe: {hits} hits</title>
                 <rect x="-13" y="-13" width="26" height="26" rx="3" transform="rotate(45)" fill={gameSession.colors.getPlayerUiColor(player.playerId)} stroke="#111" stroke-width="3" />
                 <text text-anchor="middle" dominant-baseline="central" font-size="18">🪓</text>
