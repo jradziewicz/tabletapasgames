@@ -486,7 +486,7 @@
             return {
                 text: `is laying ${CompanyNames[companyId]} track`,
                 logoUrl: companyLogoUrl(companyId),
-                detail: `Treasury $${gameSession.gameState.getCompany(companyId).treasury}`,
+                zoom: around(options),
                 live: true
             }
         }
