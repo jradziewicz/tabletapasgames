@@ -10,7 +10,12 @@ import { FRONTEND_VERSION } from '$lib/version'
 import { AblyConnection } from '$lib/network/ablyConnection.svelte'
 import { ChatService } from '$lib/services/chatService.svelte'
 import { SseConnection } from '$lib/network/sseConnection.svelte.js'
-const api = new TabletopApi(PUBLIC_API_HOST, PUBLIC_SSE_HOST, FRONTEND_VERSION)
+const api = new TabletopApi(
+    PUBLIC_API_HOST,
+    PUBLIC_SSE_HOST,
+    FRONTEND_VERSION,
+    (): boolean => authorizationService.getSessionUser() !== undefined
+)
 console.log('Initialized API with frontend version:', FRONTEND_VERSION)
 const manifestService = new ManifestService(api)
 api.setGameVersionProvider(manifestService)

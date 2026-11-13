@@ -17,9 +17,11 @@ import {
 
 import { Resend } from 'resend'
 import { SecretsService } from '../secrets/secretsService'
-import { Game, GameDefinition, User } from '@tabletop/common'
+import { AUTHENTICATION_CHALLENGE_LIFETIME_SECONDS, Game, GameDefinition, User } from '@tabletop/common'
 import { AccountChangeType, EmailService } from './emailService.js'
 import { NullEmailService } from './nullEmailService.js'
+
+const CHALLENGE_LIFETIME_MINUTES = AUTHENTICATION_CHALLENGE_LIFETIME_SECONDS / 60
 
 export class ResendEmailService implements EmailService {
     private resend!: Resend
@@ -36,8 +38,13 @@ export class ResendEmailService implements EmailService {
     }
 
     async sendVerificationEmail(token: string, toEmail: string): Promise<void> {
-        const emailHTML = await render(EmailVerification({ token }))
-        const emailText = emailVerificationText({ token })
+        const emailHTML = await render(
+            EmailVerification({ token, expiresInMinutes: CHALLENGE_LIFETIME_MINUTES })
+        )
+        const emailText = emailVerificationText({
+            token,
+            expiresInMinutes: CHALLENGE_LIFETIME_MINUTES
+        })
         const { error } = await this.resend.emails.send({
             from: 'noreply@playtest.tabletapasgames.com',
             to: toEmail,
@@ -54,8 +61,10 @@ export class ResendEmailService implements EmailService {
     }
 
     async sendPasswordResetEmail(token: string, url: string, toEmail: string): Promise<void> {
-        const emailHTML = await render(PasswordReset({ url }))
-        const emailText = passwordResetText({ url })
+        const emailHTML = await render(
+            PasswordReset({ url, expiresInMinutes: CHALLENGE_LIFETIME_MINUTES })
+        )
+        const emailText = passwordResetText({ url, expiresInMinutes: CHALLENGE_LIFETIME_MINUTES })
         const { error } = await this.resend.emails.send({
             from: 'noreply@playtest.tabletapasgames.com',
             to: toEmail,

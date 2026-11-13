@@ -23,12 +23,14 @@ export type BackendManifest = SiteManifest & {
     }
 }
 
+export type UnsupportedBackendAdminSetting = 'backendAdmin.token' | 'TABLETOP_BACKEND_ADMIN_TOKEN'
+
 export type BackendAdminConfig = {
     url?: string
-    token?: string
     username?: string
     password?: string
     cookie?: string
+    unsupportedSettings?: UnsupportedBackendAdminSetting[]
 }
 
 export type DeployConfig = {
