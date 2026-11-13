@@ -54,17 +54,9 @@
     setAgreementDeliveryScoring(session.gameState.agreementsScoreOnDelivery === true)
     setAgreementDiscardAllowed(session.gameState.noAgreementDiscard !== true)
 
-    // Live play: mirror the watched player's selection here; clear it once the mirror ends.
-    let wasMirroring = false
+    // Live play: remember the watched player's pawn pick so it can stay lit after the move.
     $effect(() => {
         JSON.stringify(session.watchedSelection)
-        const mirroring = session.mirroring
-        if (mirroring) {
-            session.applyMirror()
-        } else if (wasMirroring) {
-            session.clearLocalSelection()
-        }
-        wasMirroring = mirroring
         session.trackMovePick()
     })
 

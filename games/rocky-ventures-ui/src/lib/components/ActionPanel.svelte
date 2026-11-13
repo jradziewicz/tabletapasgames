@@ -180,12 +180,7 @@
     const bundles = $derived(Math.min(gameSession.pointBuyBundles, maxBundles))
 </script>
 
-{#if gameSession.mirroring && activeId}
-    <div class="mx-4 mt-2 rounded border-2 border-[#ffd166] bg-[#ffd166]/15 px-3 py-1.5 text-sm font-semibold text-[#ffd166]">
-        👁 Live: you're seeing <span class="capitalize">{gameSession.getPlayerName(activeId)}</span>'s screen as they play
-    </div>
-{/if}
-<div class="px-4 py-2 text-[#f1e6cf] text-sm" inert={gameSession.mirroring}>
+<div class="px-4 py-2 text-[#f1e6cf] text-sm">
     {#if gameSession.lastActionError}
         <div class="mb-2 rounded border border-red-500 bg-red-900/40 px-2 py-1 text-red-100">
             {gameSession.lastActionError}

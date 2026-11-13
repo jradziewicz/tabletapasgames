@@ -625,7 +625,7 @@ export class RockyVenturesGameSession extends GameSession<
     // What the player is offered now. In games played top to bottom that's only the next action on
     // the card; Pass moves on to the one below it.
     get offeredActionTypes(): string[] {
-        const valid = this.mirroring ? this.mirrorValidActionTypes : this.validActionTypes
+        const valid = this.validActionTypes
         const state = this.gameState
         const playerId = state.activePlayerIds[0]
         const cardId = playerId === undefined ? undefined : state.actionCardId(playerId)
@@ -651,8 +651,9 @@ export class RockyVenturesGameSession extends GameSession<
         return this.livePlay && !this.isMyTurn && !this.isViewingHistory && this.watchedSelection !== undefined
     }
 
+    // Watchers keep their own panel; everything about the player on turn goes to the watcher box.
     get seesActiveView(): boolean {
-        return this.isMyTurn || this.mirroring
+        return this.isMyTurn
     }
 
     private mirrorEngine = new GameEngine(Definition.runtime)
@@ -877,14 +878,12 @@ export class RockyVenturesGameSession extends GameSession<
 
     // Live play: the routes the current player is looking at, for everyone watching.
     get watchedRoutePreviews(): { cityId: DeliveryCityId; routeNodeIds: string[]; net: number }[] {
-        // While mirroring, the mirrored previews are exactly what the player sees (hovered mine, chosen city).
-        if (this.mirroring) return this.extractRoutePreviews
         const selection = this.livePlay && !this.isMyTurn ? this.watchedSelection : undefined
         const playerId = this.gameState.activePlayerIds[0]
-        const nodeId = selection?.extractNodeId
+        const nodeId = selection?.extractHoverNodeId ?? selection?.extractNodeId
         if (!selection || playerId === undefined || nodeId === undefined) return []
         if (this.gameState.board.mines[nodeId]?.token?.ore !== 'gold') return []
-        const shownCity = selection.extractCityId as DeliveryCityId | undefined
+        const shownCity = (selection.extractHoverNodeId ? undefined : (selection.extractHoverCityId ?? selection.extractCityId)) as DeliveryCityId | undefined
         const cities: DeliveryCityId[] = shownCity ? [shownCity] : [DeliveryCityId.Dornoch, DeliveryCityId.Manor]
         return cities.flatMap((cityId) => {
             const plan = planExtraction(this.gameState, playerId, { nodeId, cityId })
