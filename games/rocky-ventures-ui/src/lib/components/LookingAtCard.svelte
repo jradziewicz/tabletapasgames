@@ -487,7 +487,6 @@
                 text: `is laying ${CompanyNames[companyId]} track`,
                 logoUrl: companyLogoUrl(companyId),
                 detail: `Treasury $${gameSession.gameState.getCompany(companyId).treasury}`,
-                zoom: around(options),
                 live: true
             }
         }
@@ -538,7 +537,7 @@
         })
     }
     const entries = $derived(
-        logoOnce(!caughtUp ? paced : live ? [...paced, live] : finished ? [...paced, { text: 'finished their turn', live: true }] : paced)
+        !caughtUp ? paced : live ? [...paced, live] : finished ? [...paced, { text: 'finished their turn', live: true }] : paced
     )
 
     // Keep the newest entry in view as the history grows.
