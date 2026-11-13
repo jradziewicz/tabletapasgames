@@ -805,6 +805,19 @@ export class FirestoreGameStore implements GameStore, SiteStatsGameSource {
     }
 
     // It would be nice to make the caching a little less manual here
+    async hasGamesForUser(userId: string): Promise<boolean> {
+        try {
+            const snapshot = await this.readQuery(
+                this.games.where('userIds', 'array-contains', userId).limit(1)
+            )
+            this.recordRead('game')
+            return !snapshot.empty
+        } catch (error) {
+            this.handleError(error, userId)
+            throw Error('unreachable')
+        }
+    }
+
     async findGamesForUser(user: User, category: GameStatusCategory): Promise<Game[]> {
         const cacheKey = GameCacheKeys.userList(user.id, category)
         const { value, cached } = await this.cacheService.cacheGet(cacheKey)

@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+    deletedAccountRecord,
+    isReservedUsername,
+    isAbandonedSignUp,
     accountStatusAfterCompletionCheck,
     canHoldAuthenticatedSession,
     Role,
@@ -65,5 +68,57 @@ describe('accountStatusAfterCompletionCheck', () => {
                 UserStatus.Deleted
             )
         }
+    })
+})
+
+describe('account deletion', () => {
+    it('reserves names that pose as a deleted player', () => {
+        expect(isReservedUsername('Deleted player 3')).toBe(true)
+        expect(isReservedUsername('deleted_PLAYER')).toBe(true)
+        expect(isReservedUsername('Adele')).toBe(false)
+    })
+
+    it('keeps only the id, status and dates of a deleted account', () => {
+        const now = new Date(5)
+        expect(
+            deletedAccountRecord(
+                { id: 'a', sessionGeneration: 2, createdAt: new Date(1), activatedAt: new Date(2) },
+                now
+            )
+        ).toEqual({
+            id: 'a',
+            status: UserStatus.Deleted,
+            deleted: true,
+            deletedAt: now,
+            roles: [],
+            externalIds: [],
+            sessionGeneration: 3,
+            updatedAt: now,
+            createdAt: new Date(1),
+            activatedAt: new Date(2)
+        })
+    })
+})
+
+describe('isAbandonedSignUp', () => {
+    const now = new Date('2026-11-20T00:00:00Z')
+    const created = (days: number) => new Date(now.getTime() - days * 86_400_000)
+
+    it('is an Incomplete account never activated, 3 days after sign-up', () => {
+        expect(
+            isAbandonedSignUp({ status: UserStatus.Incomplete, createdAt: created(3) }, now)
+        ).toBe(true)
+        expect(
+            isAbandonedSignUp({ status: UserStatus.Incomplete, createdAt: created(2) }, now)
+        ).toBe(false)
+        expect(
+            isAbandonedSignUp(
+                { status: UserStatus.Incomplete, createdAt: created(9), activatedAt: created(8) },
+                now
+            )
+        ).toBe(false)
+        expect(isAbandonedSignUp({ status: UserStatus.Active, createdAt: created(9) }, now)).toBe(
+            false
+        )
     })
 })

@@ -1,6 +1,7 @@
 import * as Type from 'typebox'
 import { DateType } from '../util/typebox.js'
 import { Color } from '../game/model/colors.js'
+import { MILLISECONDS_PER_DAY } from './siteStats.js'
 
 export enum Role {
     User = 'user',
@@ -154,6 +155,50 @@ export function sessionGenerationOf(user: Pick<User, 'sessionGeneration'>): numb
 
 export function nextSessionGeneration(user: Pick<User, 'sessionGeneration'>): number {
     return sessionGenerationOf(user) + 1
+}
+
+export const ABANDONED_SIGN_UP_DAYS = 3
+
+// A sign-up never finished within ABANDONED_SIGN_UP_DAYS is deleted. An account that was ever
+// Active is not a sign-up, even if it is Incomplete again.
+export function isAbandonedSignUp(
+    user: Pick<User, 'status' | 'createdAt' | 'activatedAt'>,
+    now: Date
+): boolean {
+    return (
+        user.status === UserStatus.Incomplete &&
+        !user.activatedAt &&
+        user.createdAt instanceof Date &&
+        now.getTime() - user.createdAt.getTime() >= ABANDONED_SIGN_UP_DAYS * MILLISECONDS_PER_DAY
+    )
+}
+
+// Deleted accounts appear in games as "Deleted player N", so no live account may pose as one.
+export function isReservedUsername(username: string): boolean {
+    return username
+        .toLowerCase()
+        .replace(/[^a-z]/g, '')
+        .includes('deletedplayer')
+}
+
+// What is kept of a deleted account: its id, status and dates. Everything that identifies the
+// person (username, email, linked logins, preferences) is dropped.
+export function deletedAccountRecord(
+    existing: Pick<User, 'id' | 'sessionGeneration' | 'createdAt' | 'activatedAt'>,
+    now: Date
+): User & Required<Pick<User, 'updatedAt' | 'deletedAt'>> {
+    return {
+        id: existing.id,
+        status: UserStatus.Deleted,
+        deleted: true,
+        deletedAt: now,
+        roles: [],
+        externalIds: [],
+        sessionGeneration: nextSessionGeneration(existing),
+        updatedAt: now,
+        ...(existing.createdAt ? { createdAt: existing.createdAt } : {}),
+        ...(existing.activatedAt ? { activatedAt: existing.activatedAt } : {})
+    }
 }
 
 export function canHoldAuthenticatedSession(user: Pick<User, 'status'>): boolean {

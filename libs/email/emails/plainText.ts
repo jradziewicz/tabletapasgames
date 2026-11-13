@@ -10,14 +10,22 @@ import { AccountChangeType } from './AccountChangeNotification.js'
 const SIGNATURE = 'TableTapas Games\nhttps://play.tabletapasgames.com'
 
 function plainTextEmail(heading: string, body: string[], footer: string): string {
-    return [heading, '', ...body.flatMap((paragraph) => [paragraph, '']), '--', footer, '', SIGNATURE]
+    return [
+        heading,
+        '',
+        ...body.flatMap((paragraph) => [paragraph, '']),
+        '--',
+        footer,
+        '',
+        SIGNATURE,
+    ]
         .join('\n')
         .concat('\n')
 }
 
 export const emailVerificationText = ({
     token,
-    expiresInMinutes = 15
+    expiresInMinutes = 15,
 }: {
     token: string
     expiresInMinutes?: number
@@ -27,14 +35,14 @@ export const emailVerificationText = ({
         [
             'Enter this code on the verification screen to finish signing in.',
             token,
-            `This code stops working ${expiresInMinutes} minutes after it was requested, and only the most recent code works.`
+            `This code stops working ${expiresInMinutes} minutes after it was requested, and only the most recent code works.`,
         ],
-        'If you did not request this, you can safely ignore this email.'
+        'If you did not request this, you can safely ignore this email.',
     )
 
 export const passwordResetText = ({
     url,
-    expiresInMinutes = 15
+    expiresInMinutes = 15,
 }: {
     url: string
     expiresInMinutes?: number
@@ -43,9 +51,9 @@ export const passwordResetText = ({
         'Reset your password',
         [
             `Open this link to choose a new password. The link stops working ${expiresInMinutes} minutes after it was requested, and only the most recent link works.`,
-            url
+            url,
         ],
-        'If you did not request a password reset, you can safely ignore this email.'
+        'If you did not request a password reset, you can safely ignore this email.',
     )
 
 // The server runs in UTC and an email cannot know the reader's time zone, so say UTC outright.
@@ -57,12 +65,13 @@ const accountChanges: Record<string, string> = {
         'A request was made to change your email address; your current address remains active until the new address is verified',
     [AccountChangeType.PasswordReset]: 'A request was made to reset the password for your account',
     [AccountChangeType.Email]: 'Your email address was changed',
-    [AccountChangeType.Password]: 'Your password was changed'
+    [AccountChangeType.Password]: 'Your password was changed',
+    [AccountChangeType.AccountDeleted]: 'Your account was deleted',
 }
 
 export const accountChangeNotificationText = ({
     changeType,
-    timestamp
+    timestamp,
 }: {
     changeType: string
     timestamp: Date
@@ -71,16 +80,16 @@ export const accountChangeNotificationText = ({
         'Account change detected',
         [
             `${accountChanges[changeType] ?? 'Your account was changed'} on ${formatTimestamp(timestamp)}.`,
-            'If you did not make this change, please contact us immediately.'
+            'If you did not make this change, please contact us immediately.',
         ],
-        'If you made the change described above, you can safely ignore this email.'
+        'If you made the change described above, you can safely ignore this email.',
     )
 
 export const gameInvitationText = ({
     ownerName,
     gameName,
     title,
-    url
+    url,
 }: {
     ownerName: string
     gameName: string
@@ -92,9 +101,9 @@ export const gameInvitationText = ({
         [
             'Accept the invite to join the table. Your seat is waiting.',
             `${gameName} (${title})`,
-            `Join the game: ${url}`
+            `Join the game: ${url}`,
         ],
-        'If you did not expect this invite, you can safely ignore this email.'
+        'If you did not expect this invite, you can safely ignore this email.',
     )
 
 export const gameEndText = ({
@@ -102,7 +111,7 @@ export const gameEndText = ({
     winners,
     gameName,
     title,
-    url
+    url,
 }: {
     result: GameResult
     winners: string[]
@@ -120,14 +129,14 @@ export const gameEndText = ({
     return plainTextEmail(
         gameName,
         [`Your game of ${title} has ended.`, resultText, `Revisit the game: ${url}`],
-        'You played in this game on TableTapas Games.'
+        'You played in this game on TableTapas Games.',
     )
 }
 
 export const yourTurnText = ({
     title,
     gameName,
-    url
+    url,
 }: {
     title: string
     gameName: string
@@ -138,7 +147,7 @@ export const yourTurnText = ({
         [
             'The other players are waiting on you. Jump back in and keep the game moving.',
             `${gameName} (${title})`,
-            `Take your turn: ${url}`
+            `Take your turn: ${url}`,
         ],
-        "You're receiving this because it's your turn in an active game. You won't get another email for this turn unless it stays open for a while."
+        "You're receiving this because it's your turn in an active game. You won't get another email for this turn unless it stays open for a while.",
     )

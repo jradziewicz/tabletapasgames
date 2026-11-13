@@ -13,6 +13,8 @@ import {
     SiteStatsService,
     TokenService,
     UserService,
+    AccountDeletion,
+    AbandonedSignUps,
     SecretsService,
     EnvSecretsService,
     FirestoreGameStore,
@@ -61,6 +63,8 @@ declare module 'fastify' {
         sessionService: SessionService
         discordOAuth: DiscordOAuth
         userService: UserService
+        accountDeletion: AccountDeletion
+        abandonedSignUps: AbandonedSignUps
         emailService: EmailService
         secretsService: SecretsService
         gameService: GameService
@@ -226,6 +230,20 @@ export default fp(async (fastify: FastifyInstance) => {
     userService.isUsernameApproved = (username) => usernameReviewService.isApproved(username)
     fastify.decorate('usernameReviewService', usernameReviewService)
     fastify.decorate('userService', userService)
+    const accountDeletion = new AccountDeletion({
+        users: userService,
+        games: gameService,
+        sessions: sessionService,
+        tokens: tokenService,
+        preferences: userStore,
+        notifications: notificationService,
+        tasks: taskService
+    })
+    fastify.decorate('accountDeletion', accountDeletion)
+    fastify.decorate(
+        'abandonedSignUps',
+        new AbandonedSignUps(userStore, gameStore, accountDeletion)
+    )
     fastify.decorate('emailService', emailService)
     fastify.decorate('secretsService', secretsService)
     fastify.decorate('gameService', gameService)
@@ -256,6 +274,16 @@ export default fp(async (fastify: FastifyInstance) => {
     )
     fastify.decorate(
         'bugReportService',
-        new BugReportService(gameService, new FirestoreBugReportStore(fastify.firestore))
+        new BugReportService(
+            gameService,
+            new FirestoreBugReportStore(fastify.firestore),
+            MODERATION_EMAIL
+                ? {
+                      tasks: taskService,
+                      toEmail: MODERATION_EMAIL,
+                      frontendHost: process.env['FRONTEND_HOST'] ?? ''
+                  }
+                : undefined
+        )
     )
 })

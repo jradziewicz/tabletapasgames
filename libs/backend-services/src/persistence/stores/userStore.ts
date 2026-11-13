@@ -16,6 +16,7 @@ export interface UserStore {
     findByUsernameAndPassword(username: string, password: string): Promise<User | undefined>
     findAllUsernames(): Promise<string[]>
     findAllUsers(): Promise<User[]>
+    findIncompleteUsers(): Promise<User[]>
 
     createUser(user: User, password?: string, options?: { confirmAge?: boolean }): Promise<User>
     updatePassword(userId: string, password: string, options?: PasswordUpdateOptions): Promise<User>
@@ -48,4 +49,9 @@ export interface UserStore {
         service: ExternalAuthService
     }): Promise<User>
     removeExternalId(userId: string, externalId: string): Promise<User>
+
+    // Replaces the account with a tombstone (id, status and dates) and releases its username,
+    // email and linked logins. Returns [tombstone, account as it was].
+    deleteUser(userId: string, validate?: (existing: StoredUser) => void): Promise<[User, User]>
+    deletePreferences(userId: string): Promise<void>
 }

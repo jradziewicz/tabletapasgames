@@ -13,11 +13,16 @@ import {
 import { nanoid } from 'nanoid'
 import { GameService } from '../games/gameService.js'
 import { GameNotFoundError } from '../games/errors.js'
-import {
-    BugReportStore,
-    StoredBugReportScreenshot
-} from '../persistence/stores/bugReportStore.js'
+import { BugReportStore, StoredBugReportScreenshot } from '../persistence/stores/bugReportStore.js'
 import { InvalidBugReportScreenshotError } from './errors.js'
+import type { TaskService } from '../tasks/taskService.js'
+
+// Where a new bug report is emailed; without it reports are only listed on the Admin page.
+export type BugReportNotice = {
+    tasks: Pick<TaskService, 'sendBugReportEmail'>
+    toEmail: string
+    frontendHost: string
+}
 
 const BUG_REPORT_LIST_LIMIT = 200
 
@@ -25,10 +30,17 @@ const BUG_REPORT_LIST_LIMIT = 200
 export class BugReportService {
     constructor(
         private readonly gameService: GameService,
-        private readonly bugReportStore: BugReportStore
+        private readonly bugReportStore: BugReportStore,
+        private readonly notice?: BugReportNotice
     ) {}
 
-    async reportBug({ user, report }: { user: User; report: BugReportRequest }): Promise<BugReport> {
+    async reportBug({
+        user,
+        report
+    }: {
+        user: User
+        report: BugReportRequest
+    }): Promise<BugReport> {
         const game = await this.gameService.getGame({ gameId: report.gameId, withState: true })
         if (!game) {
             throw new GameNotFoundError({ id: report.gameId })
@@ -61,7 +73,35 @@ export class BugReportService {
             createdAt: new Date()
         }
 
-        return await this.bugReportStore.createBugReport(bugReport, screenshots)
+        const stored = await this.bugReportStore.createBugReport(bugReport, screenshots)
+        await this.emailNotice(stored)
+        return stored
+    }
+
+    // The report is already stored, so a lost email is logged rather than failing the request.
+    private async emailNotice(report: BugReport): Promise<void> {
+        if (!this.notice) return
+        const { tasks, toEmail, frontendHost } = this.notice
+        try {
+            await tasks.sendBugReportEmail({
+                toEmail,
+                reportId: report.id,
+                reportedAt: report.createdAt.toISOString(),
+                reporterName: report.reporterName,
+                gameName: report.gameName,
+                titleName: report.titleName,
+                ...(report.context.seat ? { seat: report.context.seat } : {}),
+                description: report.description,
+                screenshotCount: report.screenshotCount ?? 0,
+                gameUrl: `${frontendHost}/game/${report.gameId}`,
+                adminUrl: `${frontendHost}/admin`
+            })
+        } catch (error) {
+            console.error('Bug report email was not queued', {
+                reportId: report.id,
+                error: error instanceof Error ? error.message : typeof error
+            })
+        }
     }
 
     /** One screenshot of a report by its index, or undefined when there is none. */

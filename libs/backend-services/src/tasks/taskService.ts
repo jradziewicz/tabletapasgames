@@ -1,5 +1,6 @@
 import { AccountChangeType } from '../email/emailService.js'
 import type { ContentReportEmail } from '../moderation/contentReports.js'
+import type { BugReportEmail } from '../bugReports/bugReportEmail.js'
 
 export interface CreatePushTaskOptions<T> {
     queue: string
@@ -29,6 +30,7 @@ export interface TaskService {
         timestamp: Date
     }): Promise<void>
     sendContentReportEmail(report: ContentReportEmail): Promise<void>
+    sendBugReportEmail(report: BugReportEmail): Promise<void>
 
     sendGameInvitationEmail({
         userId,

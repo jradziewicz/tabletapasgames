@@ -51,6 +51,10 @@ export const AccountChangeNotification = ({
             change = 'Your password was changed'
             detailText = 'Password changed'
             break
+        case AccountChangeType.AccountDeleted:
+            change = 'Your account was deleted'
+            detailText = 'Account deleted'
+            break
     }
 
     return (

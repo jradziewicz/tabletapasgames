@@ -8,6 +8,7 @@ import {
     type PendingEmailChange,
     InappropriateUsernameError,
     isInappropriateUsername,
+    isReservedUsername,
     remove,
     Role,
     sessionGenerationOf,
@@ -18,6 +19,7 @@ import {
 } from '@tabletop/common'
 import { TaskService } from '../tasks/taskService.js'
 import {
+    AccountDeletionError,
     EmailChangeError,
     EmailVerificationError,
     InvalidPasswordError,
@@ -143,11 +145,9 @@ export class UserService {
     isUsernameApproved: (username: string) => Promise<boolean> = async () => false
 
     private async assertUsernameAllowed(username: string | undefined) {
-        if (
-            username &&
-            isInappropriateUsername(username) &&
-            !(await this.isUsernameApproved(username))
-        ) {
+        if (!username) return
+        if (isReservedUsername(username)) throw new InappropriateUsernameError()
+        if (isInappropriateUsername(username) && !(await this.isUsernameApproved(username))) {
             throw new InappropriateUsernameError()
         }
     }
@@ -441,6 +441,25 @@ export class UserService {
 
     // The Account change has committed by the time its Attention Notice is dispatched; the notice
     // is best effort (Notification Delivery), so a failed dispatch is reported, not the operation.
+    // Deletes the signed-in account after a recent sign-in (the password, or Google/Discord,
+    // entered again). Administrators can't delete their own account, so one always remains.
+    // Returns [tombstone, account as it was]; AccountDeletion does the clean-up.
+    async deleteOwnAccount(session: AuthenticatedSession): Promise<[User, User]> {
+        const [tombstone, original] = await this.userStore.deleteUser(
+            session.userId,
+            (existing) => {
+                this.requireAuthenticatedSession(session, existing, {
+                    requireRecentAuthentication: true
+                })
+                if (existing.roles.includes(Role.Admin)) {
+                    throw new AccountDeletionError("Administrator accounts can't be deleted.")
+                }
+            }
+        )
+        remove(this.usernames, original.username)
+        return [tombstone, original]
+    }
+
     private async notifyAccountChange(
         userId: string,
         notification: { email: string; changeType: AccountChangeType; timestamp: Date }
@@ -564,9 +583,13 @@ export class UserService {
     async listUsers(): Promise<User[]> {
         const users = await this.userStore.findAllUsers()
         return users.toSorted((a, b) =>
-            (a.username ?? a.email ?? a.id).localeCompare(b.username ?? b.email ?? b.id, undefined, {
-                sensitivity: 'base'
-            })
+            (a.username ?? a.email ?? a.id).localeCompare(
+                b.username ?? b.email ?? b.id,
+                undefined,
+                {
+                    sensitivity: 'base'
+                }
+            )
         )
     }
 

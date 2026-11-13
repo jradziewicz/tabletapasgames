@@ -1,5 +1,6 @@
 import { AccountChangeType } from '../email/emailService.js'
 import type { ContentReportEmail } from '../moderation/contentReports.js'
+import type { BugReportEmail } from '../bugReports/bugReportEmail.js'
 import type {
     CreatePushTaskOptions,
     TaskService,
@@ -63,6 +64,14 @@ export abstract class BaseTaskService implements TaskService {
         await this.createPushTask({
             queue: 'maintenance',
             path: '/email/sendContentReportEmail',
+            payload: report
+        })
+    }
+
+    async sendBugReportEmail(report: BugReportEmail) {
+        await this.createPushTask({
+            queue: 'maintenance',
+            path: '/email/sendBugReportEmail',
             payload: report
         })
     }

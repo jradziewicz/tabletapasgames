@@ -3,6 +3,7 @@ import { Timed, measure } from '../../diagnostics/requestTimings.js'
 import {
     accountStatusAfterCompletionCheck,
     BaseError,
+    deletedAccountRecord,
     ExternalAuthService,
     Role,
     nextSessionGeneration,
@@ -198,6 +199,17 @@ export class FirestoreUserStore implements UserStore, SiteStatsUserSource {
             return snapshot.docs.flatMap((doc) => this.sanitize(doc.data() as StoredUser) ?? [])
         } catch (error) {
             this.handleError(error, 'all')
+            throw Error('unreachable')
+        }
+    }
+
+    async findIncompleteUsers(): Promise<User[]> {
+        try {
+            const snapshot = await this.users.where('status', '==', UserStatus.Incomplete).get()
+            this.recordRead(snapshot.size)
+            return snapshot.docs.map((doc) => this.sanitize(doc.data()))
+        } catch (error) {
+            this.handleError(error, 'incomplete')
             throw Error('unreachable')
         }
     }
@@ -636,6 +648,53 @@ export class FirestoreUserStore implements UserStore, SiteStatsUserSource {
         } catch (error) {
             this.handleError(error, userId)
             throw Error('unreachable')
+        }
+    }
+
+    async deleteUser(
+        userId: string,
+        validate?: (existing: StoredUser) => void
+    ): Promise<[User, User]> {
+        const transactionBody = async (
+            transaction: FirebaseFirestore.Transaction
+        ): Promise<[StoredUser, StoredUser]> => {
+            const existing = (await transaction.get(this.users.doc(userId))).data() as
+                StoredUser | undefined
+            this.recordRead()
+            if (!existing) throw new NotFoundError({ type: 'User', id: userId })
+            validate?.(existing)
+
+            const tombstone = deletedAccountRecord(existing, new Date()) as StoredUser
+            if (existing.cleanUsername) {
+                transaction.delete(this.userUsernames.doc(existing.cleanUsername))
+            }
+            if (existing.email) transaction.delete(this.userEmails.doc(existing.email))
+            for (const externalId of existing.externalIds) {
+                transaction.delete(this.userExternalIds.doc(externalId))
+            }
+            transaction.set(this.users.doc(userId), tombstone)
+            return [tombstone, existing]
+        }
+
+        try {
+            const [tombstone, existing] = await this.cacheService.lockWhileWriting(
+                [this.makeUserCacheKey(userId)],
+                async () => this.users.firestore.runTransaction(transactionBody)
+            )
+            return [this.sanitize(tombstone), this.sanitize(existing)]
+        } catch (error) {
+            this.handleError(error, userId)
+            throw Error('unreachable')
+        }
+    }
+
+    async deletePreferences(userId: string): Promise<void> {
+        try {
+            await this.users.firestore.recursiveDelete(
+                this.users.firestore.collection('users').doc(userId).collection('preferences')
+            )
+        } catch (error) {
+            this.handleError(error, userId)
         }
     }
 
