@@ -42,7 +42,7 @@
     const gameSession = getGameSession()
 
     type Zoom = { x: number; y: number; width: number; height: number }
-    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string }; track?: { companyId: string; points: { x: number; y: number }[]; cost: number; count: number; free: boolean }; kind?: string }
+    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string }; track?: { companyId: string; points: { x: number; y: number }[]; cost: number; count: number; free: boolean }; kind?: string; iconUrl?: string }
 
     const ZoomAspect = 4 / 3
 
@@ -362,6 +362,17 @@
                     const city = BoardNodesById[detail['city'] ?? '']?.name
                     const route = (gameSession.turnMarks.routes.find((nodes) => nodes[0] === data.nodeId) ?? [data.nodeId as string]).flatMap(nodePoint)
                     const companyId = data.creditCompanyId as CompanyId | undefined
+                    // The mine draws a new token once its ore is taken: show what came up, if it changed.
+                    const nowToken = gameSession.gameState.board.getMine(data.nodeId as string).token
+                    const drew: Step[] =
+                        event && nowToken && (nowToken.ore !== event.source || String(nowToken.level) !== (detail['level'] ?? ''))
+                            ? [
+                                  {
+                                      text: `${mine} drew a ${nowToken.ore === 'gold' ? 'gold' : nowToken.ore === 'silver' ? 'silver' : String(nowToken.ore)} mine (level ${nowToken.level})`,
+                                      iconUrl: mineTokenImageUrl(nowToken)
+                                  }
+                              ]
+                            : []
                     const oreCount = Number(detail['ore'] ?? 0)
                     const sale = Number(detail['sale'] ?? 0)
                     const bonus = cash.filter((other) => other.source === 'agreement' && other.action === event?.action).reduce((sum, other) => sum + other.amount, 0)
@@ -381,7 +392,8 @@
                             logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
                             lines,
                             zoom: around(route)
-                        }
+                        },
+                        ...drew
                     ]
                 }
                 case ActionType.Hunt:
@@ -625,6 +637,9 @@
                         <img src={entry.logoUrl} alt="" class="mx-auto {newest ? 'h-16' : 'h-8'} w-auto" draggable="false" />
                     {/if}
                     {#if entry.detail}<div class="text-[#f1e6cf]">{entry.detail}</div>{/if}
+                    {#if entry.iconUrl}
+                        <img src={entry.iconUrl} alt="" class="mx-auto {newest ? 'h-16 w-16' : 'h-10 w-10'}" draggable="false" />
+                    {/if}
                     {#if entry.imageUrl}
                         <img src={entry.imageUrl} alt="" class="mx-auto {newest ? 'h-48' : 'h-24'} w-auto rounded-lg" draggable="false" />
                     {/if}
