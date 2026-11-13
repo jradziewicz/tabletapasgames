@@ -167,14 +167,13 @@
     // The money lines of a sale: what the ore sold for and what the route cost.
     function saleLines(plan: ReturnType<typeof planExtraction>): { label: string; amount: number }[] {
         if (typeof plan === 'string') return []
+        const ore = plan.ore === 'gold' ? 'Gold' : plan.ore === 'silver' ? 'Silver' : 'Ore'
+        const expenses = plan.transport + plan.security + plan.dragon - plan.discount
         return [
-            { label: `Sale (${plan.oreCount} × $${plan.price})`, amount: plan.sale },
-            { label: 'Agreement bonus', amount: plan.agreementBonus },
-            { label: 'Transportation', amount: -plan.transport },
-            { label: 'Security', amount: -plan.security },
-            { label: 'Dragon', amount: -plan.dragon },
-            { label: 'Agreement discount', amount: plan.discount }
-        ].filter((line) => line.amount !== 0 || line.label.startsWith('Sale'))
+            { label: `${ore} price (${plan.oreCount} × $${plan.price}${plan.agreementBonus ? ` + $${plan.agreementBonus} bonus` : ''})`, amount: plan.sale + plan.agreementBonus },
+            { label: 'Expenses (transport & security)', amount: -expenses },
+            { label: 'Profit', amount: plan.net }
+        ]
     }
 
     // The latest Extract & Sell this turn, replayed on the state before it for its breakdown.
@@ -403,8 +402,8 @@
                     {#if entry.lines?.length}
                         <div class="mx-auto grid grid-cols-[auto_auto] gap-x-4 {newest ? 'text-xs' : 'text-[10px]'}">
                             {#each entry.lines as line (line.label)}
-                                <span>{line.label}</span>
-                                <span class="text-right font-mono {line.amount < 0 ? 'text-[#ff8a7a]' : ''}">{line.amount < 0 ? `-$${-line.amount}` : `$${line.amount}`}</span>
+                                <span class={line.label === 'Profit' ? 'font-bold text-[#ffd166]' : ''}>{line.label}</span>
+                                <span class="text-right font-mono {line.amount < 0 ? 'text-[#ff8a7a]' : line.label === 'Profit' ? 'font-bold text-[#ffd166]' : ''}">{line.amount < 0 ? `-$${-line.amount}` : `$${line.amount}`}</span>
                             {/each}
                         </div>
                     {/if}
