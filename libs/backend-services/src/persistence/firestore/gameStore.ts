@@ -48,6 +48,7 @@ import {
     type GameHistoryCursor,
     type UserGameStats,
     summarizeUserGames,
+    sameGameProgress,
     type TimeWindow
 } from '@tabletop/common'
 import {
@@ -2049,6 +2050,9 @@ export class FirestoreGameStore implements GameStore, SiteStatsGameSource {
         after: Game | undefined
     ): Promise<void> {
         const keys = GameCacheKeys.changedLists(before, after)
+        const tournamentId = after?.tournament?.tournamentId
+        if (tournamentId && !sameGameProgress(before?.progress, after?.progress))
+            keys.push(this.tournamentCacheKeys.key('games', tournamentId))
         if (keys.length) await locks.addKeys(keys)
     }
 

@@ -7,6 +7,7 @@ import { GameResult } from './gameResult.js'
 import { GameConfig } from './gameConfig.js'
 import { PlayerVote } from './playerVote.js'
 import { GameCall } from './gameCall.js'
+import { GameProgress } from './gameProgress.js'
 import { Compile } from 'typebox/compile'
 import * as Value from 'typebox/value'
 
@@ -80,6 +81,7 @@ export const Game = Type.Object({
     activePlayerIds: Type.Optional(Type.Array(Type.String())),
     lastActionPlayerId: Type.Optional(Type.String()),
     lastActionAt: Type.Optional(DateType()),
+    progress: Type.Optional(GameProgress),
     result: Type.Optional(Type.Enum(GameResult)),
     winningPlayerIds: Type.Array(Type.String()),
     finalScores: Type.Optional(Type.Record(Type.String(), Type.Number())),

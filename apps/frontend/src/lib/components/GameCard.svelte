@@ -22,6 +22,7 @@
     import DeleteModal from './DeleteModal.svelte'
     import { GameEditForm, getAppContext } from '@tabletop/frontend-components'
     import { toast } from 'svelte-sonner'
+    import GameProgressBar from './GameProgressBar.svelte'
 
     let {
         game,
@@ -402,6 +403,9 @@
                             </div>
                         {/if}
                     </div>
+                    {#if game.status === GameStatus.Started && game.progress}
+                        <GameProgressBar progress={game.progress} class="pb-1.5" />
+                    {/if}
                     <div class="flex flex-row justify-between items-start text-white">
                         {#if game.status === GameStatus.Started}
                             <div class="flex flex-col justify-start items-start">

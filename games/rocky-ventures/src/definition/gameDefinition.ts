@@ -10,6 +10,7 @@ import { RockyVenturesConfigurator } from './configurator.js'
 import { RockyVenturesPreferenceDefinition } from './preferences.js'
 import { GAME_VERSION } from './version.js'
 import { MaxPlayers, MinPlayers } from '../data/setup.js'
+import { RockyVenturesProgression } from './progression.js'
 
 // The export MUST be named Definition and be of type GameDefinition
 export const Definition: GameDefinition<RockyVenturesGameState, HydratedRockyVenturesGameState> = <
@@ -41,6 +42,7 @@ export const Definition: GameDefinition<RockyVenturesGameState, HydratedRockyVen
         apiActions: RockyVenturesApiActions,
         playerColors: RockyVenturesColors,
         stateLogger: new DefaultStateLogger(),
-        scoring: new RockyVenturesScoring()
+        scoring: new RockyVenturesScoring(),
+        progression: new RockyVenturesProgression()
     }
 }

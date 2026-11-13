@@ -40,6 +40,8 @@ The logic package exports a `GameDefinition`:
 - `info` provides the stable game id, metadata, and an optional configurator.
 - `runtime` provides the initializer, hydrator, player-color mapping, canonical state validator, API action schemas, machine-state handlers, an optional state logger, and optional exploration state preparation.
 
+A title may add `runtime.progression`, whose `progress(state)` returns its [Game Progress](game-progress.md): a rough `fraction` of the game played, a short `label` in the title's own terms (`Round 3 of 8`, `Phase 5 · Bank $3,420`) and `final` once the game's end has begun. The host calls it with host state when a game starts and after every Action and Undo, and stores the result on the Game record that game cards, Tournament tables and League progress read. It must report only public information. If it throws or returns an invalid report, the host logs the error and leaves progress unset; the move still succeeds. Adopting it needs only a logic release. 18xx titles get it from `createEighteenXXRuntime`.
+
 The UI package exports a `GameUiDefinition`. Its info adds the thumbnail, and its lazy runtime provides the Game UI component, session class, colorizer, optional player-color palette, and the complete game runtime.
 
 Every action type that may cross the serialized boundary must be registered in the API action schema and hydrator. Every machine-state value must have a handler.

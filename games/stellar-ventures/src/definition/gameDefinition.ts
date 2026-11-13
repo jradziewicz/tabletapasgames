@@ -13,6 +13,7 @@ import { StellarVenturesColors } from './colors.js'
 import { StellarVenturesConfigurator } from './configurator.js'
 import { StellarVenturesPreferenceDefinition } from './preferences.js'
 import { GAME_VERSION } from './version.js'
+import { StellarVenturesProgression } from './progression.js'
 
 // The export MUST be named Definition and be of type GameDefinition
 export const Definition: GameDefinition<StellarVenturesGameState, HydratedStellarVenturesGameState> =
@@ -42,6 +43,7 @@ export const Definition: GameDefinition<StellarVenturesGameState, HydratedStella
         apiActions: StellarVenturesApiActions,
         playerColors: StellarVenturesColors,
         stateLogger: new DefaultStateLogger(),
-        scoring: new StellarVenturesScoring()
+        scoring: new StellarVenturesScoring(),
+        progression: new StellarVenturesProgression()
     }
 }
