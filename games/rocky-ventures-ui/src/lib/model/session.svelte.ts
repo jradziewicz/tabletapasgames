@@ -94,6 +94,8 @@ export type LiveSelection = {
     extractCustomRoute?: string[]
 }
 
+const LiveSelectionHoldMs = 1000
+
 const ActionTypeByCardAction: Record<CardActionKind, ActionType> = {
     [CardActionKind.Tax]: ActionType.Tax,
     [CardActionKind.Invest]: ActionType.Invest,
@@ -779,8 +781,33 @@ export class RockyVenturesGameSession extends GameSession<
         }
     }
 
+    // Live play: watchers step through the player's changes no faster than one a second, so each
+    // one hangs long enough to follow. A long backlog keeps only the latest few.
+    private selectionQueue: LiveSelection[] = []
+    private selectionShownAt = 0
+    private selectionTimer: ReturnType<typeof setTimeout> | undefined
+
     protected override onLiveSelection(_playerId: string, selection: Record<string, unknown>) {
-        this.remoteSelection = selection as LiveSelection
+        const next = selection as LiveSelection
+        const last = this.selectionQueue.at(-1) ?? this.remoteSelection
+        if (last && JSON.stringify(last) === JSON.stringify(next)) return
+        this.selectionQueue = this.selectionQueue.filter((queued) => queued.actionCount === next.actionCount)
+        this.selectionQueue.push(next)
+        if (this.selectionQueue.length > 3) this.selectionQueue.splice(0, this.selectionQueue.length - 3)
+        this.pumpSelections()
+    }
+
+    private pumpSelections() {
+        if (this.selectionTimer) return
+        const step = () => {
+            this.selectionTimer = undefined
+            const next = this.selectionQueue.shift()
+            if (!next) return
+            this.remoteSelection = next
+            this.selectionShownAt = Date.now()
+            if (this.selectionQueue.length) this.selectionTimer = setTimeout(step, LiveSelectionHoldMs)
+        }
+        this.selectionTimer = setTimeout(step, Math.max(0, this.selectionShownAt + LiveSelectionHoldMs - Date.now()))
     }
 
     async passAction(type: ActionType) {
