@@ -83,6 +83,7 @@ export type LiveSelection = {
     huntFocusHit?: number
     acquireMode?: boolean
     lookingAtCardId?: string
+    openedCardId?: string
     trackCompanyId?: string
     extractNodeId?: string
     extractCityId?: string
@@ -683,6 +684,7 @@ export class RockyVenturesGameSession extends GameSession<
             huntFocusHit: this.huntFocusHit,
             acquireMode: this.acquireMode,
             lookingAtCardId: this.zoomedImage?.alt ?? this.hoveredCard?.alt ?? this.pointedCardId,
+            openedCardId: this.zoomedImage?.alt,
             trackCompanyId: this.trackCompanyId,
             extractNodeId: this.extractNodeId,
             extractCityId: this.extractCityId,
