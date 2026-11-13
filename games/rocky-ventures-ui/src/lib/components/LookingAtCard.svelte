@@ -12,6 +12,7 @@
         cardActionsFor,
         getCard,
         type CompanyId,
+        type WeaponTokenKind,
         type RegionId
     } from '@tabletop/rocky-ventures'
     import type { GameAction } from '@tabletop/common'
@@ -21,6 +22,7 @@
     import { GridRegion, gridCellPosition } from '$lib/utils/trackLayout.js'
     import { regionLabelPoint } from '$lib/utils/regionMap.js'
     import { cardActionText } from '$lib/utils/cardActionText.js'
+    import { weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
 
     // Live play: the watcher box. While someone else plays it keeps their selected card up until the turn
     // is done, zooms into the map for what they're choosing or just did, and lists each step in words.
@@ -170,7 +172,7 @@
                 }
                 case ActionType.Hunt:
                     huntRegion = data.region as string
-                    return [{ text: `hunted ${regionName(huntRegion)}`, zoom: regionZoom(huntRegion) }]
+                    return [{ text: huntRegion === DragonHuntRegion ? 'hunt the Dragon' : `hunt in ${regionName(huntRegion)}`, zoom: regionZoom(huntRegion) }]
                 case ActionType.ResolveHunt: {
                     const hits = (data.hitTargets as string[] | undefined)?.length ?? 0
                     return [{ text: hits ? `hit ${hits} ${hits === 1 ? 'time' : 'times'}` : 'missed', zoom: regionZoom(huntRegion) }]
@@ -207,6 +209,10 @@
         return [...steps].reverse().find((step) => step.zoom)
     })
 
+    // While they hunt, the drawn weapon tokens take the card's place, with their picks ringed.
+    const hunt = $derived(watching ? gameSession.gameState.pendingHunt : undefined)
+    const huntPicked = $derived(gameSession.watchedSelection?.huntSelected ?? [])
+
     const lookingAtId = $derived(watching && gameSession.mirroring ? gameSession.watchedSelection?.lookingAtCardId : undefined)
     const shownCardId = $derived(lookingAtId ?? selectedCardId)
     const shownCardUrl = $derived(cardUrl(shownCardId))
@@ -214,7 +220,17 @@
 
 {#if watching && (shownCardUrl || focus?.zoom || steps.length)}
     <div class="pointer-events-none fixed bottom-4 right-4 z-40 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-xl border-2 border-[#ffd166] bg-[#1b140c]/95 p-2 text-xs text-[#f1e6cf] shadow-2xl">
-        {#if shownCardUrl}
+        {#if hunt}
+            <div><strong class="capitalize">{name}</strong> drew {hunt.drawn.length} weapon {hunt.drawn.length === 1 ? 'token' : 'tokens'}, applies up to {hunt.apply}</div>
+            <div class="flex flex-wrap justify-center gap-2">
+                {#each hunt.drawn as kind, index (index)}
+                    {@const url = weaponTokenImageUrl(kind as WeaponTokenKind)}
+                    {#if url}
+                        <img src={url} alt={kind} class="h-16 w-16 rounded-full {huntPicked.includes(index) ? 'ring-4 ring-[#ffd166]' : 'opacity-80'}" draggable="false" />
+                    {/if}
+                {/each}
+            </div>
+        {:else if shownCardUrl}
             <div><strong class="capitalize">{name}</strong> {lookingAtId && lookingAtId !== selectedCardId ? 'is looking at' : 'selected'}</div>
             {#if (!lookingAtId || lookingAtId === selectedCardId) && selectedActions}
                 <div class="text-center text-base font-bold text-[#ffd166]">{selectedActions}</div>
