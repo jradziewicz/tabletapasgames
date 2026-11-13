@@ -38,7 +38,7 @@
     const gameSession = getGameSession()
 
     type Zoom = { x: number; y: number; width: number; height: number }
-    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[] }
+    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string } }
 
     const ZoomAspect = 4 / 3
 
@@ -208,6 +208,11 @@
         let claimIndex = 0
         let purchaseIndex = 0
         let huntRegion = ''
+        // Levels gained by Acquire steps still to come this turn, to work out where each one started.
+        const pendingGain = { weapon: 0, tool: 0 }
+        for (const action of turn) {
+            if (action.type === ActionType.Acquire) pendingGain[(action as GameAction & { choice: 'weapon' | 'tool' }).choice] += 1
+        }
         return turn.flatMap((action): Step[] => {
             const data = action as GameAction & Record<string, unknown>
             switch (action.type) {
@@ -278,8 +283,22 @@
                 case ActionType.Acquire: {
                     const choice = data.choice as 'weapon' | 'tool'
                     const level = choice === 'weapon' ? player?.weaponLevel : player?.toolLevel
-                    // Close in on the disc where it landed on the weapon/tool grid.
-                    return [{ text: `raised ${choice} to ${level}`, zoom: gridZoom(180) }]
+                    // Close in on the grid and slide the disc from where it was to where it landed.
+                    const weaponNow = player?.weaponLevel ?? 1
+                    const toolNow = player?.toolLevel ?? 1
+                    const weaponAfter = weaponNow - (choice === 'weapon' ? pendingGain.weapon - 1 : pendingGain.weapon)
+                    const toolAfter = toolNow - (choice === 'tool' ? pendingGain.tool - 1 : pendingGain.tool)
+                    pendingGain[choice] -= 1
+                    const to = gridCellPosition(weaponAfter, toolAfter)
+                    const from = gridCellPosition(choice === 'weapon' ? weaponAfter - 1 : weaponAfter, choice === 'tool' ? toolAfter - 1 : toolAfter)
+                    const zoom = around([from, to], 220)
+                    return [
+                        {
+                            text: `raised ${choice} to ${choice === 'weapon' ? weaponAfter : toolAfter}`,
+                            zoom,
+                            move: { from, to, color: actorId ? gameSession.colors.getPlayerUiColor(actorId) : '#ffd166' }
+                        }
+                    ]
                 }
                 case ActionType.ChooseShare: {
                     const companyId = data.companyId as CompanyId
@@ -426,6 +445,16 @@
                     {#if entry.zoom}
                         <svg viewBox="{entry.zoom.x} {entry.zoom.y} {entry.zoom.width} {entry.zoom.height}" class="block aspect-[4/3] {newest ? 'w-full' : 'w-2/3'} mx-auto rounded-lg border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
                             <use href="#rv-board-svg" />
+                            {#if entry.move}
+                                {@const move = entry.move}
+                                <!-- Where the disc was (ghost), the path, and the disc sliding to where it landed -->
+                                <line x1={move.from.x} y1={move.from.y} x2={move.to.x} y2={move.to.y} stroke="#ffd166" stroke-width="4" stroke-dasharray="8 6" />
+                                <circle cx={move.from.x} cy={move.from.y} r="13" fill={move.color} opacity="0.35" stroke="#111" stroke-width="2" />
+                                <circle r="14" fill={move.color} stroke="#ffd166" stroke-width="3">
+                                    <animate attributeName="cx" values="{move.from.x};{move.to.x};{move.to.x}" keyTimes="0;0.5;1" dur="2.4s" repeatCount="indefinite" />
+                                    <animate attributeName="cy" values="{move.from.y};{move.to.y};{move.to.y}" keyTimes="0;0.5;1" dur="2.4s" repeatCount="indefinite" />
+                                </circle>
+                            {/if}
                         </svg>
                     {/if}
                 </div>
