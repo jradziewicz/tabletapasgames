@@ -8,8 +8,10 @@
         CardKind,
         endTriggers,
         getCard,
-        gemTriggerThreshold
+        gemTriggerThreshold,
+        FeastBuyerBonuses
     } from '@tabletop/rocky-ventures'
+    import { feastName } from '$lib/utils/feastNames.js'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
     const gameSession = getGameSession()
@@ -39,7 +41,7 @@
     }
 
     // `struck` draws a line through the label's first word (the slain dragon).
-    type TriggerChip = { key: string; label: string; tip: string; level: ChipLevel; pulse?: boolean; struck?: boolean }
+    type TriggerChip = { key: string; label: string; tip: string; level: ChipLevel; pulse?: boolean; struck?: boolean; goldWord?: string }
     const triggerChips: TriggerChip[] = $derived([
         {
             key: 'deck',
@@ -75,6 +77,25 @@
                     level: 'far',
                     tip: `${Math.min(dragon.trackerTokens.length, BonusTokensToSummonDragon)} of ${BonusTokensToSummonDragon} bonus tokens drawn. At ${BonusTokensToSummonDragon} the dragon comes out`
                 },
+        // Where each Feast card is: still in the deck, in the market to buy, or gone.
+        ...['era1', 'era2', 'era3'].map((cardId, index): TriggerChip => {
+            const state = gameSession.gameState
+            const slot = state.market.slots.indexOf(cardId)
+            const inDeck = state.market.drawPile.includes(cardId)
+            const name = feastName(index + 1)
+            const bonus = state.feastBuyerBonus ? FeastBuyerBonuses[cardId] : undefined
+            const bonusText = bonus
+                ? ` Buyer bonus: ${bonus.points.join('/')} VP for 1st/2nd/3rd in ${['tool level', 'share multipliers', 'gold mines claimed'][index]}.`
+                : ''
+            return {
+                key: cardId,
+                label: `FEAST ${index + 1}: ${['TOOL', 'SHARES', 'MINES'][index]}`,
+                goldWord: index === 2 ? 'MINES' : undefined,
+                level: slot >= 0 ? 'close' : 'far',
+                struck: false,
+                tip: `${name}: ${slot >= 0 ? 'in the market now' : inDeck ? 'still in the deck' : 'already taken'}.${bonusText}`
+            }
+        }),
         ...(eraThreeEnding
             ? []
             : [
@@ -139,8 +160,8 @@
         {/if}
     </div>
 
-    <div class="flex shrink-0 items-center gap-2 text-[15px] max-sm:ml-auto">
-        <div class="flex items-center gap-1 text-[10px] font-semibold sm:gap-2.5 sm:text-sm lg:text-base">
+    <div class="flex min-w-0 shrink items-center gap-2 text-[15px] max-sm:ml-auto">
+        <div class="flex flex-wrap items-center justify-end gap-1 text-[10px] font-semibold sm:gap-2.5 sm:text-sm 2xl:text-base">
             {#each triggerChips as chip (chip.key)}
                 <!-- Small hover (or tap) box with the details, rather than a slow native tooltip. -->
                 <button
@@ -149,7 +170,7 @@
                     class:dragon-alert={chip.pulse}
                     style="border-color: {ChipColors[chip.level].border}; color: {ChipColors[chip.level].text}; background-color: {ChipColors[chip.level].background};"
                     aria-label={chip.tip}
-                    >{#if chip.struck}<span class="line-through decoration-2">{chip.label.split(' ')[0]}</span> {chip.label.split(' ').slice(1).join(' ')}{:else}{chip.label}{/if}<span class="chip-tip" role="tooltip">{chip.tip}</span></button
+                    >{#if chip.goldWord}{chip.label.replace(chip.goldWord, '')}<span style="color: #f2c14e;">{chip.goldWord}</span>{:else if chip.struck}<span class="line-through decoration-2">{chip.label.split(' ')[0]}</span> {chip.label.split(' ').slice(1).join(' ')}{:else}{chip.label}{/if}<span class="chip-tip" role="tooltip">{chip.tip}</span></button
                 >
             {/each}
         </div>
