@@ -683,19 +683,19 @@
         <div bind:this={feedEl} class="flex max-h-[70vh] flex-col gap-3 overflow-y-auto p-2">
             {#each entries as entry, index (index)}
                 {@const newest = index === entries.length - 1}
-                <div class="flex flex-col gap-1 {newest ? '' : 'opacity-70'}">
-                    <div class={newest ? 'text-sm font-semibold text-[#ffd166]' : 'text-[#c9a961]'}>
-                        {#if entry.live}<strong class="capitalize">{name}</strong> {entry.text}{:else}{capital(entry.text)}{/if}{#if entry.iconUrl}<img src={entry.iconUrl} alt="" class="ml-2 inline-block align-middle {newest ? 'h-10 w-10' : 'h-7 w-7'}" draggable="false" />{/if}
+                <div class="flex flex-col gap-1">
+                    <div class="text-sm font-semibold text-[#ffd166]">
+                        {#if entry.live}<strong class="capitalize">{name}</strong> {entry.text}{:else}{capital(entry.text)}{/if}{#if entry.iconUrl}<img src={entry.iconUrl} alt="" class="ml-2 inline-block align-middle h-10 w-10" draggable="false" />{/if}
                     </div>
                     {#if entry.logoUrl}
-                        <img src={entry.logoUrl} alt="" class="mx-auto {newest ? 'h-16' : 'h-8'} w-auto" draggable="false" />
+                        <img src={entry.logoUrl} alt="" class="mx-auto h-16 w-auto" draggable="false" />
                     {/if}
                     {#if entry.detail}<div class="text-[#f1e6cf]">{entry.detail}</div>{/if}
                     {#if entry.imageUrl}
-                        <img src={entry.imageUrl} alt="" class="mx-auto {newest ? 'h-48' : 'h-24'} w-auto rounded-lg" draggable="false" />
+                        <img src={entry.imageUrl} alt="" class="mx-auto h-48 w-auto rounded-lg" draggable="false" />
                     {/if}
                     {#if entry.lines?.length}
-                        <div class="mx-auto grid grid-cols-[auto_auto] gap-x-4 {newest ? 'text-xs' : 'text-[10px]'}">
+                        <div class="mx-auto grid grid-cols-[auto_auto] gap-x-4 text-xs">
                             {#each entry.lines as line (line.label)}
                                 <span class={line.label === 'Profit' ? 'font-bold text-[#ffd166]' : ''}>{line.label}</span>
                                 <span class="text-right font-mono {line.amount < 0 ? 'text-[#ff8a7a]' : line.label === 'Profit' ? 'font-bold text-[#ffd166]' : ''}">{line.amount < 0 ? `-$${-line.amount}` : `$${line.amount}`}</span>
@@ -708,7 +708,7 @@
                                 {@const url = weaponTokenImageUrl(token.kind as WeaponTokenKind)}
                                 {#if url}
                                     <!-- The token as printed, with a gold circle over it once picked -->
-                                    <div class="relative {newest ? 'h-20 w-20' : 'h-10 w-10'}">
+                                    <div class="relative h-20 w-20">
                                         <img src={url} alt={token.kind} class="h-full w-full object-contain {token.picked || entry.live ? '' : 'opacity-40 grayscale'}" draggable="false" />
                                         {#if token.picked}
                                             <!-- Wide enough that the whole square token sits inside the circle -->
@@ -720,7 +720,7 @@
                         </div>
                     {/if}
                     {#if entry.zoom}
-                        <svg viewBox="{entry.zoom.x} {entry.zoom.y} {entry.zoom.width} {entry.zoom.height}" class="block aspect-[4/3] {newest ? 'w-full' : 'w-2/3'} mx-auto rounded-lg border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
+                        <svg viewBox="{entry.zoom.x} {entry.zoom.y} {entry.zoom.width} {entry.zoom.height}" class="block aspect-[4/3] w-full mx-auto rounded-lg border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
                             <use href="#rv-board-svg" />
                             {#if entry.pin}
                                 <circle cx={entry.pin.x} cy={entry.pin.y} r="27" fill="#1b140c" />
@@ -750,8 +750,8 @@
                         </svg>
                     {/if}
                     {#if entry.footer}
-                        <div class="flex items-center justify-center gap-2 {newest ? 'text-sm' : 'text-xs'}">
-                            {#if entry.footer.logoUrl}<img src={entry.footer.logoUrl} alt="" class="{newest ? 'h-10' : 'h-6'} w-auto" draggable="false" />{/if}
+                        <div class="flex items-center justify-center gap-2 text-sm">
+                            {#if entry.footer.logoUrl}<img src={entry.footer.logoUrl} alt="" class="h-10 w-auto" draggable="false" />{/if}
                             <span>{entry.footer.text}</span>
                         </div>
                     {/if}
