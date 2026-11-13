@@ -649,6 +649,21 @@
         />
     {/each}
 
+    <!-- Extract & Sell: hovering a silver mine shows what extracting it would pay -->
+    {#if gameSession.isMyTurn && !gameSession.isViewingHistory && gameSession.extractActive && gameSession.extractHoverNodeId && gameSession.gameState.board.mines[gameSession.extractHoverNodeId]?.token?.ore === OreKind.Silver}
+        {@const hoverId = gameSession.extractHoverNodeId}
+        {@const node = BoardNodesById[hoverId]}
+        {@const activeId = gameSession.gameState.activePlayerIds[0]}
+        {@const plan = activeId ? planExtraction(gameSession.gameState, activeId, { nodeId: hoverId }) : undefined}
+        {#if node && plan && typeof plan !== 'string'}
+            {@const label = `${plan.oreCount} Silver: ${plan.net < 0 ? '-' : '+'}$${Math.abs(plan.net)}`}
+            <g pointer-events="none">
+                <rect x={node.x - label.length * 6.5 - 12} y={node.y + 32} width={label.length * 13 + 24} height="32" rx="16" fill="#1b140c" fill-opacity="0.92" stroke="#c0c6d0" stroke-width="3" />
+                <text x={node.x} y={node.y + 54} text-anchor="middle" font-size="20" font-weight="700" fill="#fff">{label}</text>
+            </g>
+        {/if}
+    {/if}
+
     <!-- Extract & Sell: the delivery cities can be clicked on the map to sell there -->
     {#if gameSession.isMyTurn && !gameSession.isViewingHistory && gameSession.extractActive && gameSession.extractNodeId && !gameSession.extractCustomRoute && gameSession.gameState.board.mines[gameSession.extractNodeId]?.token?.ore === OreKind.Gold}
         {@const mineId = gameSession.extractNodeId}
