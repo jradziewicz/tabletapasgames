@@ -233,8 +233,8 @@
             tokens.length < BonusTokensToSummonDragon &&
             !session.isViewingHistory
         ) {
-            pendingBonus = { tokens: [...tokens], playerId: session.actions.at(-1)?.playerId }
-            regateOverlays()
+            // Live play has no full-screen overlays; the watcher box carries the turn.
+            if (!session.livePlay) pendingBonus = { tokens: [...tokens], playerId: session.actions.at(-1)?.playerId }
         }
     })
 
@@ -266,12 +266,8 @@
         const previous = previousDragonSummoned
         previousDragonSummoned = summoned
         if (previous === false && summoned && !session.isViewingHistory) {
-            if (session.livePlay) {
-                pendingDragonBy = session.actions.findLast((action) => action.playerId)?.playerId ?? ''
-                regateOverlays()
-            } else {
-                openDragonOverlay()
-            }
+            // Live play has no full-screen overlays.
+            if (!session.livePlay) openDragonOverlay()
         }
     })
 
@@ -308,9 +304,7 @@
             if (!previous.has(scourgeId)) {
                 session.enteredScourges = [...session.enteredScourges, { scourgeId, region, actionCount: session.gameState.actionCount }]
                 if (session.livePlay) {
-                    // Live play: the reveal waits until the turn that brought it out is entirely over.
-                    turnEndScourges = [...turnEndScourges, { region, scourgeId, playerId: session.actions.findLast((action) => action.playerId)?.playerId }]
-                    regateOverlays()
+                    // Live play: no full-screen reveal; the watcher box shows the scourge coming out.
                 } else {
                     pendingScourge = { region, scourgeId }
                 }
