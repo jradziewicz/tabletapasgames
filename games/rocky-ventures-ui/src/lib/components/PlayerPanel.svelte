@@ -32,6 +32,7 @@
     // Live play: the card this player just bought or taxed glows briefly where it landed.
     function spotlit(cardId: string | undefined): boolean {
         const spotlight = gameSession.spotlight
+        if (cardId && gameSession.turnMarks.playerId === player.id && gameSession.turnMarks.cardIds.includes(cardId)) return true
         return spotlight?.kind === 'card' && spotlight.phase === 'landed' && spotlight.playerId === player.id && spotlight.cardId === cardId
     }
 

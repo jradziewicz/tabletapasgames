@@ -1,4 +1,4 @@
-import { GameEngine } from '@tabletop/common'
+import { GameEngine, type GameAction } from '@tabletop/common'
 import { GameSession, TitlePreferences } from '@tabletop/frontend-components'
 import {
     ActionType,
@@ -52,6 +52,7 @@ import {
     type CompanyId,
     type RegionId,
     RockyVenturesPreferenceDefinition,
+    StatKind,
     Definition,
     type RockyVenturesPreferences,
     type RockyVenturesGameState,
@@ -650,6 +651,43 @@ export class RockyVenturesGameSession extends GameSession<
         this.extractCityId = selection.extractCityId as DeliveryCityId | undefined
         this.extractCreditCompanyId = selection.extractCreditCompanyId as CompanyId | undefined
     }
+
+    // Live play: everything the current player has done this turn stays marked until the next turn:
+    // track laid, mines claimed or extracted, the city and route sold along, and cards taken.
+    turnMarks: { playerId?: string; boxIds: string[]; nodeIds: string[]; routes: string[][]; cardIds: string[] } = $derived.by(() => {
+        const empty = { boxIds: [], nodeIds: [], routes: [], cardIds: [] }
+        if (!this.livePlay || this.isViewingHistory) return empty
+        const state = this.gameState
+        const playerId = state.activePlayerIds[0]
+        if (!playerId) return empty
+        const turn: GameAction[] = []
+        for (const action of [...this.actions].reverse()) {
+            if (action.playerId && action.playerId !== playerId) break
+            turn.push(action)
+            if (action.type === ActionType.MovePawn) break
+        }
+        const marks = { playerId, boxIds: [] as string[], nodeIds: [] as string[], routes: [] as string[][], cardIds: [] as string[] }
+        for (const action of turn) {
+            const data = action as GameAction & { boxId?: string; nodeId?: string; cityId?: string; routeNodeIds?: string[] }
+            if ((action.type === ActionType.LayTrack || action.type === ActionType.LayFreeTrack) && data.boxId) marks.boxIds.push(data.boxId)
+            if ((action.type === ActionType.ClaimMine || action.type === ActionType.ExtractAndSell) && data.nodeId) marks.nodeIds.push(data.nodeId)
+            if (action.type === ActionType.ExtractAndSell) {
+                if (data.cityId) marks.nodeIds.push(data.cityId)
+                if (data.routeNodeIds?.length) marks.routes.push(data.routeNodeIds)
+            }
+            if (action.type === ActionType.Tax) {
+                const tucked = state.getPlayerState(playerId).tuckedCardIds.at(-1)
+                if (tucked) marks.cardIds.push(tucked)
+            }
+        }
+        const turnStart = state.actionCount - turn.length
+        for (const event of state.statEvents) {
+            if (event.kind === StatKind.Purchase && event.playerId === playerId && event.action >= turnStart && event.cardId) {
+                marks.cardIds.push(event.cardId)
+            }
+        }
+        return marks
+    })
 
     get livePlay(): boolean {
         return (this.primaryGame.config as { livePlay?: boolean } | undefined)?.livePlay === true && !this.primaryGame.hotseat
