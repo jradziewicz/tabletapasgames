@@ -204,11 +204,6 @@
         </div>
     {/if}
 
-    {#if gameSession.livePlay}
-        <RecentHunt />
-        <RecentExtract />
-    {/if}
-
     {#if gameSession.gameState.result}
         {#if gameSession.gameCall}
             <!-- A called or conceded game ends on the players' agreement; the scores below are where it stood. -->
@@ -253,7 +248,6 @@
         {:else}
             <div class="text-[#c9a961]">Waiting for the active player.</div>
         {/if}
-        <LiveSelectionLine {player} />
         {#if gameState.machineState === MachineState.Hunt && gameState.pendingHunt}
             {@const pending = gameState.pendingHunt}
             <div class="mt-2 text-xs text-[#c9a961]">
