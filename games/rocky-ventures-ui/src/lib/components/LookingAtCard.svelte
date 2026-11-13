@@ -478,7 +478,7 @@
             return gameSession.enteredScourges
                 .filter((entered) => entered.actionCount === count)
                 .map((entered) => ({
-                    text: `a ${ScourgeDefinitionsById[entered.scourgeId]?.name ?? 'scourge'} entered ${regionName(entered.region)}`,
+                    text: `${ScourgeDefinitionsById[entered.scourgeId]?.name ?? 'Scourge'} revealed in ${regionName(entered.region)}`,
                     imageUrl: scourgeImageUrl(entered.scourgeId)
                 }))
         }
