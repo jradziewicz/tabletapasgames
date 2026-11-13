@@ -329,6 +329,7 @@
 
 <svg
     bind:this={boardSvg}
+    id="rv-board-svg"
     viewBox="0 0 {BoardArtSize.width} {BoardArtSize.height}"
     width={BoardArtSize.width}
     height={BoardArtSize.height}
