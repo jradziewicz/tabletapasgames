@@ -46,7 +46,8 @@ import {
     SessionService,
     type DiscordOAuth,
     DiscordOAuthClient,
-    UsernameReviewService
+    UsernameReviewService,
+    ContentReports
 } from '@tabletop/backend-services'
 import type { GameDefinition } from '@tabletop/common'
 
@@ -77,6 +78,7 @@ declare module 'fastify' {
         bugReportService: BugReportService
         usernameReviewService: UsernameReviewService
         siteStatsService: SiteStatsService
+        contentReports: ContentReports | undefined
     }
 }
 
@@ -87,6 +89,7 @@ const SITE_MANIFEST_PATH =
     process.env['SITE_MANIFEST_PATH'] ?? path.join(STATIC_ROOT, 'config', 'site-manifest.json')
 
 const useAbly = !!process.env['ABLY_API_KEY']
+const MODERATION_EMAIL = process.env['MODERATION_EMAIL']
 
 export default fp(async (fastify: FastifyInstance) => {
     const secretsService = new EnvSecretsService()
@@ -237,6 +240,19 @@ export default fp(async (fastify: FastifyInstance) => {
     fastify.decorate(
         'preferenceService',
         new PreferenceService(new FirestorePreferenceStore(fastify.firestore), redisCacheService)
+    )
+    fastify.decorate(
+        'contentReports',
+        MODERATION_EMAIL
+            ? new ContentReports(
+                  gameService,
+                  chatService,
+                  userService,
+                  taskService,
+                  MODERATION_EMAIL,
+                  process.env['FRONTEND_HOST'] ?? ''
+              )
+            : undefined
     )
     fastify.decorate(
         'bugReportService',

@@ -1,6 +1,7 @@
 import { type AccountChangeType, Game, GameDefinition, User } from '@tabletop/common'
 
 export { AccountChangeType } from '@tabletop/common'
+import type { ContentReportEmail } from '../moderation/contentReports.js'
 
 export interface EmailService {
     sendVerificationEmail(token: string, toEmail: string): Promise<void>
@@ -23,6 +24,7 @@ export interface EmailService {
         url: string
         toEmail: string
     }): Promise<void>
+    sendContentReportEmail(report: ContentReportEmail): Promise<void>
     sendGameEndEmail({
         winners,
         game,

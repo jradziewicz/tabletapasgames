@@ -57,6 +57,7 @@ function fixture(definition: typeof SyntheticDefinition = PublicSyntheticDefinit
         sendPasswordResetEmail: unused,
         sendAuthVerificationEmail: unused,
         sendAccountChangeNotificationEmail: unused,
+        sendContentReportEmail: unused,
         sendGameInvitationEmail: vi.fn(async () => {}),
         sendGameEndEmail: unused
     }

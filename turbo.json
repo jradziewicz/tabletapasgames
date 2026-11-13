@@ -11,6 +11,7 @@
             "env": [
                 "DISCORD_CLIENT_ID",
                 "DISCORD_BOT_TOKEN",
+                "MODERATION_EMAIL",
                 "FRONTEND_HOST",
                 "K_SERVICE",
                 "GOOGLE_CLIENT_ID",

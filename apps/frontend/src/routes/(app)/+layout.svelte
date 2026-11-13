@@ -24,6 +24,8 @@
     import AuthModal from '$lib/components/AuthModal.svelte'
     import BugReportModal from '$lib/components/BugReportModal.svelte'
     import CallGameModal from '$lib/components/CallGameModal.svelte'
+    import ReportContentModal from '$lib/components/ReportContentModal.svelte'
+    import { contentReport } from '$lib/stores/contentReport.svelte'
     import { callGameOffer } from '$lib/utils/callGameOffer'
     import { getAppContext as getSiteContext } from '$lib/stores/appContext.svelte'
     import PreferencesPanel from '$lib/components/PreferencesPanel.svelte'
@@ -65,7 +67,8 @@
         notificationService,
         visibilityService,
         libraryService,
-        manifestService
+        manifestService,
+        chatService
     } = getAppContext()
     let titlesById = $derived(libraryService.titlesById)
     let loading = $derived(libraryService.loading)
@@ -113,6 +116,11 @@
             titlesById[session.primaryGame.typeId]?.info.clientCapabilities ?? []
         )
     })
+    let reportGame = $derived.by(() => {
+        const session = gameService.currentGameSession
+        if (!sessionUser || !session || session.primaryGame.hotseat) return undefined
+        return siteGameService.cachedGame(session.primaryGame.id) ?? session.primaryGame
+    })
     let showCallGame = $state(false)
     let showBugReport = $state(false)
     let showPreferences = $state(false)
@@ -136,6 +144,7 @@
     })
 
     afterNavigate(() => {
+        contentReport.close()
         showLoginModal = false
         showCallGame = false
         showBugReport = false
@@ -558,6 +567,15 @@
                                     >
                                     <DropdownDivider />
                                 {/if}
+                                {#if reportGame}
+                                    <DropdownItem
+                                        class="w-full text-left"
+                                        onclick={() => contentReport.open()}>Report…</DropdownItem
+                                    >
+                                {/if}
+                                {#if reportGame}
+                                    <DropdownDivider />
+                                {/if}
                                 <DropdownItem class="w-full text-left" onclick={gotoProfile}
                                     >Profile</DropdownItem
                                 >
@@ -659,6 +677,9 @@
 {/if}
 {#if bugReportSession}
     <BugReportModal bind:open={showBugReport} session={bugReportSession} />
+{/if}
+{#if reportGame}
+    <ReportContentModal game={reportGame} messages={chatService.currentGameChat?.messages ?? []} />
 {/if}
 {#if callOffer && gameService.currentGameSession}
     <CallGameModal

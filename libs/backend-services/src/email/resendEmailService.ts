@@ -7,6 +7,7 @@ import {
     GameInvitation,
     GameEnd,
     YourTurn,
+    ContentReport,
     emailVerificationText,
     passwordResetText,
     accountChangeNotificationText,
@@ -17,9 +18,21 @@ import {
 
 import { Resend } from 'resend'
 import { SecretsService } from '../secrets/secretsService'
-import { AUTHENTICATION_CHALLENGE_LIFETIME_SECONDS, Game, GameDefinition, User } from '@tabletop/common'
+import {
+    AUTHENTICATION_CHALLENGE_LIFETIME_SECONDS,
+    CONTENT_REPORT_REASON_LABELS,
+    CONTENT_REPORT_TARGET_LABELS,
+    Game,
+    GameDefinition,
+    User
+} from '@tabletop/common'
 import { AccountChangeType, EmailService } from './emailService.js'
 import { NullEmailService } from './nullEmailService.js'
+import type { ContentReportEmail } from '../moderation/contentReports.js'
+
+function formatReportTime(time: Date): string {
+    return `${time.toISOString().slice(0, 16).replace('T', ' ')} UTC`
+}
 
 const CHALLENGE_LIFETIME_MINUTES = AUTHENTICATION_CHALLENGE_LIFETIME_SECONDS / 60
 
@@ -169,6 +182,42 @@ export class ResendEmailService implements EmailService {
             from: 'noreply@playtest.tabletapasgames.com',
             to: toEmail,
             subject: `Your game of ${definition.info.metadata.name} ${game.name} has ended`,
+            html: emailHTML,
+            text: emailText,
+            headers: {
+                'X-Entity-Ref-ID': nanoid()
+            }
+        })
+        if (error) {
+            throw new Error(`Failed to send email via Resend: ${error.message}`)
+        }
+    }
+
+    // Sent to the moderation inbox; the reported player is never told who reported them.
+    async sendContentReportEmail(report: ContentReportEmail): Promise<void> {
+        const targetLabel = CONTENT_REPORT_TARGET_LABELS[report.targetKind]
+        const reasonLabel = CONTENT_REPORT_REASON_LABELS[report.reason]
+        const emailHTML = await render(
+            ContentReport({
+                ...report,
+                targetLabel,
+                reasonLabel,
+                reportedAt: formatReportTime(new Date(report.reportedAt))
+            })
+        )
+        const emailText = await render(
+            ContentReport({
+                ...report,
+                targetLabel,
+                reasonLabel,
+                reportedAt: formatReportTime(new Date(report.reportedAt))
+            }),
+            { plainText: true }
+        )
+        const { error } = await this.resend.emails.send({
+            from: 'noreply@playtest.tabletapasgames.com',
+            to: report.toEmail,
+            subject: `Report: ${targetLabel}, ${reasonLabel}`,
             html: emailHTML,
             text: emailText,
             headers: {

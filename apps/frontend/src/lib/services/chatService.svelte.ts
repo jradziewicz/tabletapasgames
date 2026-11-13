@@ -16,11 +16,13 @@ import {
     GameChat,
     GameChatMessage,
     addToChecksum,
+    redactionChecksumValue,
     GameChatNotification,
     GameNotificationAction
 } from '@tabletop/common'
 import * as Value from 'typebox/value'
 import { NotificationService } from './notificationService.svelte'
+import { contentReport } from '$lib/stores/contentReport.svelte'
 
 export class ChatService {
     private loading = $state(false)
@@ -79,6 +81,10 @@ export class ChatService {
         this.currentGameChat = undefined
         this.loaded = false
         this.loading = false
+    }
+
+    reportGameChatMessage(message: GameChatMessage) {
+        contentReport.open({ message })
     }
 
     addListener(listener: ChatListener) {
@@ -215,9 +221,14 @@ export class ChatService {
                 return
             }
 
-            if (this.currentGameChat.messages.find((m) => m.id === newMessage.id)) {
+            const existingIndex = this.currentGameChat.messages.findIndex(
+                (m) => m.id === newMessage.id
+            )
+            if (newMessage.redacted) {
+                await this.applyRedaction(newMessage, existingIndex, notification.data.checksum)
                 return
             }
+            if (existingIndex >= 0) return
 
             const chatEvent: NewGameChatMessageEvent = {
                 eventType: ChatEventType.NewGameChatMessage,
@@ -242,6 +253,26 @@ export class ChatService {
             }
         } else if (isDiscontinuityEvent(event) && event.channel === NotificationChannel.User) {
             await this.reloadGameChat()
+        }
+    }
+
+    // A redaction of a message this client never received cannot be applied in place.
+    private async applyRedaction(redacted: GameChatMessage, index: number, checksum: number) {
+        if (!this.currentGameChat) return
+        if (index < 0) {
+            await this.reloadGameChat()
+            return
+        }
+        const existing: GameChatMessage = this.currentGameChat.messages[index]
+        if (existing.redacted) return
+        this.currentGameChat.messages[index] = redacted
+        const expectedChecksum = addToChecksum(this.currentGameChat.checksum, [
+            redactionChecksumValue(redacted.id)
+        ])
+        if (expectedChecksum !== checksum) {
+            await this.reloadGameChat()
+        } else {
+            this.currentGameChat.checksum = checksum
         }
     }
 
