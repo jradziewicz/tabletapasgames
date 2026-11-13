@@ -17,6 +17,7 @@
         CompanyIds,
         CompanyId,
         DeliveryCityId,
+        planExtraction,
         MineTier,
         MineTokensById,
         RedRestrictedMineLevel,
@@ -647,6 +648,36 @@
             pointer-events="none"
         />
     {/each}
+
+    <!-- Extract & Sell: the delivery cities can be clicked on the map to sell there -->
+    {#if gameSession.isMyTurn && !gameSession.isViewingHistory && gameSession.extractActive && gameSession.extractNodeId && !gameSession.extractCustomRoute && gameSession.gameState.board.mines[gameSession.extractNodeId]?.token?.ore === OreKind.Gold}
+        {@const mineId = gameSession.extractNodeId}
+        {#each [DeliveryCityId.Dornoch, DeliveryCityId.Manor] as cityId (cityId)}
+            {@const node = BoardNodesById[cityId]}
+            {@const plan = gameSession.gameState.activePlayerIds[0] ? planExtraction(gameSession.gameState, gameSession.gameState.activePlayerIds[0], { nodeId: mineId, cityId }) : undefined}
+            {#if node && plan && typeof plan !== 'string'}
+                {@const color = CityRouteColors[cityId] ?? '#ffd166'}
+                <g
+                    class="city-sell"
+                    role="button"
+                    tabindex="0"
+                    aria-label="Sell to {node.name} for {plan.net < 0 ? '-' : '+'}${Math.abs(plan.net)}"
+                    onclick={() => gameSession.selectExtractCity(cityId)}
+                    onpointerenter={() => (gameSession.extractHoverCityId = cityId)}
+                    onpointerleave={() => (gameSession.extractHoverCityId = undefined)}
+                    onkeydown={(event) => {
+                        if (event.key === 'Enter' || event.key === ' ') gameSession.selectExtractCity(cityId)
+                    }}
+                    style="cursor: pointer;"
+                >
+                    <circle cx={node.x} cy={node.y} r="46" fill={color} fill-opacity="0.18" stroke={color} stroke-width="10" filter="url(#mine-halo-blur)" class="mine-halo" />
+                    <circle cx={node.x} cy={node.y} r="40" fill="transparent" stroke="#fff" stroke-width="3" />
+                    <rect x={node.x - 52} y={node.y + 44} width="104" height="30" rx="15" fill="#1b140c" fill-opacity="0.9" stroke={color} stroke-width="3" />
+                    <text x={node.x} y={node.y + 65} text-anchor="middle" font-size="18" font-weight="700" fill="#fff">Sell {plan.net < 0 ? '-' : '+'}${Math.abs(plan.net)}</text>
+                </g>
+            {/if}
+        {/each}
+    {/if}
 
     <!-- Mine tokens -->
     {#each mineNodes as node (node.id)}
