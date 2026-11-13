@@ -308,7 +308,7 @@
                         <img src={entry.imageUrl} alt="" class="mx-auto {newest ? 'h-48' : 'h-24'} w-auto rounded-lg" draggable="false" />
                     {/if}
                     {#if entry.tokens?.length}
-                        <div class="flex flex-wrap justify-center gap-2">
+                        <div class="flex flex-wrap justify-center gap-7 p-4">
                             {#each entry.tokens as token, tokenIndex (tokenIndex)}
                                 {@const url = weaponTokenImageUrl(token.kind as WeaponTokenKind)}
                                 {#if url}
@@ -316,7 +316,8 @@
                                     <div class="relative {newest ? 'h-20 w-20' : 'h-10 w-10'}">
                                         <img src={url} alt={token.kind} class="h-full w-full object-contain {token.picked || entry.live ? '' : 'opacity-40 grayscale'}" draggable="false" />
                                         {#if token.picked}
-                                            <div class="absolute -inset-1 rounded-full border-4 border-[#ffd166] shadow-[0_0_12px_rgba(255,209,102,0.8)]"></div>
+                                            <!-- Wide enough that the whole square token sits inside the circle -->
+                                            <div class="pointer-events-none absolute rounded-full border-4 border-[#ffd166] shadow-[0_0_12px_rgba(255,209,102,0.8)]" style="inset: -24%;"></div>
                                         {/if}
                                     </div>
                                 {/if}
