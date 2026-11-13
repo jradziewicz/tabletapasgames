@@ -8,6 +8,7 @@
         DragonHuntRegion,
         RegionIds,
         RegionNames,
+        ScourgeDefinitionsById,
         StatKind,
         buildableBoxes,
         cardActionsFor,
@@ -25,7 +26,8 @@
     import { GridRegion, gridCellPosition, victoryPointPosition } from '$lib/utils/trackLayout.js'
     import { regionLabelPoint } from '$lib/utils/regionMap.js'
     import { cardActionText } from '$lib/utils/cardActionText.js'
-    import { weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
+    import { DragonTileImageUrl, weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
+    import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
     import { recentOtherPlayerAction } from '$lib/utils/recentAction.js'
     import { shareImageUrl } from '$lib/utils/shareImages.js'
     import { companyLogoUrl } from '$lib/utils/companyLogos.js'
@@ -162,7 +164,13 @@
         ]
             .filter((part) => part !== undefined)
             .join(', ')
-        return { text, tokens, region: recent.before.pendingHunt?.region, hitsFrom: before.huntHits ?? 0, hitsTo: after.huntHits ?? 0 }
+        const scourgeIds = (state: typeof recent.before) => Object.values(state.board.scourgesByRegion).flatMap((list) => (list ?? []).map((scourge) => scourge.scourgeId))
+        const remaining = new Set(scourgeIds(recent.after))
+        const killed: Step[] = scourgeIds(recent.before)
+            .filter((scourgeId) => !remaining.has(scourgeId))
+            .map((scourgeId) => ({ text: `killed the ${ScourgeDefinitionsById[scourgeId]?.name ?? 'scourge'}`, imageUrl: scourgeImageUrl(scourgeId) }))
+        if (!recent.before.dragon.killed && recent.after.dragon.killed) killed.push({ text: 'killed the Dragon', imageUrl: DragonTileImageUrl })
+        return { text, tokens, region: recent.before.pendingHunt?.region, hitsFrom: before.huntHits ?? 0, hitsTo: after.huntHits ?? 0, killed, actionId: recent.action.id }
     })
 
     // The money lines of a sale: what the ore sold for and what the route cost.
@@ -314,7 +322,7 @@
                             ? [{ text: `moved the battle axe up to ${huntBonus.hitsTo} ${huntBonus.hitsTo === 1 ? 'hit' : 'hits'}`, zoom: around([victoryPointPosition(huntBonus.hitsFrom), victoryPointPosition(huntBonus.hitsTo)], 360) }]
                             : []
                     return [
-                        ...lead,{ text: hits ? `applied ${hits} ${hits === 1 ? 'hit' : 'hits'}${bonus}` : `missed${bonus}`, tokens: huntBonus?.tokens }, ...axe]
+                        ...lead,{ text: hits ? `applied ${hits} ${hits === 1 ? 'hit' : 'hits'}${bonus}` : `missed${bonus}`, tokens: huntBonus?.tokens }, ...(huntBonus?.actionId === action.id ? huntBonus.killed : []), ...axe]
                 }
                 case ActionType.Acquire: {
                     const choice = data.choice as 'weapon' | 'tool'
