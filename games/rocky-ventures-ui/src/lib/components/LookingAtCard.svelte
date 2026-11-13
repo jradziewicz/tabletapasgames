@@ -42,7 +42,7 @@
     const gameSession = getGameSession()
 
     type Zoom = { x: number; y: number; width: number; height: number }
-    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string }; track?: { companyId: string; points: { x: number; y: number }[]; cost: number; count: number; free: boolean }; kind?: string; iconUrl?: string; pin?: { x: number; y: number; url: string } }
+    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string }; track?: { companyId: string; points: { x: number; y: number }[]; cost: number; count: number; free: boolean }; kind?: string; iconUrl?: string; pin?: { x: number; y: number; url: string }; footer?: { text: string; logoUrl?: string } }
 
     const ZoomAspect = 4 / 3
 
@@ -415,8 +415,8 @@
                         {
                             kind: 'extract',
                             text: `extracted ${detail['ore'] ?? ''} ${ore} from ${mine}${city ? `, sold to ${city}` : ''}${companyId ? ` via ${CompanyNames[companyId]}` : ''}${event ? `: ${money(event.amount)}` : ''}`.replace('  ', ' '),
-                            logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
-                            detail: companyId ? `Delivery credited to ${CompanyNames[companyId]}` : undefined,
+                            // The credited railroad goes under the map, with its logo.
+                            footer: companyId ? { text: `Delivery credited to ${CompanyNames[companyId]}`, logoUrl: companyLogoUrl(companyId) } : undefined,
                             lines,
                             pin,
                             zoom: around(route)
@@ -748,6 +748,12 @@
                                 </circle>
                             {/if}
                         </svg>
+                    {/if}
+                    {#if entry.footer}
+                        <div class="flex items-center justify-center gap-2 {newest ? 'text-sm' : 'text-xs'}">
+                            {#if entry.footer.logoUrl}<img src={entry.footer.logoUrl} alt="" class="{newest ? 'h-10' : 'h-6'} w-auto" draggable="false" />{/if}
+                            <span>{entry.footer.text}</span>
+                        </div>
                     {/if}
                 </div>
             {/each}
