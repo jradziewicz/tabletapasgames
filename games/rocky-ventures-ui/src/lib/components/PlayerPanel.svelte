@@ -152,7 +152,7 @@
             {@const imageUrl = tableauImageUrl(cardId)}
             <button
                 type="button"
-                class="tableau-card relative flex h-7 w-6 items-center justify-center rounded border text-[11px] font-bold {spotlit(cardId) ? 'spotlit' : ''} {gameSession.mirroring && gameSession.watchedSelection?.lookingAtCardId === cardId && player.id === gameSession.gameState.activePlayerIds[0] ? 'mirror-pulse' : ''}"
+                class="tableau-card relative flex h-7 w-6 items-center justify-center rounded border text-[11px] font-bold {spotlit(cardId) ? 'spotlit' : ''} {gameSession.mirroring && gameSession.watchedSelection?.lookingAtCardId === cardId && player.id === gameSession.gameState.activePlayerIds[0] ? 'mirror-pulse' : ''} {gameSession.mirroring && player.id === gameSession.gameState.activePlayerIds[0] && gameSession.watchedSelection?.moveTargetIndex === index ? 'move-picked' : ''}"
                 style="background: {cardChipBackground(cardId, playerState.stackedCards?.[cardId], gameSession.gameState.revisedCards)}; color: #111; border-color: #8a6d3b;"
                 title={cardActionsTooltip(cardId, gameSession.gameState.revisedCards)}
                 onclick={() => gameSession.zoomCard(cardId, imageUrl)}
@@ -205,6 +205,11 @@
 </div>
 
 <style>
+
+    /* Live play: the card the playing player has picked, as watchers see it. */
+    .move-picked {
+        box-shadow: 0 0 0 4px #ffd166, 0 0 18px 8px rgba(255, 209, 102, 0.85);
+    }
     /* Tableau cards pulse on hover like market cards; in Live play, watchers see the card the player points at pulse. */
     .tableau-card:hover,
     .mirror-pulse {

@@ -369,7 +369,7 @@
                         onclick={() => gameSession.selectMoveTarget(index)}
                         onpointerenter={(event) => gameSession.pointAtCard(event, cardId)}
                         onpointerleave={(event) => gameSession.pointAtCard(event, undefined)}
-                        class="tableau-card relative z-10 block overflow-hidden rounded border-2 transition {cardId === StartingPlayerCardId ? '' : 'bg-white'} {mirrorPulse(cardId)}"
+                        class="tableau-card relative z-10 block overflow-hidden rounded border-2 transition {cardId === StartingPlayerCardId ? '' : 'bg-white'} {mirrorPulse(cardId)} {gameSession.mirroring && isTarget ? 'move-picked' : ''}"
                         style="border-color: {isTarget ? '#ffd166' : isSkipped ? (discarded ? '#c9302c' : '#b8700a') : '#4a3620'}; filter: {legal ? 'none' : 'brightness(0.55)'};"
                         title={legal ? `Move to ${cardLabel(cardId)}` : 'Not a legal move'}
                     >
@@ -1127,6 +1127,10 @@
 </div>
 
 <style>
+    /* Live play: the card the playing player has picked, as watchers see it. */
+    .move-picked {
+        box-shadow: 0 0 0 4px #ffd166, 0 0 18px 8px rgba(255, 209, 102, 0.85);
+    }
     /* Tableau cards pulse on hover like market cards; in Live play, watchers see the card the player points at pulse. */
     .tableau-card:hover,
     .mirror-pulse {

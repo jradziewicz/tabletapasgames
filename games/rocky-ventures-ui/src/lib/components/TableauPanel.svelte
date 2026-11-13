@@ -34,6 +34,11 @@
         selectedPlayerId = gameSession.isMyTurn ? (gameSession.myPlayer?.id ?? activeId) : activeId
     })
 
+    // Live play: watchers see the card the playing player has picked to move to, and the skipped cards' choices.
+    const watchedMove = $derived(
+        gameSession.mirroring && selectedPlayer.playerId === gameSession.gameState.activePlayerIds[0] ? gameSession.watchedSelection : undefined
+    )
+
     function cycle(direction: 1 | -1) {
         const index = playerIds.indexOf(selectedPlayer.playerId)
         selectedPlayerId = playerIds[(index + direction + playerIds.length) % playerIds.length]
@@ -113,7 +118,7 @@
                 {#if imageUrl}
                     <button
                         type="button"
-                        class="tableau-card relative z-10 block w-full overflow-hidden rounded-md border border-[#8a6d3b] shadow-md {gameSession.mirroring && gameSession.watchedSelection?.lookingAtCardId === cardId && selectedPlayer.playerId === gameSession.gameState.activePlayerIds[0] ? 'mirror-pulse' : ''}"
+                        class="tableau-card relative z-10 block w-full overflow-hidden rounded-md border border-[#8a6d3b] shadow-md {gameSession.mirroring && gameSession.watchedSelection?.lookingAtCardId === cardId && selectedPlayer.playerId === gameSession.gameState.activePlayerIds[0] ? 'mirror-pulse' : ''} {watchedMove?.moveTargetIndex === index ? 'move-picked' : ''}"
                         onclick={() => gameSession.zoomCard(cardId, imageUrl)}
                         onpointerenter={(event) => gameSession.pointAtCard(event, cardId)}
                         onpointerleave={(event) => gameSession.pointAtCard(event, undefined)}
@@ -125,6 +130,13 @@
                         />
                         <img src={imageUrl} alt={cardId} class="block h-auto w-full" draggable="false" />
                         {#if cardId === StartingPlayerCardId}<MatGems gems={selectedPlayer.gems} />{/if}
+                        {#if watchedMove?.moveTargetIndex === index}
+                            <div class="pointer-events-none absolute left-1/2 top-2 z-30 -translate-x-1/2 rounded-full bg-[#1b140c]/90 px-2 py-0.5 text-xs font-bold text-[#ffd166]">Moving here</div>
+                        {:else if watchedMove?.moveDiscardIndexes.includes(index)}
+                            <div class="pointer-events-none absolute inset-0 z-30 flex items-center justify-center bg-red-900/60 text-sm font-bold text-white">DISCARD</div>
+                        {:else if watchedMove?.movePaidIndexes.includes(index)}
+                            <div class="pointer-events-none absolute left-1/2 top-2 z-30 -translate-x-1/2 rounded-full bg-[#173d28]/90 px-2 py-0.5 text-xs font-bold text-white">Paying to skip</div>
+                        {/if}
                     </button>
                 {:else}
                     <div class="aspect-[369/516] rounded-md border border-dashed border-[#8a6d3b] p-2 text-xs">{cardId}</div>
@@ -160,6 +172,11 @@
 </div>
 
 <style>
+
+    /* Live play: the card the playing player has picked, as watchers see it. */
+    .move-picked {
+        box-shadow: 0 0 0 4px #ffd166, 0 0 18px 8px rgba(255, 209, 102, 0.85);
+    }
     .tableau-card:hover,
     .mirror-pulse {
         animation: tableau-card-pulse 1.2s ease-in-out infinite;
