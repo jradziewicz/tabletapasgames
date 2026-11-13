@@ -12,6 +12,8 @@
         buildableBoxes,
         cardActionsFor,
         getCard,
+        planExtraction,
+        type DeliveryCityId,
         type CompanyId,
         type WeaponTokenKind,
         type RegionId
@@ -27,6 +29,7 @@
     import { recentOtherPlayerAction } from '$lib/utils/recentAction.js'
     import { shareImageUrl } from '$lib/utils/shareImages.js'
     import { companyLogoUrl } from '$lib/utils/companyLogos.js'
+    import { mineTokenImageUrl } from '$lib/utils/tokenImages.js'
     import { tick } from 'svelte'
 
     // Live play: the watcher box. While someone else plays it keeps their selected card up until the turn
@@ -35,7 +38,7 @@
     const gameSession = getGameSession()
 
     type Zoom = { x: number; y: number; width: number; height: number }
-    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string }
+    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[] }
 
     const ZoomAspect = 4 / 3
 
@@ -161,6 +164,33 @@
         return { text, tokens, region: recent.before.pendingHunt?.region, hitsFrom: before.huntHits ?? 0, hitsTo: after.huntHits ?? 0 }
     })
 
+    // The money lines of a sale: what the ore sold for and what the route cost.
+    function saleLines(plan: ReturnType<typeof planExtraction>): { label: string; amount: number }[] {
+        if (typeof plan === 'string') return []
+        return [
+            { label: `Sale (${plan.oreCount} × $${plan.price})`, amount: plan.sale },
+            { label: 'Agreement bonus', amount: plan.agreementBonus },
+            { label: 'Transportation', amount: -plan.transport },
+            { label: 'Security', amount: -plan.security },
+            { label: 'Dragon', amount: -plan.dragon },
+            { label: 'Agreement discount', amount: plan.discount }
+        ].filter((line) => line.amount !== 0 || line.label.startsWith('Sale'))
+    }
+
+    // The latest Extract & Sell this turn, replayed on the state before it for its breakdown.
+    const lastExtract = $derived.by(() => {
+        if (!turn.some((action) => action.type === ActionType.ExtractAndSell) || !actorId) return undefined
+        const recent = recentOtherPlayerAction<{ nodeId: string; creditCompanyId?: CompanyId }>(gameSession, ActionType.ExtractAndSell, { includeMine: true })
+        if (!recent) return undefined
+        const token = recent.before.board.getMine(recent.action.nodeId).token
+        return {
+            actionId: recent.action.id,
+            lines: saleLines(planExtraction(recent.before, actorId, recent.action as never)),
+            tokenUrl: token ? mineTokenImageUrl(token) : undefined,
+            companyId: recent.action.creditCompanyId
+        }
+    })
+
     function huntStep(region: string): Step {
         return { text: region === DragonHuntRegion ? 'hunt the Dragon' : `hunt in ${regionName(region)}`, zoom: regionZoom(region) }
     }
@@ -216,9 +246,14 @@
                     const mine = BoardNodesById[data.nodeId as string]?.name ?? 'a mine'
                     const city = BoardNodesById[detail['city'] ?? '']?.name
                     const route = (gameSession.turnMarks.routes.find((nodes) => nodes[0] === data.nodeId) ?? [data.nodeId as string]).flatMap(nodePoint)
+                    const last = lastExtract?.actionId === action.id ? lastExtract : undefined
+                    const companyId = (data.creditCompanyId as CompanyId | undefined) ?? last?.companyId
                     return [
                         {
-                            text: `delivered ${detail['ore'] ?? ''} ${ore} from ${mine}${city ? ` to ${city}` : ''}${event ? `: ${money(event.amount)}` : ''}`.replace('  ', ' '),
+                            text: `extracted ${detail['ore'] ?? ''} ${ore} from ${mine}${city ? `, sold to ${city}` : ''}${companyId ? ` via ${CompanyNames[companyId]}` : ''}${event ? `: ${money(event.amount)}` : ''}`.replace('  ', ' '),
+                            imageUrl: last?.tokenUrl,
+                            logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
+                            lines: last?.lines,
                             zoom: around(route)
                         }
                     ]
@@ -292,8 +327,21 @@
         if (!selection) return undefined
         const mineId = selection.extractHoverNodeId ?? selection.extractNodeId
         if (mineId) {
+            const state = gameSession.gameState
             const nodes = [mineId, ...gameSession.watchedRoutePreviews.flatMap((preview) => preview.routeNodeIds)]
-            return { text: `is choosing a delivery from ${BoardNodesById[mineId]?.name ?? 'a mine'}`, zoom: around(nodes.flatMap(nodePoint)), live: true }
+            const cityId = (selection.extractHoverNodeId ? undefined : (selection.extractHoverCityId ?? selection.extractCityId)) as DeliveryCityId | undefined
+            const companyId = selection.extractCreditCompanyId as CompanyId | undefined
+            const token = state.board.getMine(mineId).token
+            const plan = cityId && activeId ? planExtraction(state, activeId, { nodeId: mineId, cityId, creditCompanyId: companyId }) : undefined
+            return {
+                text: `is extracting from ${BoardNodesById[mineId]?.name ?? 'a mine'}${cityId ? ` to ${BoardNodesById[cityId]?.name ?? cityId}` : ''}`,
+                detail: cityId ? (companyId ? `Via ${CompanyNames[companyId]}` : 'Choosing a railroad to credit') : 'Choosing a city',
+                imageUrl: token ? mineTokenImageUrl(token) : undefined,
+                logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
+                lines: plan ? saleLines(plan) : undefined,
+                zoom: around(nodes.flatMap(nodePoint)),
+                live: true
+            }
         }
         if (selection.acquireMode || selection.step === 'Acquire') return { text: 'is picking a level', zoom: gridZoom(), live: true }
         if (selection.step === 'Lay Track' || selection.trackCompanyId) {
@@ -350,6 +398,14 @@
                     {#if entry.detail}<div class="text-[#f1e6cf]">{entry.detail}</div>{/if}
                     {#if entry.imageUrl}
                         <img src={entry.imageUrl} alt="" class="mx-auto {newest ? 'h-48' : 'h-24'} w-auto rounded-lg" draggable="false" />
+                    {/if}
+                    {#if entry.lines?.length}
+                        <div class="mx-auto grid grid-cols-[auto_auto] gap-x-4 {newest ? 'text-xs' : 'text-[10px]'}">
+                            {#each entry.lines as line (line.label)}
+                                <span>{line.label}</span>
+                                <span class="text-right font-mono {line.amount < 0 ? 'text-[#ff8a7a]' : ''}">{line.amount < 0 ? `-$${-line.amount}` : `$${line.amount}`}</span>
+                            {/each}
+                        </div>
                     {/if}
                     {#if entry.tokens?.length}
                         <div class="flex flex-wrap justify-center gap-7 p-4">
