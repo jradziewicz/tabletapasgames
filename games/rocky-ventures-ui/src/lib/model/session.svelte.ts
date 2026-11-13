@@ -113,13 +113,14 @@ export class RockyVenturesGameSession extends GameSession<
     // Live play: a card just bought or taxed, popping up and then highlighted where it landed.
     spotlight:
         | {
-              kind: 'card' | 'hunt' | 'claim'
+              kind: 'card' | 'hunt' | 'claim' | 'delivery'
               playerId: string
               phase: 'up' | 'landed'
               cardId?: string
               nodeId?: string
               hunt?: { region: string; tokens: { kind: string; applied: boolean }[]; hitTargets: string[]; gains: string[] }
               claim?: { mine: string; cost: number }
+              delivery?: { amount: string; mine: string; city?: string; railroad?: string; companyId?: string; earned: number; vp: number; tokenUrl?: string }
           }
         | undefined = $state()
 

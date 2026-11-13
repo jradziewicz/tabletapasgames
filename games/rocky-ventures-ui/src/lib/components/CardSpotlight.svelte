@@ -3,11 +3,13 @@
         ActionType,
         BoardNodesById,
         CardKind,
+        CompanyNames,
         DragonHuntRegion,
         RegionIds,
         RegionNames,
         StatKind,
         getCard,
+        type CompanyId,
         type WeaponTokenKind
     } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -16,6 +18,7 @@
     import { DragonTileImageUrl, weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
     import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
     import { mineTokenImageUrl } from '$lib/utils/tokenImages.js'
+    import { companyLogoUrl } from '$lib/utils/companyLogos.js'
     import { recentOtherPlayerAction } from '$lib/utils/recentAction.js'
 
     // Live play: a card someone buys or taxes, a hunt, or a mine claim pops up big for everyone
@@ -24,7 +27,7 @@
 
     const PopUpMs = 2500
     const HighlightMs = 1500
-    const Watched = [ActionType.Invest, ActionType.Tax, ActionType.ResolveHunt, ActionType.ClaimMine] as string[]
+    const Watched = [ActionType.Invest, ActionType.Tax, ActionType.ResolveHunt, ActionType.ClaimMine, ActionType.ExtractAndSell] as string[]
 
     let lastSeen = gameSession.actions.at(-1)?.id
     let timers: ReturnType<typeof setTimeout>[] = []
@@ -64,6 +67,31 @@
         } else if (type === ActionType.ClaimMine && nodeId) {
             const cost = state.statEvents.findLast((event) => event.kind === StatKind.MineClaim && event.playerId === playerId)?.amount ?? 0
             next = { kind: 'claim', playerId, nodeId, phase: 'up', claim: { mine: BoardNodesById[nodeId]?.name ?? nodeId, cost } }
+        } else if (type === ActionType.ExtractAndSell) {
+            const recent = recentOtherPlayerAction<{ nodeId: string; creditCompanyId?: CompanyId }>(gameSession, ActionType.ExtractAndSell, { includeMine: true })
+            const event = recent?.after.statEvents.slice(recent.before.statEvents.length).find((candidate) => candidate.kind === StatKind.MineExtract)
+            if (recent && event) {
+                const detail = Object.fromEntries((event.detail ?? '').split(';').map((pair) => pair.split('=') as [string, string]))
+                const ore = event.source === 'gold' ? 'Gold' : event.source === 'silver' ? 'Silver' : 'ore'
+                const token = recent.before.board.getMine(recent.action.nodeId).token
+                const companyId = recent.action.creditCompanyId
+                next = {
+                    kind: 'delivery',
+                    playerId,
+                    nodeId: recent.action.nodeId,
+                    phase: 'up',
+                    delivery: {
+                        amount: `${detail['ore'] ?? ''} ${ore}`.trim(),
+                        mine: BoardNodesById[recent.action.nodeId]?.name ?? recent.action.nodeId,
+                        city: BoardNodesById[detail['city'] ?? '']?.name,
+                        railroad: companyId ? CompanyNames[companyId] : undefined,
+                        companyId,
+                        earned: event.amount ?? 0,
+                        vp: recent.after.getPlayerState(playerId).victoryPoints - recent.before.getPlayerState(playerId).victoryPoints,
+                        tokenUrl: token ? mineTokenImageUrl(token) : undefined
+                    }
+                }
+            }
         } else if (type === ActionType.ResolveHunt) {
             const recent = recentOtherPlayerAction<{ tokenIndexes: number[]; hitTargets: string[] }>(gameSession, ActionType.ResolveHunt, { includeMine: true })
             const pending = recent?.before.pendingHunt
@@ -129,10 +157,26 @@
         <div class="spotlight-panel flex max-w-[90vw] flex-col items-center gap-3 rounded-xl border-2 border-[#ffd166] bg-[#1b140c]/95 p-5 text-[#f1e6cf] shadow-2xl">
             <div class="text-base">
                 <strong class="capitalize">{gameSession.getPlayerName(shown.playerId)}</strong>
-                {#if shown.kind === 'card'}took this card{:else if shown.kind === 'claim'}claimed <strong>{shown.claim?.mine}</strong>{#if shown.claim?.cost}&nbsp;for ${shown.claim.cost}{/if}{:else}hunted <strong>{regionLabel(shown.hunt?.region ?? '')}</strong>{/if}
+                {#if shown.kind === 'card'}took this card{:else if shown.kind === 'delivery'}delivered <strong>{shown.delivery?.amount}</strong> from <strong>{shown.delivery?.mine}</strong>{#if shown.delivery?.city}&nbsp;to <strong>{shown.delivery.city}</strong>{/if}{:else if shown.kind === 'claim'}claimed <strong>{shown.claim?.mine}</strong>{#if shown.claim?.cost}&nbsp;for ${shown.claim.cost}{/if}{:else}hunted <strong>{regionLabel(shown.hunt?.region ?? '')}</strong>{/if}
             </div>
             {#if shown.kind === 'card' && cardUrl}
                 <img src={cardUrl} alt={shown.cardId} class="max-h-[55vh] w-auto rounded-xl" draggable="false" />
+            {:else if shown.kind === 'delivery' && shown.delivery}
+                {@const logo = shown.delivery.companyId ? companyLogoUrl(shown.delivery.companyId as CompanyId) : undefined}
+                <div class="flex items-center justify-center gap-4">
+                    {#if shown.delivery.tokenUrl}<img src={shown.delivery.tokenUrl} alt={shown.delivery.mine} class="h-32 w-32" draggable="false" />{/if}
+                    <span class="text-5xl text-[#ffd166]">→</span>
+                    <span class="rounded-lg border-2 border-[#ffd166] px-4 py-2 text-3xl font-bold">{shown.delivery.city ?? 'Sold'}</span>
+                </div>
+                {#if shown.delivery.railroad}
+                    <div class="flex items-center gap-2 text-base">
+                        {#if logo}<img src={logo} alt={shown.delivery.railroad} class="h-10 w-auto" draggable="false" />{/if}
+                        <span>via <strong>{shown.delivery.railroad}</strong></span>
+                    </div>
+                {/if}
+                <div class="text-3xl font-bold text-[#ffd166]">
+                    {shown.delivery.earned < 0 ? `-$${-shown.delivery.earned}` : `+$${shown.delivery.earned}`}{#if shown.delivery.vp > 0}, +{shown.delivery.vp} VP{/if}
+                </div>
             {:else if shown.kind === 'claim' && mineUrl}
                 <img src={mineUrl} alt={shown.claim?.mine} class="h-40 w-40" draggable="false" />
             {:else if shown.kind === 'hunt' && shown.hunt}
