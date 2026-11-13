@@ -1020,6 +1020,14 @@ export class RockyVenturesGameSession extends GameSession<
         this.extractCityId = undefined
         this.extractCreditCompanyId = undefined
         this.extractCustomRoute = undefined
+        // Silver has no route or city to pick: one click delivers it, unless a railroad must be chosen.
+        if (this.gameState.board.mines[nodeId]?.token?.ore === 'silver') {
+            this.extractHoverNodeId = undefined
+            const plan = this.extractPlan
+            if (plan && plan.creditCandidates.length <= 1) {
+                await this.confirmExtract()
+            }
+        }
     }
 
     async selectExtractCity(cityId: DeliveryCityId) {
