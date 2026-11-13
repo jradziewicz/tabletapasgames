@@ -683,7 +683,8 @@
         <div bind:this={feedEl} class="flex max-h-[70vh] flex-col gap-3 overflow-y-auto p-2">
             {#each entries as entry, index (index)}
                 {@const newest = index === entries.length - 1}
-                <div class="flex flex-col gap-1">
+                <!-- Earlier steps keep their size but grey out, so the newest stands out -->
+                <div class="flex flex-col gap-1 {newest ? '' : 'opacity-50 grayscale'}">
                     <div class="text-sm font-semibold text-[#ffd166]">
                         {#if entry.live}<strong class="capitalize">{name}</strong> {entry.text}{:else}{capital(entry.text)}{/if}{#if entry.iconUrl}<img src={entry.iconUrl} alt="" class="ml-2 inline-block align-middle h-10 w-10" draggable="false" />{/if}
                     </div>
