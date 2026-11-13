@@ -1,6 +1,6 @@
 {
     "name": "@tabletop/stellar-ventures",
-    "version": "1.0.12",
+    "version": "1.0.13",
     "type": "module",
     "exports": {
         "import": "./esm/index.js",
