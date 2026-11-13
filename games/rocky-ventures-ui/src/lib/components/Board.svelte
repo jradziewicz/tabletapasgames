@@ -694,6 +694,19 @@
         {/each}
     {/if}
 
+    <!-- Your own extract routes: what each city would pay, on the route itself -->
+    {#each gameSession.isMyTurn && gameSession.extractHoverNodeId ? gameSession.extractRoutePreviews : [] as preview (preview.cityId)}
+        {@const mid = BoardNodesById[preview.routeNodeIds[Math.floor(preview.routeNodeIds.length / 2)]]}
+        {@const color = CityRouteColors[preview.cityId] ?? '#ffd166'}
+        {@const label = `${BoardNodesById[preview.cityId]?.name ?? preview.cityId}: ${preview.net < 0 ? `-$${-preview.net}` : `+$${preview.net}`}`}
+        {#if mid}
+            <g pointer-events="none">
+                <rect x={mid.x - label.length * 6.5 - 12} y={mid.y - 18} width={label.length * 13 + 24} height="36" rx="18" fill="#1b140c" fill-opacity="0.92" stroke={color} stroke-width="3" />
+                <text x={mid.x} y={mid.y + 7} text-anchor="middle" font-size="20" font-weight="700" fill="#fff">{label}</text>
+            </g>
+        {/if}
+    {/each}
+
     <!-- Mine tokens -->
     {#each mineNodes as node (node.id)}
         {@const site = mineSite(node)}
