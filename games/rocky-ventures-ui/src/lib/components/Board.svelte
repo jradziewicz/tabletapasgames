@@ -607,6 +607,18 @@
         <polyline {points} fill="none" stroke={color} stroke-width="26" stroke-linecap="round" stroke-linejoin="round" opacity="0.45" class="pulse-soft" style="--glow: {color};" pointer-events="none" />
         <polyline {points} fill="none" stroke={color} stroke-width="8" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="14 10" pointer-events="none" />
     {/each}
+    <!-- Labels drawn after every route so no line covers them: which city, and what the sale would pay -->
+    {#each gameSession.watchedRoutePreviews as preview (preview.cityId)}
+        {@const mid = BoardNodesById[preview.routeNodeIds[Math.floor(preview.routeNodeIds.length / 2)]]}
+        {@const color = CityRouteColors[preview.cityId] ?? '#ffd166'}
+        {@const label = `Gold to ${BoardNodesById[preview.cityId]?.name ?? preview.cityId}: ${preview.net < 0 ? `-$${-preview.net}` : `+$${preview.net}`}`}
+        {#if mid}
+            <g pointer-events="none">
+                <rect x={mid.x - label.length * 7.5 - 14} y={mid.y - 22} width={label.length * 15 + 28} height="44" rx="22" fill="#1b140c" fill-opacity="0.92" stroke={color} stroke-width="4" />
+                <text x={mid.x} y={mid.y + 9} text-anchor="middle" font-size="26" font-weight="700" fill="#fff">{label}</text>
+            </g>
+        {/if}
+    {/each}
 
     {#each gameSession.extractRoutePreviews as preview (preview.cityId)}
         {@const points = routePolylinePoints(preview.routeNodeIds)}
