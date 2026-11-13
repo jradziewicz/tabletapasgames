@@ -215,7 +215,14 @@
         box-shadow: 0 0 0 4px #ffd166, 0 0 18px 8px rgba(255, 209, 102, 0.85);
     }
     /* Tableau cards pulse on hover like market cards; in Live play, watchers see the card the player points at pulse. */
-    .tableau-card:hover,
+    /* Hovering a card nudges it up, like the gem action buttons */
+    .tableau-card {
+        transition: transform 120ms ease, box-shadow 120ms ease;
+    }
+    .tableau-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+    }
     .mirror-pulse {
         animation: tableau-card-pulse 1.2s ease-in-out infinite;
     }
