@@ -276,7 +276,9 @@
         return undefined
     })
 
-    const entries = $derived(live ? [...steps, live] : steps)
+    // Once the turn has passed, the history closes with a final line until the next player starts.
+    const finished = $derived(watching && actorId !== activeId && steps.length > 0)
+    const entries = $derived(live ? [...steps, live] : finished ? [...steps, { text: 'finished their turn', live: true }] : steps)
 
     // Keep the newest entry in view as the history grows.
     let feedEl: HTMLDivElement | undefined = $state()
