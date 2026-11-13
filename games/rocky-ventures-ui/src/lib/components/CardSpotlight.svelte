@@ -20,6 +20,7 @@
     import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
     import { mineTokenImageUrl } from '$lib/utils/tokenImages.js'
     import { companyLogoUrl } from '$lib/utils/companyLogos.js'
+    import { GridRegion } from '$lib/utils/trackLayout.js'
     import { recentOtherPlayerAction } from '$lib/utils/recentAction.js'
 
     // Live play: a card someone buys or taxes, a hunt, or a mine claim pops up big for everyone
@@ -28,7 +29,7 @@
 
     const PopUpMs = 2500
     const HighlightMs = 1500
-    const Watched = [ActionType.Invest, ActionType.Tax, ActionType.ResolveHunt, ActionType.ClaimMine, ActionType.ExtractAndSell] as string[]
+    const Watched = [ActionType.Invest, ActionType.Tax, ActionType.ResolveHunt, ActionType.ClaimMine, ActionType.ExtractAndSell, ActionType.Acquire] as string[]
 
     let lastSeen = gameSession.actions.at(-1)?.id
     let timers: ReturnType<typeof setTimeout>[] = []
@@ -68,6 +69,15 @@
         } else if (type === ActionType.ClaimMine && nodeId) {
             const cost = state.statEvents.findLast((event) => event.kind === StatKind.MineClaim && event.playerId === playerId)?.amount ?? 0
             next = { kind: 'claim', playerId, nodeId, phase: 'up', claim: { mine: BoardNodesById[nodeId]?.name ?? nodeId, cost } }
+        } else if (type === ActionType.Acquire) {
+            const recent = recentOtherPlayerAction<{ choice: 'weapon' | 'tool' }>(gameSession, ActionType.Acquire, { includeMine: true })
+            if (recent) {
+                const level = (state: typeof recent.before) => {
+                    const player = state.getPlayerState(playerId)
+                    return recent.action.choice === 'weapon' ? player.weaponLevel : player.toolLevel
+                }
+                next = { kind: 'level', playerId, phase: 'up', level: { choice: recent.action.choice, from: level(recent.before), to: level(recent.after) } }
+            }
         } else if (type === ActionType.ExtractAndSell) {
             const recent = recentOtherPlayerAction<{ nodeId: string; creditCompanyId?: CompanyId }>(gameSession, ActionType.ExtractAndSell, { includeMine: true })
             const event = recent?.after.statEvents.slice(recent.before.statEvents.length).find((candidate) => candidate.kind === StatKind.MineExtract)
@@ -172,10 +182,15 @@
         <div class="spotlight-panel flex max-w-[90vw] flex-col items-center gap-3 rounded-xl border-2 border-[#ffd166] bg-[#1b140c]/95 p-5 text-[#f1e6cf] shadow-2xl">
             <div class="text-base">
                 <strong class="capitalize">{gameSession.getPlayerName(shown.playerId)}</strong>
-                {#if shown.kind === 'card'}took this card{:else if shown.kind === 'delivery'}delivered <strong>{shown.delivery?.amount}</strong> from <strong>{shown.delivery?.mine}</strong>{#if shown.delivery?.city}&nbsp;to <strong>{shown.delivery.city}</strong>{/if}{:else if shown.kind === 'claim'}claimed <strong>{shown.claim?.mine}</strong>{#if shown.claim?.cost}&nbsp;for ${shown.claim.cost}{/if}{:else}hunted <strong>{regionLabel(shown.hunt?.region ?? '')}</strong>{/if}
+                {#if shown.kind === 'card'}took this card{:else if shown.kind === 'level'}raised their <strong>{shown.level?.choice}</strong> to level <strong>{shown.level?.to}</strong>{:else if shown.kind === 'delivery'}delivered <strong>{shown.delivery?.amount}</strong> from <strong>{shown.delivery?.mine}</strong>{#if shown.delivery?.city}&nbsp;to <strong>{shown.delivery.city}</strong>{/if}{:else if shown.kind === 'claim'}claimed <strong>{shown.claim?.mine}</strong>{#if shown.claim?.cost}&nbsp;for ${shown.claim.cost}{/if}{:else}hunted <strong>{regionLabel(shown.hunt?.region ?? '')}</strong>{/if}
             </div>
             {#if shown.kind === 'card' && cardUrl}
                 <img src={cardUrl} alt={shown.cardId} class="max-h-[55vh] w-auto rounded-xl" draggable="false" />
+            {:else if shown.kind === 'level' && shown.level}
+                <svg viewBox="{GridRegion.x} {GridRegion.y} {GridRegion.width} {GridRegion.height}" class="block w-[min(80vw,640px)] rounded-lg border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
+                    <use href="#rv-board-svg" />
+                </svg>
+                <div class="text-3xl font-bold capitalize text-[#ffd166]">{shown.level.choice} {shown.level.from} → {shown.level.to}</div>
             {:else if shown.kind === 'delivery' && shown.delivery}
                 {@const logo = shown.delivery.companyId ? companyLogoUrl(shown.delivery.companyId as CompanyId) : undefined}
                 <div class="flex items-center justify-center gap-4">
