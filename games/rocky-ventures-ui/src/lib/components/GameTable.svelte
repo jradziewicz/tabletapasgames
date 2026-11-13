@@ -183,6 +183,21 @@
         }
     })
 
+    // A big overlay can arrive in the same update that ends the turn, before the watcher box has
+    // started replaying it. Close the gate at once; it reopens 1.5s after the box is done.
+    function regateOverlays() {
+        if (!session.livePlay) return
+        overlaysAllowed = false
+        clearTimeout(overlayGateTimer)
+        overlayGateTimer = setTimeout(function check() {
+            if (session.viewerHold) {
+                overlayGateTimer = setTimeout(check, 500)
+            } else {
+                overlayGateTimer = setTimeout(() => (overlaysAllowed = true), 1500)
+            }
+        }, 300)
+    }
+
     let previousDragonSummoned: boolean | undefined
     let dragonOverlayOpen = $state(false)
     let gameOverOpen = $state(false)
@@ -219,6 +234,7 @@
             !session.isViewingHistory
         ) {
             pendingBonus = { tokens: [...tokens], playerId: session.actions.at(-1)?.playerId }
+            regateOverlays()
         }
     })
 
@@ -252,6 +268,7 @@
         if (previous === false && summoned && !session.isViewingHistory) {
             if (session.livePlay) {
                 pendingDragonBy = session.actions.findLast((action) => action.playerId)?.playerId ?? ''
+                regateOverlays()
             } else {
                 openDragonOverlay()
             }
@@ -293,6 +310,7 @@
                 if (session.livePlay) {
                     // Live play: the reveal waits until the turn that brought it out is entirely over.
                     turnEndScourges = [...turnEndScourges, { region, scourgeId, playerId: session.actions.findLast((action) => action.playerId)?.playerId }]
+                    regateOverlays()
                 } else {
                     pendingScourge = { region, scourgeId }
                 }
