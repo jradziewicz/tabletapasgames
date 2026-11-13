@@ -1342,7 +1342,9 @@
     <!-- Labels and sell tags sit on top of everything, so mines and pawns never cover them -->
     <!-- Labels drawn after every route so no line covers them: which city, and what the sale would pay -->
     {#each gameSession.watchedRoutePreviews as preview (preview.cityId)}
-        {@const mid = BoardNodesById[preview.routeNodeIds[Math.floor(preview.routeNodeIds.length / 2)]]}
+        {@const cityNode = BoardNodesById[preview.cityId]}
+        <!-- Sits just above the city, where there's room, instead of on the route -->
+        {@const mid = cityNode ? { x: cityNode.x - 70, y: cityNode.y - 62 } : undefined}
         {@const color = CityRouteColors[preview.cityId] ?? '#ffd166'}
         {@const label = `Gold to ${BoardNodesById[preview.cityId]?.name ?? preview.cityId}: ${preview.net < 0 ? `-$${-preview.net}` : `+$${preview.net}`}`}
         {#if mid}
@@ -1400,7 +1402,9 @@
 
     <!-- Your own extract routes: what each city would pay, on the route itself -->
     {#each gameSession.isMyTurn && gameSession.extractHoverNodeId ? gameSession.extractRoutePreviews : [] as preview (preview.cityId)}
-        {@const mid = BoardNodesById[preview.routeNodeIds[Math.floor(preview.routeNodeIds.length / 2)]]}
+        {@const cityNode = BoardNodesById[preview.cityId]}
+        <!-- Sits just above the city, where there's room, instead of on the route -->
+        {@const mid = cityNode ? { x: cityNode.x - 70, y: cityNode.y - 62 } : undefined}
         {@const color = CityRouteColors[preview.cityId] ?? '#ffd166'}
         {@const label = `${BoardNodesById[preview.cityId]?.name ?? preview.cityId}: ${preview.net < 0 ? `-$${-preview.net}` : `+$${preview.net}`}`}
         {#if mid}
