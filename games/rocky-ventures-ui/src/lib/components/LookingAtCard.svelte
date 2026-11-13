@@ -207,6 +207,20 @@
         return { actionId: recent.action.id, detail: gains.join(', ') }
     })
 
+    // What moving the pawn cost: money paid to skip cards and cards discarded instead.
+    const moveCost = $derived.by(() => {
+        if (!turn.some((action) => action.type === ActionType.MovePawn) || !actorId) return undefined
+        const recent = recentOtherPlayerAction<{ discardIndexes?: number[] }>(gameSession, ActionType.MovePawn, { includeMine: true })
+        if (!recent) return undefined
+        const paid = recent.before.getPlayerState(actorId).money - recent.after.getPlayerState(actorId).money
+        const discarded = recent.action.discardIndexes?.length ?? 0
+        const parts = [
+            paid > 0 ? `Paid $${paid} to skip ${paid} ${paid === 1 ? 'card' : 'cards'}` : undefined,
+            discarded > 0 ? `Discarded ${discarded} skipped ${discarded === 1 ? 'card' : 'cards'}` : undefined
+        ].filter((part) => part !== undefined)
+        return parts.length ? parts.join(', ') : undefined
+    })
+
     function huntStep(region: string): Step {
         return { text: region === DragonHuntRegion ? 'hunt the Dragon' : `hunt in ${regionName(region)}`, zoom: regionZoom(region) }
     }
@@ -236,7 +250,7 @@
             const data = action as GameAction & Record<string, unknown>
             switch (action.type) {
                 case ActionType.MovePawn:
-                    return [{ text: selectedActions ? `selected ${selectedActions}` : 'selected a card', imageUrl: cardUrl(selectedCardId) }]
+                    return [{ text: selectedActions ? `selected ${selectedActions}` : 'selected a card', detail: moveCost, imageUrl: cardUrl(selectedCardId) }]
                 case ActionType.Invest: {
                     const cardId = purchases[purchaseIndex++]?.cardId
                     const cost = cash.find((event) => event.source === 'purchase' && event.cardId === cardId)?.amount
