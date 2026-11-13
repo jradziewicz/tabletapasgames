@@ -24,6 +24,8 @@
     import { cardActionText } from '$lib/utils/cardActionText.js'
     import { weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
     import { recentOtherPlayerAction } from '$lib/utils/recentAction.js'
+    import { shareImageUrl } from '$lib/utils/shareImages.js'
+    import { tick } from 'svelte'
 
     // Live play: the watcher box. While someone else plays it keeps their selected card up until the turn
     // is done, zooms into the map for what they're choosing or just did, and lists each step in words.
@@ -31,19 +33,27 @@
     const gameSession = getGameSession()
 
     type Zoom = { x: number; y: number; width: number; height: number }
-    type Step = { text: string; zoom?: Zoom }
+    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean }
 
     const ZoomAspect = 4 / 3
 
     const activeId = $derived(gameSession.gameState.activePlayerIds[0])
     const watching = $derived(gameSession.livePlay && !gameSession.isMyTurn && !gameSession.isViewingHistory && activeId !== undefined)
-    const name = $derived(activeId ? gameSession.getPlayerName(activeId) : '')
+    // Whose history to show: the player on turn, or until they start, the player who just finished,
+    // so the last turn's summary stays up instead of vanishing the moment the turn passes.
+    const actorId = $derived.by(() => {
+        const last = gameSession.actions.at(-1)
+        const started = last?.playerId === activeId || gameSession.watchedSelection !== undefined || gameSession.gameState.pendingHunt !== undefined
+        if (started || !last?.playerId || last.playerId === gameSession.myPlayer?.id) return activeId
+        return last.playerId
+    })
+    const name = $derived(actorId ? gameSession.getPlayerName(actorId) : '')
 
     function cardUrl(cardId: string | undefined): string | undefined {
         if (!cardId) return undefined
         try {
             return getCard(cardId).kind === CardKind.Player
-                ? playerCardImageUrl(cardId, activeId ? gameSession.colors.getPlayerColor(activeId) : undefined)
+                ? playerCardImageUrl(cardId, actorId ? gameSession.colors.getPlayerColor(actorId) : undefined)
                 : cardImageUrl(cardId)
         } catch {
             return undefined
@@ -82,7 +92,7 @@
     }
 
     function gridZoom(): Zoom | undefined {
-        const player = activeId ? gameSession.gameState.findPlayerState(activeId) : undefined
+        const player = actorId ? gameSession.gameState.findPlayerState(actorId) : undefined
         if (!player) return undefined
         const cell = gridCellPosition(player.weaponLevel, player.toolLevel)
         const width = GridRegion.width
@@ -96,9 +106,9 @@
     // This turn's actions by the active player, oldest first.
     const turn = $derived.by(() => {
         const actions: GameAction[] = []
-        if (!watching || !activeId) return actions
+        if (!watching || !actorId) return actions
         for (const action of [...gameSession.actions].reverse()) {
-            if (action.playerId && action.playerId !== activeId) break
+            if (action.playerId && action.playerId !== actorId) break
             actions.unshift(action)
             if (action.type === ActionType.MovePawn) break
         }
@@ -107,7 +117,7 @@
 
     const selectedCardId = $derived.by(() => {
         if (!turn.some((action) => action.type === ActionType.MovePawn)) return undefined
-        const player = activeId ? gameSession.gameState.findPlayerState(activeId) : undefined
+        const player = actorId ? gameSession.gameState.findPlayerState(actorId) : undefined
         return player && player.pawnIndex !== undefined ? player.tableau[player.pawnIndex] : undefined
     })
 
@@ -130,42 +140,53 @@
 
     // What the latest hunt this turn paid out, e.g. "+2 VP, +$3".
     const huntBonus = $derived.by(() => {
-        if (!turn.some((action) => action.type === ActionType.ResolveHunt) || !activeId) return undefined
+        if (!turn.some((action) => action.type === ActionType.ResolveHunt) || !actorId) return undefined
         const recent = recentOtherPlayerAction(gameSession, ActionType.ResolveHunt, { includeMine: true })
         if (!recent) return undefined
-        const before = recent.before.getPlayerState(activeId)
-        const after = recent.after.getPlayerState(activeId)
+        const before = recent.before.getPlayerState(actorId)
+        const after = recent.after.getPlayerState(actorId)
         const gain = (amount: number, text: (n: number) => string) => (amount > 0 ? text(amount) : undefined)
-        return [
+        const tokenIndexes = (recent.action as GameAction & { tokenIndexes?: number[] }).tokenIndexes ?? []
+        const tokens = (recent.before.pendingHunt?.drawn ?? []).map((kind, index) => ({ kind: kind as string, picked: tokenIndexes.includes(index) }))
+        const text = [
             gain(after.victoryPoints - before.victoryPoints, (n) => `${n} VP`),
             gain(after.money - before.money, (n) => `$${n}`),
             gain(after.gems - before.gems, (n) => `${n} ${n === 1 ? 'gem' : 'gems'}`),
             gain(after.weaponLevel - before.weaponLevel, (n) => `${n} weapon ${n === 1 ? 'level' : 'levels'}`)
         ]
-            .filter((text) => text !== undefined)
+            .filter((part) => part !== undefined)
             .join(', ')
+        return { text, tokens, region: recent.before.pendingHunt?.region }
     })
+
+    function huntStep(region: string): Step {
+        return { text: region === DragonHuntRegion ? 'hunt the Dragon' : `hunt in ${regionName(region)}`, zoom: regionZoom(region) }
+    }
 
     const steps = $derived.by((): Step[] => {
         const state = gameSession.gameState
         const turnStart = state.actionCount - turn.length
-        const extracts = state.statEvents.filter((event) => event.kind === StatKind.MineExtract && event.playerId === activeId && event.action >= turnStart)
-        const player = activeId ? state.findPlayerState(activeId) : undefined
-        const claims = state.statEvents.filter((event) => event.kind === StatKind.MineClaim && event.playerId === activeId && event.action >= turnStart)
+        const ofKind = (kind: StatKind) => state.statEvents.filter((event) => event.kind === kind && event.playerId === actorId && event.action >= turnStart)
+        const extracts = ofKind(StatKind.MineExtract)
+        const claims = ofKind(StatKind.MineClaim)
+        const purchases = ofKind(StatKind.Purchase)
+        const player = actorId ? state.findPlayerState(actorId) : undefined
         let extractIndex = 0
         let claimIndex = 0
+        let purchaseIndex = 0
         let huntRegion = ''
         return turn.flatMap((action): Step[] => {
             const data = action as GameAction & Record<string, unknown>
             switch (action.type) {
                 case ActionType.MovePawn:
-                    return [{ text: selectedActions ? `selected ${selectedActions}` : 'selected a card' }]
-                case ActionType.Invest:
-                    return [{ text: 'bought a card' }]
+                    return [{ text: selectedActions ? `selected ${selectedActions}` : 'selected a card', imageUrl: cardUrl(selectedCardId) }]
+                case ActionType.Invest: {
+                    const cardId = purchases[purchaseIndex++]?.cardId
+                    return [{ text: 'bought a card', imageUrl: cardUrl(cardId) }]
+                }
                 case ActionType.Tax:
-                    return [{ text: 'taxed' }]
-                case ActionType.ClaimMine:
-                {
+                    return [{ text: 'taxed', imageUrl: cardUrl(player?.tuckedCardIds.at(-1)) }]
+                case ActionType.ClaimMine: {
                     const cost = claims[claimIndex++]?.amount
                     return [{ text: `claimed ${BoardNodesById[data.nodeId as string]?.name ?? 'a mine'}${cost === undefined ? '' : ` for $${cost}`}`, zoom: around(nodePoint(data.nodeId as string)) }]
                 }
@@ -191,19 +212,28 @@
                 }
                 case ActionType.Hunt:
                     huntRegion = data.region as string
-                    return [{ text: huntRegion === DragonHuntRegion ? 'hunt the Dragon' : `hunt in ${regionName(huntRegion)}`, zoom: regionZoom(huntRegion) }]
+                    return [huntStep(huntRegion)]
                 case ActionType.ResolveHunt: {
                     const hits = (data.hitTargets as string[] | undefined)?.length ?? 0
-                    const bonus = huntBonus ? ` and claimed ${huntBonus}` : ''
-                    return [{ text: hits ? `applied ${hits} ${hits === 1 ? 'hit' : 'hits'}${bonus}` : `missed${bonus}`, zoom: regionZoom(huntRegion) }]
+                    const bonus = huntBonus?.text ? ` and claimed ${huntBonus.text}` : ''
+                    // A hunt that came with a claim has no Hunt step of its own, so name the region first.
+                    const region = huntRegion || huntBonus?.region || ''
+                    const lead: Step[] = huntRegion || !region ? [] : [huntStep(region)]
+                    huntRegion = ''
+                    return [
+                        ...lead,{ text: hits ? `applied ${hits} ${hits === 1 ? 'hit' : 'hits'}${bonus}` : `missed${bonus}`, tokens: huntBonus?.tokens }]
                 }
                 case ActionType.Acquire: {
                     const choice = data.choice as 'weapon' | 'tool'
                     const level = choice === 'weapon' ? player?.weaponLevel : player?.toolLevel
                     return [{ text: `raised ${choice} to ${level}`, zoom: gridZoom() }]
                 }
-                case ActionType.ChooseShare:
-                    return [{ text: `took a ${CompanyNames[data.companyId as CompanyId] ?? ''} share` }]
+                case ActionType.ChooseShare: {
+                    const companyId = data.companyId as CompanyId
+                    const company = state.getCompany(companyId)
+                    const index = Math.max(0, company.nextShareIndex - 1)
+                    return [{ text: `took a ${CompanyNames[companyId] ?? ''} share (${company.multiplierForShare(index)}x)`, imageUrl: shareImageUrl(companyId, index, company.sharesFlipped) }]
+                }
                 case ActionType.GemAction:
                     return [{ text: 'used a gem' }]
                 case ActionType.AgreementPointBuy:
@@ -214,63 +244,79 @@
         })
     })
 
-    // What to zoom into: what they're choosing right now, else the last thing they did with a place on the map.
-    const focus = $derived.by((): Step | undefined => {
-        const selection = watching ? gameSession.watchedSelection : undefined
-        if (selection) {
-            const mineId = selection.extractHoverNodeId ?? selection.extractNodeId
-            if (mineId) {
-                const nodes = [mineId, ...gameSession.watchedRoutePreviews.flatMap((preview) => preview.routeNodeIds)]
-                return { text: `is choosing a delivery from ${BoardNodesById[mineId]?.name ?? 'a mine'}`, zoom: around(nodes.flatMap(nodePoint)) }
+    // The entry at the bottom of the history: what they're doing right now, before it's committed.
+    const live = $derived.by((): Step | undefined => {
+        if (!watching || actorId !== activeId) return undefined
+        const pending = gameSession.gameState.pendingHunt
+        const selection = gameSession.watchedSelection
+        if (pending) {
+            const picked = selection?.huntSelected ?? []
+            return {
+                text: `${pending.region === DragonHuntRegion ? 'hunts the Dragon' : `hunts in ${regionName(pending.region)}`}`,
+                detail: `Drew ${pending.drawn.length} weapon ${pending.drawn.length === 1 ? 'token' : 'tokens'}, applies up to ${pending.apply}`,
+                tokens: pending.drawn.map((kind, index) => ({ kind: kind as string, picked: picked.includes(index) })),
+                live: true
             }
-            if (selection.acquireMode || selection.step === 'Acquire') return { text: 'is picking a level', zoom: gridZoom() }
-            if (selection.step === 'Hunt') return { text: 'is picking weapon tokens' }
         }
-        return [...steps].reverse().find((step) => step.zoom)
+        if (!selection) return undefined
+        const mineId = selection.extractHoverNodeId ?? selection.extractNodeId
+        if (mineId) {
+            const nodes = [mineId, ...gameSession.watchedRoutePreviews.flatMap((preview) => preview.routeNodeIds)]
+            return { text: `is choosing a delivery from ${BoardNodesById[mineId]?.name ?? 'a mine'}`, zoom: around(nodes.flatMap(nodePoint)), live: true }
+        }
+        if (selection.acquireMode || selection.step === 'Acquire') return { text: 'is picking a level', zoom: gridZoom(), live: true }
+        const lookingAt = gameSession.mirroring ? selection.lookingAtCardId : undefined
+        if (lookingAt && lookingAt !== selectedCardId) return { text: 'is looking at', detail: cardActions(lookingAt), imageUrl: cardUrl(lookingAt), live: true }
+        if (selection.step) return { text: `is choosing ${selection.step}`, live: true }
+        return undefined
     })
 
-    // While they hunt, the drawn weapon tokens take the card's place, with their picks ringed.
-    const hunt = $derived(watching ? gameSession.gameState.pendingHunt : undefined)
-    const huntPicked = $derived(gameSession.watchedSelection?.huntSelected ?? [])
+    const entries = $derived(live ? [...steps, live] : steps)
 
-    const lookingAtId = $derived(watching && gameSession.mirroring ? gameSession.watchedSelection?.lookingAtCardId : undefined)
-    const shownCardId = $derived(lookingAtId ?? selectedCardId)
-    const shownCardUrl = $derived(cardUrl(shownCardId))
+    // Keep the newest entry in view as the history grows.
+    let feedEl: HTMLDivElement | undefined = $state()
+    $effect(() => {
+        void entries.length
+        void live
+        tick().then(() => feedEl?.scrollTo({ top: feedEl.scrollHeight, behavior: 'smooth' }))
+    })
+
+    function capital(text: string) {
+        return text.charAt(0).toUpperCase() + text.slice(1)
+    }
 </script>
 
-{#if watching && (shownCardUrl || focus?.zoom || steps.length)}
-    <div class="pointer-events-none fixed bottom-4 right-4 z-40 flex w-80 max-w-[calc(100vw-2rem)] flex-col gap-2 rounded-xl border-2 border-[#ffd166] bg-[#1b140c]/95 p-2 text-xs text-[#f1e6cf] shadow-2xl">
-        {#if hunt}
-            <div><strong class="capitalize">{name}</strong> drew {hunt.drawn.length} weapon {hunt.drawn.length === 1 ? 'token' : 'tokens'}, applies up to {hunt.apply}</div>
-            <div class="flex flex-wrap justify-center gap-2">
-                {#each hunt.drawn as kind, index (index)}
-                    {@const url = weaponTokenImageUrl(kind as WeaponTokenKind)}
-                    {#if url}
-                        <img src={url} alt={kind} class="h-16 w-16 rounded-full {huntPicked.includes(index) ? 'ring-4 ring-[#ffd166]' : 'opacity-80'}" draggable="false" />
+{#if watching && entries.length}
+    <div class="pointer-events-none fixed bottom-4 right-4 z-40 flex w-80 max-w-[calc(100vw-2rem)] flex-col rounded-xl border-2 border-[#ffd166] bg-[#1b140c]/95 text-xs text-[#f1e6cf] shadow-2xl">
+        <div class="border-b border-[#8a6d3b] px-2 py-1 text-sm"><strong class="capitalize">{name}</strong>'s turn</div>
+        <div bind:this={feedEl} class="flex max-h-[70vh] flex-col gap-3 overflow-y-auto p-2">
+            {#each entries as entry, index (index)}
+                {@const newest = index === entries.length - 1}
+                <div class="flex flex-col gap-1 {newest ? '' : 'opacity-70'}">
+                    <div class={newest ? 'text-sm font-semibold text-[#ffd166]' : 'text-[#c9a961]'}>
+                        {#if entry.live}<strong class="capitalize">{name}</strong> {entry.text}{:else}{index + 1}. {capital(entry.text)}{/if}
+                    </div>
+                    {#if entry.detail}<div class="text-[#f1e6cf]">{entry.detail}</div>{/if}
+                    {#if entry.imageUrl}
+                        <img src={entry.imageUrl} alt="" class="mx-auto {newest ? 'h-48' : 'h-24'} w-auto rounded-lg" draggable="false" />
                     {/if}
-                {/each}
-            </div>
-        {:else if shownCardUrl}
-            <div><strong class="capitalize">{name}</strong> {lookingAtId && lookingAtId !== selectedCardId ? 'is looking at' : 'selected'}</div>
-            {#if (!lookingAtId || lookingAtId === selectedCardId) && selectedActions}
-                <div class="text-center text-base font-bold text-[#ffd166]">{selectedActions}</div>
-            {/if}
-            <img src={shownCardUrl} alt={shownCardId} class="mx-auto {focus?.zoom ? 'h-40' : 'h-56'} w-auto rounded-lg max-sm:h-28" draggable="false" />
-        {/if}
-        {#if focus?.zoom}
-            <div><strong class="capitalize">{name}</strong> {focus.text}</div>
-            <svg viewBox="{focus.zoom.x} {focus.zoom.y} {focus.zoom.width} {focus.zoom.height}" class="block aspect-[4/3] w-full rounded-lg border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
-                <use href="#rv-board-svg" />
-            </svg>
-        {:else if focus}
-            <div><strong class="capitalize">{name}</strong> {focus.text}</div>
-        {/if}
-        {#if steps.length}
-            <ol class="flex flex-col gap-0.5 border-t border-[#8a6d3b] pt-1">
-                {#each steps as step, index (index)}
-                    <li class={index === steps.length - 1 ? 'font-semibold text-[#ffd166]' : 'text-[#c9a961]'}>{index + 1}. {step.text.charAt(0).toUpperCase()}{step.text.slice(1)}</li>
-                {/each}
-            </ol>
-        {/if}
+                    {#if entry.tokens?.length}
+                        <div class="flex flex-wrap justify-center gap-2">
+                            {#each entry.tokens as token, tokenIndex (tokenIndex)}
+                                {@const url = weaponTokenImageUrl(token.kind as WeaponTokenKind)}
+                                {#if url}
+                                    <img src={url} alt={token.kind} class="{newest ? 'h-14 w-14' : 'h-9 w-9'} rounded-full {token.picked ? 'ring-4 ring-[#ffd166]' : 'opacity-40 grayscale'}" draggable="false" />
+                                {/if}
+                            {/each}
+                        </div>
+                    {/if}
+                    {#if entry.zoom}
+                        <svg viewBox="{entry.zoom.x} {entry.zoom.y} {entry.zoom.width} {entry.zoom.height}" class="block aspect-[4/3] {newest ? 'w-full' : 'w-2/3'} mx-auto rounded-lg border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
+                            <use href="#rv-board-svg" />
+                        </svg>
+                    {/if}
+                </div>
+            {/each}
+        </div>
     </div>
 {/if}
