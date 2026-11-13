@@ -538,7 +538,7 @@
     {#if session.scourgeOverlayRegion}
         <ScourgeOverlay region={session.scourgeOverlayRegion} highlightId={session.newScourgeId} onclose={() => { session.scourgeOverlayRegion = undefined; session.newScourgeId = undefined }} />
     {/if}
-    {#if session.revealScourgeId}
+    {#if session.revealScourgeId && !session.livePlay}
         {#key session.revealScourgeId}
             <ScourgeRevealOverlay scourgeId={session.revealScourgeId} slow={session.livePlay} onclose={finishScourgeReveal} />
         {/key}
@@ -554,10 +554,10 @@
             Final scores
         </button>
     {/if}
-    {#if bonusOverlayTokens && !dragonOverlayOpen}
+    {#if bonusOverlayTokens && !dragonOverlayOpen && !session.livePlay}
         <DragonBonusOverlay tokens={bonusOverlayTokens} onclose={() => (bonusOverlayTokens = undefined)} />
     {/if}
-    {#if dragonOverlayOpen}
+    {#if dragonOverlayOpen && !session.livePlay}
         <DragonOverlay onclose={() => (dragonOverlayOpen = false)} />
     {/if}
     {#if session.hoveredCard && !session.zoomedImage}
