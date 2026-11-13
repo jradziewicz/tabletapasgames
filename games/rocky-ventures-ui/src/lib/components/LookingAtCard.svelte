@@ -339,7 +339,8 @@
                 imageUrl: token ? mineTokenImageUrl(token) : undefined,
                 logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
                 lines: plan ? saleLines(plan) : undefined,
-                zoom: around(nodes.flatMap(nodePoint)),
+                // Close in on the mine until a city is picked, then pull back to show the route.
+                zoom: cityId ? around(nodes.flatMap(nodePoint)) : around(nodePoint(mineId), 320),
                 live: true
             }
         }
