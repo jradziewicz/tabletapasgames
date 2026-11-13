@@ -9,6 +9,7 @@
         RegionIds,
         RegionNames,
         StatKind,
+        buildableBoxes,
         cardActionsFor,
         getCard,
         type CompanyId,
@@ -170,6 +171,8 @@
         const extracts = ofKind(StatKind.MineExtract)
         const claims = ofKind(StatKind.MineClaim)
         const purchases = ofKind(StatKind.Purchase)
+        const tracks = ofKind(StatKind.Track)
+        let trackIndex = 0
         const player = actorId ? state.findPlayerState(actorId) : undefined
         let extractIndex = 0
         let claimIndex = 0
@@ -193,8 +196,16 @@
                 case ActionType.LayTrack:
                 case ActionType.LayFreeTrack: {
                     const location = BoardBoxLocations.find((candidate) => candidate.box.id === data.boxId)
-                    const company = data.companyId ? CompanyNames[data.companyId as CompanyId] : undefined
-                    return [{ text: `laid ${company ? `${company} ` : ''}track`, zoom: location ? around([location]) : undefined }]
+                    const event = tracks[trackIndex++]
+                    const companyId = (data.companyId ?? event?.source) as CompanyId | undefined
+                    const company = companyId ? CompanyNames[companyId] : undefined
+                    const cost = event?.amount ?? 0
+                    return [
+                        {
+                            text: `laid ${company ? `${company} ` : ''}track ${action.type === ActionType.LayFreeTrack || cost === 0 ? 'for free' : `for $${cost}`}`,
+                            zoom: location ? around([location]) : undefined
+                        }
+                    ]
                 }
                 case ActionType.ExtractAndSell: {
                     const event = extracts[extractIndex++]
@@ -263,6 +274,18 @@
                 live: true
             }
         }
+        const freeTrack = gameSession.gameState.freeTrack
+        if (freeTrack && freeTrack.remaining > 0) {
+            const options = buildableBoxes(gameSession.gameState, freeTrack.companyId, true)
+                .map((buildable) => BoardBoxLocations.find((candidate) => candidate.box.id === buildable.boxId))
+                .filter((location) => location !== undefined)
+            return {
+                text: `is laying free ${CompanyNames[freeTrack.companyId]} track`,
+                detail: `${freeTrack.remaining} left to lay`,
+                zoom: around(options),
+                live: true
+            }
+        }
         if (!selection) return undefined
         const mineId = selection.extractHoverNodeId ?? selection.extractNodeId
         if (mineId) {
@@ -270,6 +293,20 @@
             return { text: `is choosing a delivery from ${BoardNodesById[mineId]?.name ?? 'a mine'}`, zoom: around(nodes.flatMap(nodePoint)), live: true }
         }
         if (selection.acquireMode || selection.step === 'Acquire') return { text: 'is picking a level', zoom: gridZoom(), live: true }
+        if (selection.step === 'Lay Track' || selection.trackCompanyId) {
+            const companyId = selection.trackCompanyId as CompanyId | undefined
+            if (!companyId) return { text: 'is choosing a railroad to build', live: true }
+            // Every spot they could build next, so watchers see the options light up on the map.
+            const options = buildableBoxes(gameSession.gameState, companyId)
+                .map((buildable) => BoardBoxLocations.find((candidate) => candidate.box.id === buildable.boxId))
+                .filter((location) => location !== undefined)
+            return {
+                text: `is laying ${CompanyNames[companyId]} track`,
+                detail: `Treasury $${gameSession.gameState.getCompany(companyId).treasury}`,
+                zoom: around(options),
+                live: true
+            }
+        }
         const lookingAt = gameSession.mirroring ? selection.lookingAtCardId : undefined
         if (lookingAt && lookingAt !== selectedCardId) return { text: 'is looking at', detail: cardActions(lookingAt), imageUrl: cardUrl(lookingAt), live: true }
         if (selection.step) return { text: `is choosing ${selection.step}`, live: true }
