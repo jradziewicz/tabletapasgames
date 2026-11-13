@@ -452,6 +452,7 @@
     // Steps come in one a second, so a quick chain (a claim and its hunt) plays out instead of landing at once.
     const StepMs = 1000
     let shown = $state(0)
+    let liveAfter = $state(-1)
     let shownFor: string | undefined
     let paceTimer: ReturnType<typeof setTimeout> | undefined
     $effect(() => {
@@ -463,12 +464,18 @@
         }
         if (shown > total) shown = total
         clearTimeout(paceTimer)
-        if (shown < total) paceTimer = setTimeout(() => (shown += 1), StepMs)
+        if (shown < total) {
+            paceTimer = setTimeout(() => (shown += 1), StepMs)
+        } else if (liveAfter !== shown) {
+            // The live entry (what they're doing now) also waits its second after the last step lands.
+            const count = shown
+            paceTimer = setTimeout(() => (liveAfter = count), StepMs)
+        }
     })
     $effect(() => () => clearTimeout(paceTimer))
 
     const paced = $derived(steps.slice(0, shown))
-    const caughtUp = $derived(shown >= steps.length)
+    const caughtUp = $derived(shown >= steps.length && liveAfter === shown)
     const entries = $derived(
         !caughtUp ? paced : live ? [...paced, live] : finished ? [...paced, { text: 'finished their turn', live: true }] : paced
     )
