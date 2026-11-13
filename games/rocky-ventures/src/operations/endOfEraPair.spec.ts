@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { Definition } from '../definition/gameDefinition.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { MarketSize } from '../data/setup.js'
-import { FirstEraCardId, SecondEraCardId, removeFromMarket } from './market.js'
+import { FirstEraCardId, SecondEraCardId, removeFromMarket, refillMarketAfterTurn } from './market.js'
 
 const engine = new GameEngine(Definition.runtime)
 
@@ -31,6 +31,8 @@ describe('both End of Era cards in the market', () => {
         delete state.pointBuy
 
         removeFromMarket(state, 0, new Prng(state.prng).random)
+        // The replacement is drawn once the turn is over.
+        refillMarketAfterTurn(state, new Prng(state.prng).random)
 
         expect(state.market.slots).not.toContain(FirstEraCardId)
         expect(state.market.slots).not.toContain(SecondEraCardId)

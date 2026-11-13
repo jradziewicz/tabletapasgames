@@ -1,5 +1,6 @@
 import { scoreHuntHitsAtFeast } from './hunt.js'
-import { ThirdEraCardId } from './market.js'
+import { refillMarketAfterTurn, ThirdEraCardId } from './market.js'
+import { Prng } from '@tabletop/common'
 import { AcquireMode, CardActionKind, CardKind, getCard } from '../data/cards.js'
 import { MachineState } from '../definition/states.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
@@ -85,9 +86,12 @@ export function endCurrentTurn(state: HydratedRockyVenturesGameState) {
     delete state.turnCopied
     delete state.immediateCardId
     delete state.immediateStart
+    refillMarketAfterTurn(state, new Prng(state.prng).random)
     const order = state.turnManager.turnOrder
     if (state.dummy && endingPlayerId !== undefined && endingPlayerId === order[order.length - 1]) {
         runDummyTurn(state)
+        // The dummy's own pick is replaced straight after it, before the next player starts.
+        refillMarketAfterTurn(state, new Prng(state.prng).random)
     }
 }
 

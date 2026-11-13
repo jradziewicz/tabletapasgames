@@ -82,6 +82,11 @@ export function removeFromMarket(
         throw Error(`No market card in slot ${slotIndex}`)
     }
     state.market.slots.splice(slotIndex, 1)
+    if (state.delayedMarketRefill) {
+        // The replacement comes out when the turn is over (refillMarketAfterTurn).
+        state.pendingMarketDraws = (state.pendingMarketDraws ?? 0) + 1
+        return cardId
+    }
     drawIntoMarket(state, random)
     // End of Era III left as the very last card also ends the game.
     if (
@@ -100,4 +105,27 @@ export function marketCardCost(card: Card, slotIndex: number): number | undefine
         return card.baseCost + (MarketSlotPrices[slotIndex] ?? 0)
     }
     return undefined
+}
+
+// Delayed refill: the cards taken this turn are replaced once it's over, before the next turn starts.
+export function refillMarketAfterTurn(state: HydratedRockyVenturesGameState, random: RandomFunction) {
+    const pending = state.pendingMarketDraws ?? 0
+    if (pending <= 0) {
+        return
+    }
+    state.pendingMarketDraws = 0
+    for (let drawn = 0; drawn < pending && state.market.slots.length < MarketSize; drawn++) {
+        if (drawIntoMarket(state, random) === undefined) {
+            break
+        }
+    }
+    // End of Era III left as the very last card also ends the game.
+    if (
+        state.eraThreeEndsGame &&
+        isDrawPileAtGameOver(state) &&
+        state.market.slots.length === 1 &&
+        state.market.slots[0] === ThirdEraCardId
+    ) {
+        state.eraThreeTriggered = true
+    }
 }

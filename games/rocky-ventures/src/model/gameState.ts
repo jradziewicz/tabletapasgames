@@ -113,6 +113,8 @@ export const RockyVenturesGameState = Type.Evaluate(
             gemOnlyOnCircle: Type.Optional(Type.Boolean()),
             huntHitsScoreAtFeasts: Type.Optional(Type.Boolean()),
             feastBuyerBonus: Type.Optional(Type.Boolean()),
+            delayedMarketRefill: Type.Optional(Type.Boolean()),
+            pendingMarketDraws: Type.Optional(Type.Number()),
             eraThreeTriggered: Type.Optional(Type.Boolean()),
             gemsSpent: Type.Number(),
             era: Type.Number(),
@@ -179,6 +181,9 @@ export class HydratedRockyVenturesGameState
     declare huntHitsScoreAtFeasts?: boolean
     // Buying a Feast card scores a bonus for the buyer's rank in that Feast's category.
     declare feastBuyerBonus?: boolean
+    // A card taken from the market (bought or taxed) is only replaced once the turn is over.
+    declare delayedMarketRefill?: boolean
+    declare pendingMarketDraws?: number
     declare eraThreeTriggered?: boolean
     declare gemsSpent: number
     declare era: number

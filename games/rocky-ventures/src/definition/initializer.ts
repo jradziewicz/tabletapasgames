@@ -96,6 +96,7 @@ export class RockyVenturesGameInitializer
             gemOnlyOnCircle: true,
             huntHitsScoreAtFeasts: true,
             feastBuyerBonus: true,
+            delayedMarketRefill: true,
             gemsSpent: 0,
             era: 1,
             turnActionsTaken: [],

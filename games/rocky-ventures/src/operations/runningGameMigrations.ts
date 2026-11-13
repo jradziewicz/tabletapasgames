@@ -74,6 +74,8 @@ export function migrateRunningGame(state: HydratedRockyVenturesGameState) {
     if (!state.result) {
         migrateToEraThreeEnding(state)
         migrateToNoGameOverCard(state)
+        // Every open game moves onto refilling the market only after the turn (Justin, 2026-11-13).
+        state.delayedMarketRefill = true
         if (InOrderAndDeliveryScoringGameIds.includes(state.gameId)) {
             state.actionsInOrder = true
             state.agreementsScoreOnDelivery = true

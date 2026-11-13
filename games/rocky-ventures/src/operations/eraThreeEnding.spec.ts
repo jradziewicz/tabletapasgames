@@ -4,7 +4,7 @@ import { Definition } from '../definition/gameDefinition.js'
 import { MachineState } from '../definition/states.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { GameOverCard } from '../data/cards.js'
-import { drawIntoMarket, removeFromMarket, ThirdEraCardId } from './market.js'
+import { drawIntoMarket, removeFromMarket, refillMarketAfterTurn, ThirdEraCardId } from './market.js'
 import { endGameTriggered } from './endGame.js'
 import { nextStateAfterResolution, startPointBuy } from './turn.js'
 
@@ -74,6 +74,7 @@ describe('End of Era III ending', () => {
         state.market.slots = ['d01', ThirdEraCardId]
         state.market.drawPile = [GameOverCard.id]
         removeFromMarket(state, 0, random)
+        refillMarketAfterTurn(state, random)
         expect(endGameTriggered(state)).toBe(true)
     })
 
