@@ -27,6 +27,8 @@
     import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
     import { companyLogoUrl } from '$lib/utils/companyLogos.js'
     import { GridRegion, gridCellPosition } from '$lib/utils/trackLayout.js'
+    import boardArt from '$lib/images/board.jpg'
+    import { BoardArtSize } from '@tabletop/rocky-ventures'
 
     // Same shape as the other Board Together games' History (e.g. Kaivai): newest first on a
     // timeline, each entry a short "<player> did something" sentence with how long ago it was,
@@ -291,6 +293,9 @@
         const city = placeName(detail['city'] ?? action['cityId'])
         const credit = companyName(action['creditCompanyId'])
         const earned = delta(entry, playerId, 'money')
+        const agreementVp = eventsFor(entry)
+            .filter((event) => event.kind === StatKind.VictoryPoints && event.source === 'agreement')
+            .reduce((sum, event) => sum + event.amount, 0)
         if (!extract || !ore || !oreCount) {
             return [mine ? `extracted from ${mine}` : 'extracted and sold', city ? `to ${city}` : undefined]
                 .filter(Boolean)
@@ -301,10 +306,12 @@
             mine ? `at ${mine}` : undefined,
             earned !== undefined ? `for ${money(earned)}` : undefined,
             city ? `to ${city}` : undefined,
-            credit ? `via ${credit}` : undefined
+            credit ? `via ${credit}` : undefined,
+            agreementVp ? `and scored ${plural(agreementVp, 'VP')} from the agreement` : undefined
         ]
             .filter(Boolean)
             .join(' ')
+            .replace('VPs', 'VP')
     }
 
     function describeAcquire(entry: Entry, action: Record<string, unknown>): string {
@@ -583,6 +590,7 @@
                                 {/if}
                                 {#if pictures.zoom}
                                     <svg viewBox="{pictures.zoom.x} {pictures.zoom.y} {pictures.zoom.width} {pictures.zoom.height}" class="block aspect-[4/3] w-full max-w-xs rounded border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
+                                        <image href={boardArt} x="0" y="0" width={BoardArtSize.width} height={BoardArtSize.height} />
                                         <use href="#rv-board-svg" />
                                         {#each pictures.rings as point, ringIndex (ringIndex)}
                                             <circle cx={point.x} cy={point.y} r="30" fill="none" stroke="#111" stroke-width="10" opacity="0.8" />

@@ -45,6 +45,7 @@
     import { cardBackImageUrl, cardImageUrl } from '$lib/utils/cardImages.js'
     import { DrawPileBox, MarketSlotBoxes, type MarketSlotBox } from '$lib/utils/marketLayout.js'
     import { CityRouteColors, routePolylinePoints } from '$lib/utils/routePath.js'
+    import { deliveryVictoryPoints } from '$lib/utils/deliveryPoints.js'
     import { DummyColor } from '$lib/utils/dummyDisplay.js'
     import { GemHexRadius, GemTrackFillOrder, hexagonPoints } from '$lib/utils/gemTrack.js'
     import { GridRegion, gridCellPosition, victoryPointPosition } from '$lib/utils/trackLayout.js'
@@ -1387,7 +1388,8 @@
             {@const plan = gameSession.gameState.activePlayerIds[0] ? planExtraction(gameSession.gameState, gameSession.gameState.activePlayerIds[0], { nodeId: mineId, cityId }) : undefined}
             {#if node && plan && typeof plan !== 'string'}
                 {@const color = CityRouteColors[cityId] ?? '#ffd166'}
-                {@const tag = `${node.name} ${plan.net < 0 ? '-' : '+'}$${Math.abs(plan.net)}`}
+                {@const vp = deliveryVictoryPoints(gameSession.gameState, gameSession.gameState.activePlayerIds[0] ?? '', cityId)}
+                {@const tag = `${node.name} ${plan.net < 0 ? '-' : '+'}$${Math.abs(plan.net)}${vp ? ` · +${vp} VP` : ''}`}
                 <g
                     class="city-sell"
                     role="button"

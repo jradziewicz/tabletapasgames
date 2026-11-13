@@ -1,6 +1,7 @@
 <script lang="ts">
     import {
         ActionType,
+        BoardArtSize,
         BoardBoxLocations,
         BoardNodesById,
         CardKind,
@@ -31,6 +32,8 @@
     import { recentOtherPlayerAction } from '$lib/utils/recentAction.js'
     import { shareImageUrl } from '$lib/utils/shareImages.js'
     import { companyLogoUrl } from '$lib/utils/companyLogos.js'
+    import { deliveryVictoryPoints } from '$lib/utils/deliveryPoints.js'
+    import boardArt from '$lib/images/board.jpg'
     import { CompanyColors } from '$lib/utils/companyDisplay.svelte.js'
     import { mineTokenImageUrl } from '$lib/utils/tokenImages.js'
     import { MarketSlotBoxes } from '$lib/utils/marketLayout.js'
@@ -404,6 +407,9 @@
                     const bonus = cash.filter((other) => other.source === 'agreement' && other.action === event?.action).reduce((sum, other) => sum + other.amount, 0)
                     const price = sale + bonus
                     const net = event?.amount ?? 0
+                    const agreementVp = state.statEvents
+                        .filter((other) => other.kind === StatKind.VictoryPoints && other.source === 'agreement' && other.playerId === actorId && other.action === event?.action)
+                        .reduce((sum, other) => sum + other.amount, 0)
                     const lines = event
                         ? [
                               { label: `${ore} price (${oreCount} × $${oreCount ? Math.round(sale / oreCount) : 0}${bonus ? ` + $${bonus} agreement` : ''})`, amount: price },
@@ -414,7 +420,8 @@
                     return [
                         {
                             kind: 'extract',
-                            text: `extracted ${detail['ore'] ?? ''} ${ore} from ${mine}${city ? `, sold to ${city}` : ''}${companyId ? ` via ${CompanyNames[companyId]}` : ''}${event ? `: ${money(event.amount)}` : ''}`.replace('  ', ' '),
+                            text: `extracted ${detail['ore'] ?? ''} ${ore} from ${mine}${city ? `, sold to ${city}` : ''}${companyId ? ` via ${CompanyNames[companyId]}` : ''}${event ? `: ${money(event.amount)}` : ''}${agreementVp ? `, +${agreementVp} VP` : ''}`.replace('  ', ' '),
+                            detail: agreementVp ? `Scored ${agreementVp} VP from the ${city ?? ''} agreement`.replace('  ', ' ') : undefined,
                             // The credited railroad goes under the map, with its logo.
                             footer: companyId ? { text: `Delivery credited to ${CompanyNames[companyId]}`, logoUrl: companyLogoUrl(companyId) } : undefined,
                             lines,
@@ -561,7 +568,12 @@
             return {
                 kind: 'extract',
                 text: `is extracting from ${BoardNodesById[mineId]?.name ?? 'a mine'}${cityId ? ` to ${BoardNodesById[cityId]?.name ?? cityId}` : ''}`,
-                detail: cityId ? (companyId ? `Via ${CompanyNames[companyId]}` : 'Choosing a railroad to credit') : 'Choosing a city',
+                detail: [
+                    cityId ? (companyId ? `Via ${CompanyNames[companyId]}` : 'Choosing a railroad to credit') : 'Choosing a city',
+                    cityId && activeId && deliveryVictoryPoints(state, activeId, cityId) ? `+${deliveryVictoryPoints(state, activeId, cityId)} VP from the agreement` : undefined
+                ]
+                    .filter((part) => part !== undefined)
+                    .join(' · '),
                 logoUrl: companyId ? companyLogoUrl(companyId) : undefined,
                 lines: plan ? saleLines(plan) : undefined,
                 // Close in on the mine until a city is picked, then pull back to show the route.
@@ -726,6 +738,7 @@
                     {/if}
                     {#if entry.zoom}
                         <svg viewBox="{entry.zoom.x} {entry.zoom.y} {entry.zoom.width} {entry.zoom.height}" class="block aspect-[4/3] w-full mx-auto rounded-lg border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
+                            <image href={boardArt} x="0" y="0" width={BoardArtSize.width} height={BoardArtSize.height} />
                             <use href="#rv-board-svg" />
                             {#if entry.rings}
                                 {#each entry.rings as point, ringIndex (ringIndex)}
