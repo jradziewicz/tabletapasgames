@@ -895,9 +895,9 @@
                         <button
                             type="button"
                             onclick={() => gameSession.clickMarketCard(slotIndex, cardId, cardImageUrl(cardId))}
-                            onpointerenter={(event) => gameSession.previewCard(event, cardId, cardImageUrl(cardId))}
-                            onpointerleave={() => gameSession.clearCardPreview()}
-                            class="market-card block overflow-hidden rounded border-2 border-[#8a6d3b] shadow-md"
+                            onpointerenter={(event) => gameSession.pointAtCard(event, cardId)}
+                            onpointerleave={(event) => gameSession.pointAtCard(event, undefined)}
+                            class="market-card tableau-card block overflow-hidden rounded border-2 border-[#8a6d3b] shadow-md {mirrorPulse(cardId)}"
                             title={affordable ? 'Click to buy' : 'Not enough money'}
                         >
                             <img src={cardImageUrl(cardId)} alt={cardLabel(cardId)} class="block h-[266px] w-auto max-sm:h-[190px]" draggable="false" />
@@ -1018,9 +1018,9 @@
                     <button
                         type="button"
                         onclick={() => gameSession.clickMarketCard(slotIndex, cardId, cardImageUrl(cardId))}
-                        onpointerenter={(event) => gameSession.previewCard(event, cardId, cardImageUrl(cardId))}
-                        onpointerleave={() => gameSession.clearCardPreview()}
-                        class="market-card block overflow-hidden rounded border-2 border-[#8a6d3b] shadow-md"
+                        onpointerenter={(event) => gameSession.pointAtCard(event, cardId)}
+                        onpointerleave={(event) => gameSession.pointAtCard(event, undefined)}
+                        class="market-card tableau-card block overflow-hidden rounded border-2 border-[#8a6d3b] shadow-md {mirrorPulse(cardId)}"
                         title={affordable ? 'Click to buy' : 'Not enough money'}
                     >
                         <img src={cardImageUrl(cardId)} alt={cardLabel(cardId)} class="block h-[266px] w-auto max-sm:h-[190px]" draggable="false" />
