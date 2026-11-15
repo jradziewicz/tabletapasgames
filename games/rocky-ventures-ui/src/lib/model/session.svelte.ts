@@ -1038,7 +1038,9 @@ export class RockyVenturesGameSession extends GameSession<
         this.extractCreditCompanyId = undefined
         this.extractCustomRoute = undefined
         // Silver has no route or city to pick: one click delivers it, unless a railroad must be chosen.
-        if (this.gameState.board.mines[nodeId]?.token?.ore === 'silver') {
+        // On touch screens there's no hover to preview the payout, so the confirm button stays instead.
+        const canHover = typeof window === 'undefined' || window.matchMedia('(hover: hover)').matches
+        if (canHover && this.gameState.board.mines[nodeId]?.token?.ore === 'silver') {
             this.extractHoverNodeId = undefined
             const plan = this.extractPlan
             if (plan && plan.creditCandidates.length <= 1) {
