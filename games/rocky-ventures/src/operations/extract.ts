@@ -433,10 +433,7 @@ export function planExtraction(
             security: route.security,
             dragon: route.dragon,
             discount: route.discount,
-            net: Math.max(
-                0,
-                sale + agreementBonus - route.transport - route.security - route.dragon + route.discount
-            ),
+            net: deliveryNet(state, sale + agreementBonus - route.transport - route.security - route.dragon + route.discount),
             routeNodeIds: route.nodeIds,
             regionIds: RegionIds.filter((regionId) => (route.regionMask & regionBit(regionId)) !== 0),
             creditCandidates: candidates,
@@ -470,7 +467,7 @@ export function planExtraction(
             security: 0,
             dragon,
             discount: 0,
-            net: Math.max(0, sale + agreementBonus - dragon),
+            net: deliveryNet(state, sale + agreementBonus - dragon),
             routeNodeIds: [],
             regionIds: [],
             creditCandidates: [],
@@ -489,7 +486,17 @@ export function planExtraction(
         (pointBuy.fromIncome
             ? plan.net >= pointBuy.cost
             : state.getPlayerState(playerId).money + plan.net >= pointBuy.cost)
+    // A delivery that costs more than it earns is paid for from the player's cash.
+    if (plan.net < 0 && state.getPlayerState(playerId).money < -plan.net) {
+        return `This delivery would cost $${-plan.net} and you only have $${state.getPlayerState(playerId).money}`
+    }
     return plan
+}
+
+// What a delivery pays: with negative deliveries on, costs above the sale come out of the player's
+// cash; otherwise a delivery never pays less than $0.
+function deliveryNet(state: HydratedRockyVenturesGameState, net: number): number {
+    return state.negativeDeliveries ? net : Math.max(0, net)
 }
 
 // The railroad with the most track cubes on the route gets the delivery; the player only chooses

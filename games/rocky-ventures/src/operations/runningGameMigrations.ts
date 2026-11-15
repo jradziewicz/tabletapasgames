@@ -76,6 +76,8 @@ export function migrateRunningGame(state: HydratedRockyVenturesGameState) {
         migrateToNoGameOverCard(state)
         // Every open game moves onto refilling the market only after the turn (Justin, 2026-11-13).
         state.delayedMarketRefill = true
+        // Every open game moves onto deliveries that can pay out less than $0 (Justin, 2026-11-15).
+        state.negativeDeliveries = true
         if (InOrderAndDeliveryScoringGameIds.includes(state.gameId)) {
             state.actionsInOrder = true
             state.agreementsScoreOnDelivery = true

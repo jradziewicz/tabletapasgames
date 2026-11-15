@@ -114,6 +114,7 @@ export const RockyVenturesGameState = Type.Evaluate(
             huntHitsScoreAtFeasts: Type.Optional(Type.Boolean()),
             feastBuyerBonus: Type.Optional(Type.Boolean()),
             delayedMarketRefill: Type.Optional(Type.Boolean()),
+            negativeDeliveries: Type.Optional(Type.Boolean()),
             pendingMarketDraws: Type.Optional(Type.Number()),
             eraThreeTriggered: Type.Optional(Type.Boolean()),
             gemsSpent: Type.Number(),
@@ -183,6 +184,8 @@ export class HydratedRockyVenturesGameState
     declare feastBuyerBonus?: boolean
     // A card taken from the market (bought or taxed) is only replaced once the turn is over.
     declare delayedMarketRefill?: boolean
+    // A delivery can pay out less than $0: the costs above the sale come out of the player's cash.
+    declare negativeDeliveries?: boolean
     declare pendingMarketDraws?: number
     declare eraThreeTriggered?: boolean
     declare gemsSpent: number

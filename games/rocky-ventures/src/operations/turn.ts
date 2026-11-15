@@ -141,7 +141,7 @@ export function nextStateAfterResolution(state: HydratedRockyVenturesGameState):
 export function startPointBuy(
     state: HydratedRockyVenturesGameState,
     cardId: string,
-    startPlayerId: string = currentPlayerId(state)
+    startPlayerId: string = pointBuyStarter(state)
 ) {
     scoreHuntHitsAtFeast(state, cardId)
     if (cardId === ThirdEraCardId) {
@@ -158,4 +158,13 @@ export function startPointBuy(
 export function finishImmediateAction(state: HydratedRockyVenturesGameState) {
     delete state.immediateCardId
     delete state.immediateStart
+}
+
+// Who opens a point buy: the player on turn, or, when the Feast comes out between turns (the market
+// refills after the turn ends), the player whose turn just ended.
+function pointBuyStarter(state: HydratedRockyVenturesGameState): string {
+    const current = state.turnManager.currentTurn()?.playerId
+    if (current) return current
+    const series = (state.turnManager as unknown as { series?: { type: string; playerId?: string }[] }).series ?? []
+    return series.findLast((entry) => entry.type === 'turn' && entry.playerId)?.playerId ?? state.turnManager.turnOrder[0]!
 }
