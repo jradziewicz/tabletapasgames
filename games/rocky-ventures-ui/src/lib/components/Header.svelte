@@ -77,8 +77,9 @@
                     level: 'far',
                     tip: `${Math.min(dragon.trackerTokens.length, BonusTokensToSummonDragon)} of ${BonusTokensToSummonDragon} bonus tokens drawn. At ${BonusTokensToSummonDragon} the dragon comes out`
                 },
-        // Where each Feast card is: still in the deck, in the market to buy, or gone.
-        ...['era1', 'era2', 'era3'].map((cardId, index): TriggerChip => {
+        // Where each Feast card is: still in the deck, in the market to buy, or gone. Only in games
+        // with Feast buyer bonus scoring, since the chips name what each Feast scores.
+        ...(gameSession.gameState.feastBuyerBonus ? ['era1', 'era2', 'era3'] : []).map((cardId, index): TriggerChip => {
             const state = gameSession.gameState
             const slot = state.market.slots.indexOf(cardId)
             const inDeck = state.market.drawPile.includes(cardId)
