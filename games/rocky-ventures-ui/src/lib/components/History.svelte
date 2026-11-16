@@ -323,14 +323,15 @@
         const parts: string[] = []
         if (weapon > 0) parts.push(plural(weapon, 'Weapon'))
         if (tool > 0) parts.push(plural(tool, 'Tool'))
-        if (gems > 0) parts.push(plural(gems, 'Gem'))
-        if (!parts.length) return action['choice'] === 'tool' ? 'acquired a tool' : 'acquired a weapon'
+        // A gem comes from where the disc landed on the grid, not from the card.
+        const gemText = gems > 0 ? `, and gained ${plural(gems, 'Gem')} from the grid` : ''
+        if (!parts.length) return (action['choice'] === 'tool' ? 'acquired a tool' : 'acquired a weapon') + gemText
         const level = weapon > 0
             ? entry.after?.players[playerId]?.weaponLevel
             : tool > 0
               ? entry.after?.players[playerId]?.toolLevel
               : undefined
-        return `acquired ${parts.join(' and ')}${level !== undefined ? ` (now level ${level})` : ''}`
+        return `acquired ${parts.join(' and ')}${level !== undefined ? ` (now level ${level})` : ''}${gemText}`
     }
 
     // The pictures that go with a step, like the Live play watcher box: the card, the tokens, the
