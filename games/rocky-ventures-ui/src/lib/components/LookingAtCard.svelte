@@ -764,7 +764,7 @@
                             {#if entry.rings}
                                 {#each entry.rings as point, ringIndex (ringIndex)}
                                     <g>
-                                        <circle cx={point.x} cy={point.y} r="34" fill="none" stroke={glowColor} stroke-width="7" opacity="0.75" filter="url(#{`rv-viewer-glow-${index}`})" />
+                                        <circle cx={point.x} cy={point.y} r="27" fill="none" stroke={glowColor} stroke-width="7" opacity="0.75" filter="url(#{`rv-viewer-glow-${index}`})" />
                                     </g>
                                 {/each}
                             {/if}

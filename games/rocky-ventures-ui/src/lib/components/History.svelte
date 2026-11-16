@@ -611,7 +611,7 @@
                                             <polyline {points} fill="none" stroke={glowColor} stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
                                         {/if}
                                         {#each pictures.rings as point, ringIndex (ringIndex)}
-                                            <circle cx={point.x} cy={point.y} r={pictures.ringRadius ?? 30} fill="none" stroke={glowColor} stroke-width={pictures.ringRadius ? 5 : 7} opacity="0.75" filter="url(#{`rv-history-glow-${entry.id}`})" />
+                                            <circle cx={point.x} cy={point.y} r={pictures.ringRadius ?? 27} fill="none" stroke={glowColor} stroke-width={pictures.ringRadius ? 5 : 7} opacity="0.75" filter="url(#{`rv-history-glow-${entry.id}`})" />
                                         {/each}
                                     </svg>
                                 {/if}
