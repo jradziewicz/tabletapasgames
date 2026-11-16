@@ -323,8 +323,9 @@
         const parts: string[] = []
         if (weapon > 0) parts.push(plural(weapon, 'Weapon'))
         if (tool > 0) parts.push(plural(tool, 'Tool'))
-        // A gem comes from where the disc landed on the grid, not from the card.
-        const gemText = gems > 0 ? `, and gained ${plural(gems, 'Gem')} from the grid` : ''
+        // Only what they took with the card; a gem from the grid isn't part of the choice.
+        const gemText = ''
+        void gems
         if (!parts.length) return (action['choice'] === 'tool' ? 'acquired a tool' : 'acquired a weapon') + gemText
         const level = weapon > 0
             ? entry.after?.players[playerId]?.weaponLevel
