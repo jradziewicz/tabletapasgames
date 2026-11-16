@@ -343,6 +343,7 @@
         zoom?: Zoom
         rings: { x: number; y: number }[]
         routeIds?: string[]
+        ringRadius?: number
     }
 
     function around(points: { x: number; y: number }[], minWidth = 380): Zoom | undefined {
@@ -452,6 +453,7 @@
                     const cell = gridCellPosition(after.weaponLevel, after.toolLevel)
                     result.zoom = around([cell], 220)
                     result.rings = [cell]
+                    result.ringRadius = 20
                 } else {
                     result.zoom = { x: GridRegion.x, y: GridRegion.y, width: GridRegion.width, height: GridRegion.height }
                 }
@@ -609,7 +611,7 @@
                                             <polyline {points} fill="none" stroke={glowColor} stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
                                         {/if}
                                         {#each pictures.rings as point, ringIndex (ringIndex)}
-                                            <circle cx={point.x} cy={point.y} r="30" fill="none" stroke={glowColor} stroke-width="7" opacity="0.75" filter="url(#{`rv-history-glow-${entry.id}`})" />
+                                            <circle cx={point.x} cy={point.y} r={pictures.ringRadius ?? 30} fill="none" stroke={glowColor} stroke-width={pictures.ringRadius ? 5 : 7} opacity="0.75" filter="url(#{`rv-history-glow-${entry.id}`})" />
                                         {/each}
                                     </svg>
                                 {/if}
