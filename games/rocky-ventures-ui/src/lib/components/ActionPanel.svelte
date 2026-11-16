@@ -551,6 +551,9 @@
                             >
                                 Sell to {BoardNodesById[customCity]?.name} · {`+$${extractPlan.net}`}
                             </button>
+                        {:else if customCity && extractProblem}
+                            <!-- The route reaches a city but can't be sold: say why instead of asking for more stops -->
+                            <span class="text-xs font-semibold text-[#ff8a7a]">{extractProblem}</span>
                         {:else}
                             <span class="text-xs text-[#c9a961]">Click the next stop on the map.</span>
                         {/if}
