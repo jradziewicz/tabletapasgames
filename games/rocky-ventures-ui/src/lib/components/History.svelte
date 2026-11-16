@@ -601,16 +601,15 @@
                                     <svg viewBox="{pictures.zoom.x} {pictures.zoom.y} {pictures.zoom.width} {pictures.zoom.height}" class="block aspect-[4/3] w-full max-w-xs rounded border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
                                         <image href={boardArt} x="0" y="0" width={BoardArtSize.width} height={BoardArtSize.height} />
                                         <use href="#rv-board-svg" />
-                            <defs><filter id={`rv-history-glow-${entry.id}`} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5" /></filter></defs>
+                            <defs><filter id={`rv-history-glow-${entry.id}`} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" /></filter></defs>
                                         {#if pictures.routeIds}
                                             {@const points = routePolylinePoints(pictures.routeIds)}
-                                            <polyline {points} fill="none" stroke={glowColor} stroke-width="22" stroke-linecap="round" stroke-linejoin="round" filter="url(#{`rv-history-glow-${entry.id}`})" />
+                                            <polyline {points} fill="none" stroke={glowColor} stroke-width="12" opacity="0.6" stroke-linecap="round" stroke-linejoin="round" filter="url(#{`rv-history-glow-${entry.id}`})" />
                                             <polyline {points} fill="none" stroke="#111" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.8" />
                                             <polyline {points} fill="none" stroke={glowColor} stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
                                         {/if}
                                         {#each pictures.rings as point, ringIndex (ringIndex)}
-                                            <circle cx={point.x} cy={point.y} r="30" fill="none" stroke={glowColor} stroke-width="18" filter="url(#{`rv-history-glow-${entry.id}`})" />
-                                            <circle cx={point.x} cy={point.y} r="30" fill="none" stroke={glowColor} stroke-width="10" filter="url(#{`rv-history-glow-${entry.id}`})" />
+                                            <circle cx={point.x} cy={point.y} r="30" fill="none" stroke={glowColor} stroke-width="7" opacity="0.75" filter="url(#{`rv-history-glow-${entry.id}`})" />
                                         {/each}
                                     </svg>
                                 {/if}

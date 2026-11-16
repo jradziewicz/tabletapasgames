@@ -533,7 +533,7 @@
     {#each [...new Set(gameSession.turnMarks.nodeIds)] as nodeId (nodeId)}
         {@const node = BoardNodesById[nodeId]}
         {#if node}
-            <circle cx={node.x} cy={node.y} r={MineTokenRadius + 14} fill="none" stroke={gameSession.colors.getPlayerUiColor(gameSession.turnMarks.playerId ?? '')} stroke-width="22" filter="url(#mine-halo-blur)" class="mine-halo" pointer-events="none" />
+            <circle cx={node.x} cy={node.y} r={MineTokenRadius + 8} fill="none" stroke={gameSession.colors.getPlayerUiColor(gameSession.turnMarks.playerId ?? '')} stroke-width="8" opacity="0.75" filter="url(#mine-halo-blur)" pointer-events="none" />
         {/if}
     {/each}
 
