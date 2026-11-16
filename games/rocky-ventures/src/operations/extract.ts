@@ -549,7 +549,7 @@ export function extractAndSellAt(
         amount: plan.net,
         source: plan.ore,
         nodeId: request.nodeId,
-        detail: `level=${site.token?.level ?? 0};ore=${plan.oreCount};sale=${plan.sale};city=${plan.saleCityId}`
+        detail: `level=${site.token?.level ?? 0};ore=${plan.oreCount};sale=${plan.sale};city=${plan.saleCityId};route=${plan.routeNodeIds.join(',')}`
     })
     recordCash(state, playerId, plan.net, 'extract', { nodeId: request.nodeId })
     const twoSided = state

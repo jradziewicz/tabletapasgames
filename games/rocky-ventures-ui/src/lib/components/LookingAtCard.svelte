@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { routePolylinePoints } from '$lib/utils/routePath.js'
     import {
         ActionType,
         BoardArtSize,
@@ -45,7 +46,7 @@
     const gameSession = getGameSession()
 
     type Zoom = { x: number; y: number; width: number; height: number }
-    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string }; track?: { companyId: string; points: { x: number; y: number }[]; cost: number; count: number; free: boolean }; kind?: string; iconUrl?: string; pin?: { x: number; y: number; url: string }; footer?: { text: string; logoUrl?: string }; rings?: { x: number; y: number }[] }
+    type Step = { text: string; detail?: string; zoom?: Zoom; imageUrl?: string; tokens?: { kind: string; picked: boolean }[]; live?: boolean; logoUrl?: string; lines?: { label: string; amount: number }[]; move?: { from: { x: number; y: number }; to: { x: number; y: number }; color: string }; track?: { companyId: string; points: { x: number; y: number }[]; cost: number; count: number; free: boolean }; kind?: string; iconUrl?: string; pin?: { x: number; y: number; url: string }; footer?: { text: string; logoUrl?: string }; rings?: { x: number; y: number }[]; routeIds?: string[] }
 
     const ZoomAspect = 4 / 3
 
@@ -67,6 +68,8 @@
     const summaryKey = $derived(
         `${actorId}:${gameSession.actions.findLast((action) => action.playerId === actorId && action.type === ActionType.MovePawn)?.id ?? ''}`
     )
+    // Highlights on the map close-ups glow in the acting player's colour.
+    const glowColor = $derived(actorId ? gameSession.colors.getPlayerUiColor(actorId) : '#ffd166')
     const canDismiss = $derived(gameSession.isMyTurn && actorId !== activeId)
     let lastPassedSummary: string | undefined
     $effect(() => {
@@ -238,7 +241,11 @@
             lines: saleLines(planExtraction(recent.before, actorId, recent.action as never)),
             tokenUrl: token ? mineTokenImageUrl(token) : undefined,
             tokenId: token?.id,
-            companyId: recent.action.creditCompanyId
+            companyId: recent.action.creditCompanyId,
+            routeNodeIds: (() => {
+                const plan = planExtraction(recent.before, actorId, recent.action as never)
+                return typeof plan === 'string' ? undefined : plan.routeNodeIds
+            })()
         }
     }
     const lastExtract = $derived(fresh(ActionType.ExtractAndSell, compute_lastExtract))
@@ -376,7 +383,12 @@
                     const ore = event?.source === 'gold' ? 'Gold' : event?.source === 'silver' ? 'Silver' : 'ore'
                     const mine = BoardNodesById[data.nodeId as string]?.name ?? 'a mine'
                     const city = BoardNodesById[detail['city'] ?? '']?.name
-                    const route = (gameSession.turnMarks.routes.find((nodes) => nodes[0] === data.nodeId) ?? [data.nodeId as string]).flatMap(nodePoint)
+                    // The way the gold went: recorded with the delivery, chosen by the player, or replayed.
+                    const routeIds = (detail['route'] ? detail['route'].split(',') : undefined) ??
+                        (data.routeNodeIds as string[] | undefined) ??
+                        (lastExtract?.actionId === action.id ? lastExtract.routeNodeIds : undefined) ??
+                        gameSession.turnMarks.routes.find((nodes) => nodes[0] === data.nodeId) ?? [data.nodeId as string]
+                    const route = routeIds.flatMap(nodePoint)
                     // The railroad credited with the delivery: picked by the player, or the only one that could take it
                     // (found by the gold token now sitting in that railroad's deliveries).
                     const deliveredTokenId = lastExtract?.actionId === action.id ? lastExtract.tokenId : undefined
@@ -426,6 +438,7 @@
                             footer: companyId ? { text: `Delivery credited to ${CompanyNames[companyId]}`, logoUrl: companyLogoUrl(companyId) } : undefined,
                             lines,
                             pin,
+                            routeIds: routeIds.length > 1 ? routeIds : undefined,
                             zoom: around(route)
                         },
                         ...drew
@@ -740,11 +753,19 @@
                         <svg viewBox="{entry.zoom.x} {entry.zoom.y} {entry.zoom.width} {entry.zoom.height}" class="block aspect-[4/3] w-full mx-auto rounded-lg border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
                             <image href={boardArt} x="0" y="0" width={BoardArtSize.width} height={BoardArtSize.height} />
                             <use href="#rv-board-svg" />
+                            <defs><filter id={`rv-viewer-glow-${index}`} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5" /></filter></defs>
+                            {#if entry.routeIds}
+                                <!-- The delivery route, mine to city, glowing in the player's colour -->
+                                {@const points = routePolylinePoints(entry.routeIds)}
+                                <polyline {points} fill="none" stroke={glowColor} stroke-width="22" stroke-linecap="round" stroke-linejoin="round" filter="url(#{`rv-viewer-glow-${index}`})" />
+                                <polyline {points} fill="none" stroke="#111" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.8" />
+                                <polyline {points} fill="none" stroke={glowColor} stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+                            {/if}
                             {#if entry.rings}
                                 {#each entry.rings as point, ringIndex (ringIndex)}
                                     <g class="track-pulse">
-                                        <circle cx={point.x} cy={point.y} r="34" fill="none" stroke="#111" stroke-width="12" opacity="0.85" />
-                                        <circle cx={point.x} cy={point.y} r="34" fill="none" stroke="#ffd166" stroke-width="6" />
+                                        <circle cx={point.x} cy={point.y} r="34" fill="none" stroke={glowColor} stroke-width="18" filter="url(#{`rv-viewer-glow-${index}`})" />
+                                        <circle cx={point.x} cy={point.y} r="34" fill="none" stroke={glowColor} stroke-width="10" filter="url(#{`rv-viewer-glow-${index}`})" />
                                     </g>
                                 {/each}
                             {/if}
@@ -757,9 +778,8 @@
                                 {#each entry.track.points as point, pointIndex (pointIndex)}
                                     <!-- A dark band under the railroad's colour so the ring reads on any terrain -->
                                     <g class="track-pulse">
-                                        <circle cx={point.x} cy={point.y} r="26" fill="none" stroke="#111" stroke-width="13" opacity="0.85" />
-                                        <circle cx={point.x} cy={point.y} r="26" fill="none" stroke={CompanyColors[entry.track.companyId as CompanyId] ?? '#ffd166'} stroke-width="7" />
-                                        <circle cx={point.x} cy={point.y} r="32" fill="none" stroke="#fff" stroke-width="2" />
+                                        <circle cx={point.x} cy={point.y} r="28" fill="none" stroke={glowColor} stroke-width="18" filter="url(#{`rv-viewer-glow-${index}`})" />
+                                        <circle cx={point.x} cy={point.y} r="28" fill="none" stroke={glowColor} stroke-width="10" filter="url(#{`rv-viewer-glow-${index}`})" />
                                     </g>
                                 {/each}
                             {/if}

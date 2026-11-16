@@ -534,7 +534,6 @@
         {@const node = BoardNodesById[nodeId]}
         {#if node}
             <circle cx={node.x} cy={node.y} r={MineTokenRadius + 14} fill="none" stroke={gameSession.colors.getPlayerUiColor(gameSession.turnMarks.playerId ?? '')} stroke-width="22" filter="url(#mine-halo-blur)" class="mine-halo" pointer-events="none" />
-            <circle cx={node.x} cy={node.y} r={MineTokenRadius + 6} fill="none" stroke="#ffd166" stroke-width="4" pointer-events="none" />
         {/if}
     {/each}
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { routePolylinePoints } from '$lib/utils/routePath.js'
     import { createTimeAgo, PlayerName } from '@tabletop/frontend-components'
     import { GameEngine, type GameAction } from '@tabletop/common'
     import {
@@ -341,6 +342,7 @@
         logo?: string
         zoom?: Zoom
         rings: { x: number; y: number }[]
+        routeIds?: string[]
     }
 
     function around(points: { x: number; y: number }[], minWidth = 380): Zoom | undefined {
@@ -417,6 +419,12 @@
                 const detail = Object.fromEntries((extract?.detail ?? '').split(';').map((pair) => pair.split('=') as [string, string]))
                 result.zoom = around([...nodePoints(action['nodeId']), ...nodePoints(detail['city'])])
                 result.rings = nodePoints(action['nodeId'])
+                // The delivery route, recorded with the delivery or chosen by the player.
+                const routeIds = detail['route'] ? detail['route'].split(',') : (action['routeNodeIds'] as string[] | undefined)
+                if (routeIds && routeIds.length > 1) {
+                    result.routeIds = routeIds
+                    result.zoom = around(routeIds.flatMap((nodeId) => nodePoints(nodeId)))
+                }
                 result.logo = typeof action['creditCompanyId'] === 'string' ? companyLogoUrl(action['creditCompanyId'] as CompanyId) : undefined
                 break
             }
@@ -572,7 +580,7 @@
                                 {#if pictures.cards.length || pictures.tokens.length || pictures.logo}
                                     <div class="flex flex-wrap items-center gap-2">
                                         {#each pictures.cards as url, cardIndex (cardIndex)}
-                                            <img src={url} alt="" class="h-28 w-auto rounded" draggable="false" />
+                                            <img src={url} alt="" class="h-56 max-w-full w-auto rounded" draggable="false" />
                                         {/each}
                                         {#each pictures.tokens as token, tokenIndex (tokenIndex)}
                                             {@const url = weaponTokenImageUrl(token.kind)}
@@ -589,12 +597,20 @@
                                     </div>
                                 {/if}
                                 {#if pictures.zoom}
+                                    {@const glowColor = action.playerId ? gameSession.colors.getPlayerUiColor(action.playerId) : '#ffd166'}
                                     <svg viewBox="{pictures.zoom.x} {pictures.zoom.y} {pictures.zoom.width} {pictures.zoom.height}" class="block aspect-[4/3] w-full max-w-xs rounded border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
                                         <image href={boardArt} x="0" y="0" width={BoardArtSize.width} height={BoardArtSize.height} />
                                         <use href="#rv-board-svg" />
+                            <defs><filter id={`rv-history-glow-${entry.id}`} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5" /></filter></defs>
+                                        {#if pictures.routeIds}
+                                            {@const points = routePolylinePoints(pictures.routeIds)}
+                                            <polyline {points} fill="none" stroke={glowColor} stroke-width="22" stroke-linecap="round" stroke-linejoin="round" filter="url(#{`rv-history-glow-${entry.id}`})" />
+                                            <polyline {points} fill="none" stroke="#111" stroke-width="9" stroke-linecap="round" stroke-linejoin="round" opacity="0.8" />
+                                            <polyline {points} fill="none" stroke={glowColor} stroke-width="5" stroke-linecap="round" stroke-linejoin="round" />
+                                        {/if}
                                         {#each pictures.rings as point, ringIndex (ringIndex)}
-                                            <circle cx={point.x} cy={point.y} r="30" fill="none" stroke="#111" stroke-width="10" opacity="0.8" />
-                                            <circle cx={point.x} cy={point.y} r="30" fill="none" stroke="#ffd166" stroke-width="5" />
+                                            <circle cx={point.x} cy={point.y} r="30" fill="none" stroke={glowColor} stroke-width="18" filter="url(#{`rv-history-glow-${entry.id}`})" />
+                                            <circle cx={point.x} cy={point.y} r="30" fill="none" stroke={glowColor} stroke-width="10" filter="url(#{`rv-history-glow-${entry.id}`})" />
                                         {/each}
                                     </svg>
                                 {/if}
