@@ -453,7 +453,7 @@
                     const cell = gridCellPosition(after.weaponLevel, after.toolLevel)
                     result.zoom = around([cell], 220)
                     result.rings = [cell]
-                    result.ringRadius = 20
+                    result.ringRadius = 14
                 } else {
                     result.zoom = { x: GridRegion.x, y: GridRegion.y, width: GridRegion.width, height: GridRegion.height }
                 }
