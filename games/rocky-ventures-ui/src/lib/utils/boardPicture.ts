@@ -17,7 +17,9 @@ import { gridCellPosition } from '$lib/utils/trackLayout.js'
 // instead of the board as it is now.
 export type BoardPicture = {
     track: { boxId: string; color: string }[]
-    mines: { x: number; y: number; imageUrl?: string; ringColor?: string; ownerColor?: string }[]
+    mines: { nodeId: string; x: number; y: number; imageUrl?: string; ringColor?: string; ownerColor?: string }[]
+    // Scourges on the board, by id, with the region each is in.
+    scourges: Record<string, string>
     discs: { x: number; y: number; color: string }[]
 }
 
@@ -41,6 +43,7 @@ export function boardPicture(state: HydratedRockyVenturesGameState, colorOf: (pl
               ? mineTokenImageUrl(site.token)
               : mineTokenBackImageUrl(OreKind.Gold, node.kind === NodeKind.MineA ? MineTier.A : MineTier.B)
         mines.push({
+            nodeId: node.id,
             x: node.x,
             y: node.y,
             imageUrl,
@@ -62,5 +65,9 @@ export function boardPicture(state: HydratedRockyVenturesGameState, colorOf: (pl
         const offset = count > 1 ? index - (count - 1) / 2 : 0
         return { x: cell.x + offset * 9, y: cell.y - offset * 9 * 0.6, color: piece.color }
     })
-    return { track, mines, discs }
+    const scourges: Record<string, string> = {}
+    for (const [region, list] of Object.entries(state.board.scourgesByRegion)) {
+        for (const scourge of list ?? []) scourges[scourge.scourgeId] = region
+    }
+    return { track, mines, discs, scourges }
 }

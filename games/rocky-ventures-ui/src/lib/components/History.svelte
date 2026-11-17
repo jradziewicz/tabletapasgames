@@ -346,6 +346,14 @@
         cards: string[]
         tokens: { kind: WeaponTokenKind; picked: boolean }[]
         logo?: string
+        // A mine token that turned up during the step (e.g. the silver mine after a gold extract).
+        drewUrl?: string
+        // The sale breakdown for a delivery, like the Live play viewer: price, expenses, profit.
+        lines?: { label: string; amount: number }[]
+        credit?: string
+        creditLogo?: string
+        // Scourges that came onto the board during the step.
+        entered: { url?: string; region: string }[]
         zoom?: Zoom
         rings: { x: number; y: number }[]
         routeIds?: string[]
@@ -385,7 +393,15 @@
     function visual(entry: Entry): Visual {
         const action = entry.actions[0] as unknown as Record<string, unknown>
         const playerId = String(action['playerId'])
-        const result: Visual = { cards: [], tokens: [], rings: [] }
+        const result: Visual = { cards: [], tokens: [], rings: [], entered: [] }
+        // Scourges that came onto the board during this step, from any action.
+        if (entry.before && entry.after) {
+            for (const [scourgeId, region] of Object.entries(entry.after.picture.scourges)) {
+                if (!(scourgeId in entry.before.picture.scourges)) {
+                    result.entered.push({ url: scourgeImageUrl(scourgeId), region: RegionNames[region as RegionId] ?? region })
+                }
+            }
+        }
         const events = eventsFor(entry)
         switch (action['type']) {
             case ActionType.MovePawn: {
@@ -426,13 +442,34 @@
                 const detail = Object.fromEntries((extract?.detail ?? '').split(';').map((pair) => pair.split('=') as [string, string]))
                 result.zoom = around([...nodePoints(action['nodeId']), ...nodePoints(detail['city'])])
                 result.rings = nodePoints(action['nodeId'])
+                if (extract) {
+                    const oreCount = Number(detail['ore'] ?? 0)
+                    const sale = Number(detail['sale'] ?? 0)
+                    const bonus = events
+                        .filter((event) => event.kind === StatKind.Cash && event.source === 'agreement' && event.playerId === playerId)
+                        .reduce((sum, event) => sum + event.amount, 0)
+                    const price = sale + bonus
+                    const ore = extract.source === 'silver' ? 'Silver' : 'Gold'
+                    result.lines = [
+                        { label: `${ore} price (${oreCount} × $${oreCount ? Math.round(sale / oreCount) : 0}${bonus ? ` + $${bonus} agreement` : ''})`, amount: price },
+                        { label: ore === 'Gold' ? 'Expenses (transport & security)' : 'Expenses (dragon)', amount: -(price - extract.amount) },
+                        { label: 'Profit', amount: extract.amount }
+                    ]
+                }
+                if (typeof action['creditCompanyId'] === 'string') {
+                    result.credit = `Delivery credited to ${CompanyNames[action['creditCompanyId'] as CompanyId] ?? ''}`
+                }
                 // The delivery route, recorded with the delivery or chosen by the player.
                 const routeIds = detail['route'] ? detail['route'].split(',') : (action['routeNodeIds'] as string[] | undefined)
                 if (routeIds && routeIds.length > 1) {
                     result.routeIds = routeIds
                     result.zoom = around(routeIds.flatMap((nodeId) => nodePoints(nodeId)))
                 }
-                result.logo = typeof action['creditCompanyId'] === 'string' ? companyLogoUrl(action['creditCompanyId'] as CompanyId) : undefined
+                result.creditLogo = typeof action['creditCompanyId'] === 'string' ? companyLogoUrl(action['creditCompanyId'] as CompanyId) : undefined
+                // The token that turned up on the mine once its ore was taken.
+                const mineBefore = entry.before?.picture.mines.find((mine) => mine.nodeId === action['nodeId'])
+                const mineAfter = entry.after?.picture.mines.find((mine) => mine.nodeId === action['nodeId'])
+                if (mineAfter?.imageUrl && mineAfter.imageUrl !== mineBefore?.imageUrl) result.drewUrl = mineAfter.imageUrl
                 break
             }
             case ActionType.Hunt:
@@ -624,6 +661,32 @@
                                         {/each}
                                     </svg>
                                 {/if}
+                                {#if pictures.lines}
+                                    <div class="grid w-full max-w-xs grid-cols-[auto_auto] gap-x-4 text-xs text-[#e8d9b8]">
+                                        {#each pictures.lines as line (line.label)}
+                                            <span class={line.label === 'Profit' ? 'font-bold text-[#ffd166]' : ''}>{line.label}</span>
+                                            <span class="text-right font-mono {line.amount < 0 ? 'text-[#ff8a7a]' : line.label === 'Profit' ? 'font-bold text-[#ffd166]' : ''}">{line.amount < 0 ? `-$${-line.amount}` : `$${line.amount}`}</span>
+                                        {/each}
+                                    </div>
+                                {/if}
+                                {#if pictures.credit}
+                                    <div class="flex items-center gap-2 text-sm text-[#e8d9b8]">
+                                        {#if pictures.creditLogo}<img src={pictures.creditLogo} alt="" class="h-10 w-auto" draggable="false" />{/if}
+                                        <span>{pictures.credit}</span>
+                                    </div>
+                                {/if}
+                                {#if pictures.drewUrl}
+                                    <div class="flex items-center gap-2 text-sm text-[#e8d9b8]">
+                                        <span>A new mine token turned up:</span>
+                                        <img src={pictures.drewUrl} alt="new mine token" class="h-12 w-12" draggable="false" />
+                                    </div>
+                                {/if}
+                                {#each pictures.entered as scourge, scourgeIndex (scourgeIndex)}
+                                    <div class="flex flex-col gap-1">
+                                        <div class="text-sm text-[#e8d9b8]">A scourge entered {scourge.region}</div>
+                                        {#if scourge.url}<img src={scourge.url} alt="scourge" class="h-56 max-w-full w-auto rounded" draggable="false" />{/if}
+                                    </div>
+                                {/each}
                             </div>
                         {/each}
                     </div>
