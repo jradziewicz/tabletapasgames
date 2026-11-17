@@ -1,4 +1,6 @@
 import { assertExists, GameResult, GameStatus, type Game, type Player } from '@tabletop/common'
+import { sha256 } from '@noble/hashes/sha2.js'
+import { bytesToHex, utf8ToBytes } from '@noble/hashes/utils.js'
 
 // Builds the "Post to BG Stats" link documented at
 // https://www.bgstatsapp.com/support/push-plays-to-bg-stats-from-other-apps-or-websites/
@@ -44,6 +46,12 @@ type BgStatsPlay = {
         noPoints: boolean
     }
     players: BgStatsPlayer[]
+}
+
+// A Game's ID opens the Game and its chat, so BG Stats gets a stable stand-in it can match
+// a re-exported play by, not the ID itself.
+export function bgStatsPlayId(gameId: string): string {
+    return bytesToHex(sha256(utf8ToBytes(`bgstats:${gameId}`))).slice(0, 32)
 }
 
 // Games whose scores only mark the winner (1/0) have no real scores to show or export.
@@ -92,7 +100,7 @@ function bgStatsPlayer(
 ): BgStatsPlayer {
     return {
         name: player.name,
-        sourcePlayerId: player.userId ?? `${game.id}:${player.id}`,
+        sourcePlayerId: player.userId ?? `${bgStatsPlayId(game.id)}:${player.id}`,
         winner: game.winningPlayerIds.includes(player.id),
         // The site doesn't record who went first across titles.
         startPlayer: false,
@@ -108,7 +116,7 @@ export function bgStatsPlay(game: Game, titleName: string): BgStatsPlay {
     const finishedAt = new Date(game.finishedAt)
     return {
         sourceName: BG_STATS_SOURCE_NAME,
-        sourcePlayId: game.id,
+        sourcePlayId: bgStatsPlayId(game.id),
         playDate: bgStatsDate(finishedAt),
         durationMin: bgStatsDurationMin(game, finishedAt),
         location: BG_STATS_SOURCE_NAME,
