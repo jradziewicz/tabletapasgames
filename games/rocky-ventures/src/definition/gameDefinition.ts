@@ -29,8 +29,8 @@ export const Definition: GameDefinition<RockyVenturesGameState, HydratedRockyVen
             defaultPlayerCount: 4,
             version: GAME_VERSION,
             beta: true,
-            // Alpha testers only (assigned on the /admin Users tab) until launch
-            visibility: GameVisibility.Alpha
+            // Beta testers only (assigned on the /admin Users tab) until launch (Justin, 2026-11-17)
+            visibility: GameVisibility.Beta
         },
         configurator: new RockyVenturesConfigurator(),
         preferences: RockyVenturesPreferenceDefinition
