@@ -1076,66 +1076,78 @@
             {/each}
         </div>
     {:else if gameState.machineState === MachineState.PointBuy && pointBuyCard}
-        <div class="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span class="font-semibold">{feastName(pointBuyCard.era)}: buy victory points.</span>
-            <span class="text-xs text-[#c9a961]">
-                {`$${pointBuyCard.pointBuyCost}`} for {pointBuyCard.pointBuyVictoryPoints} VP, any number of times. You may first cash in one share (it leaves the game).
-            </span>
-        </div>
-        {#if player.shares.length > 0}
-            <div class="mb-2 flex flex-wrap items-center gap-2">
-                <span class="text-xs text-[#c9a961]">Cash in a share:</span>
-                {#each player.shares as share (`${share.companyId}-${share.shareIndex}`)}
-                    {@const company = gameState.getCompany(share.companyId)}
-                    {@const url = shareImageUrl(share.companyId, share.shareIndex, company.sharesFlipped)}
-                    {@const selected =
-                        gameSession.pointBuyConvertShare?.companyId === share.companyId &&
-                        gameSession.pointBuyConvertShare?.shareIndex === share.shareIndex}
+        {@const feastUrl = gameState.pointBuy?.cardId ? cardImageUrl(gameState.pointBuy.cardId) : undefined}
+        {@const cost = pointBuyCard.pointBuyCost}
+        {@const vpEach = pointBuyCard.pointBuyVictoryPoints}
+        {@const moneyAfter = player.money + convertCash - bundles * cost}
+        <!-- Feast point buy: the Feast card, an optional share to cash in, and a VP stepper -->
+        <div class="point-buy flex flex-wrap items-start gap-4 rounded-xl border border-[#8a6d3b] p-3">
+            {#if feastUrl}
+                <img src={feastUrl} alt={feastName(pointBuyCard.era)} class="h-44 w-auto rounded-lg shadow-lg" draggable="false" />
+            {/if}
+            <div class="flex min-w-[16rem] flex-1 flex-col gap-3">
+                <div>
+                    <div class="text-[11px] uppercase tracking-[0.18em] text-[#c9a961]">{feastName(pointBuyCard.era)}</div>
+                    <div class="text-xl font-semibold text-[#f8ecd2]" style="font-family: Georgia, 'Times New Roman', serif;">Buy victory points</div>
+                    <div class="mt-1 inline-flex items-center gap-2 rounded-full border border-[#c9a961] bg-[#3a2a17] px-3 py-0.5 text-sm font-semibold text-[#ffd166]">
+                        ${cost} <span class="text-[#c9a961]">→</span> {vpEach} VP
+                        <span class="text-xs font-normal text-[#c9a961]">as many times as you like</span>
+                    </div>
+                </div>
+
+                {#if player.shares.length > 0}
+                    <div>
+                        <div class="mb-1 text-xs text-[#c9a961]">You may cash in one share first. It leaves the game.</div>
+                        <div class="flex flex-wrap gap-2">
+                            {#each player.shares as share (`${share.companyId}-${share.shareIndex}`)}
+                                {@const company = gameState.getCompany(share.companyId)}
+                                {@const url = shareImageUrl(share.companyId, share.shareIndex, company.sharesFlipped)}
+                                {@const selected =
+                                    gameSession.pointBuyConvertShare?.companyId === share.companyId &&
+                                    gameSession.pointBuyConvertShare?.shareIndex === share.shareIndex}
+                                <button
+                                    type="button"
+                                    onclick={() => gameSession.toggleConvertShare({ companyId: share.companyId, shareIndex: share.shareIndex })}
+                                    class="share-option flex flex-col items-center gap-1 rounded-lg p-1"
+                                    class:selected
+                                >
+                                    {#if url}
+                                        <img src={url} alt="{CompanyNames[share.companyId]} share" class="block h-[90px] w-auto rounded shadow-md" draggable="false" />
+                                    {/if}
+                                    <span class="text-[11px] font-semibold {selected ? 'text-[#ffd166]' : 'text-[#e8d9b8]'}">
+                                        {CompanyAbbreviations[share.companyId]} #{share.shareIndex + 1} · +${company.multiplierForShare(share.shareIndex) * company.value}
+                                    </span>
+                                </button>
+                            {/each}
+                        </div>
+                    </div>
+                {/if}
+
+                <div class="flex flex-wrap items-center gap-4">
+                    <div class="flex items-center gap-3">
+                        <button type="button" disabled={bundles <= 0} onclick={() => gameSession.setPointBuyBundles(bundles - 1)} class="stepper" aria-label="Buy fewer">−</button>
+                        <div class="min-w-[6.5rem] text-center">
+                            <div class="text-3xl font-bold leading-none text-[#ffd166]">{bundles * vpEach} VP</div>
+                            <div class="mt-1 text-xs text-[#c9a961]">{bundles} × for ${bundles * cost}</div>
+                        </div>
+                        <button type="button" disabled={bundles >= maxBundles} onclick={() => gameSession.setPointBuyBundles(bundles + 1)} class="stepper" aria-label="Buy more">+</button>
+                    </div>
+                    <div class="flex flex-col gap-0.5 text-sm">
+                        <span class="text-[#c9a961]">Money <span class="font-semibold text-[#f1e6cf]">${player.money}</span>{#if convertCash} <span class="text-[#8fd18f]">+${convertCash}</span>{/if} → <span class="font-semibold {moneyAfter < player.money ? 'text-[#f1e6cf]' : 'text-[#8fd18f]'}">${moneyAfter}</span></span>
+                        <span class="text-xs text-[#a88d5a]">Up to {maxBundles * vpEach} VP with what you have</span>
+                    </div>
                     <button
                         type="button"
-                        onclick={() => gameSession.toggleConvertShare({ companyId: share.companyId, shareIndex: share.shareIndex })}
-                        class="flex flex-col items-center gap-1 rounded border-2 p-1"
-                        style="border-color: {selected ? '#ffd166' : 'transparent'};"
+                        onclick={() => {
+                            gameSession.setPointBuyBundles(bundles)
+                            gameSession.submitPointBuy()
+                        }}
+                        class="rv-btn rv-primary ms-auto px-5"
                     >
-                        {#if url}
-                            <img src={url} alt="{CompanyNames[share.companyId]} share" class="block h-[106px] w-auto rounded shadow-md" draggable="false" />
-                        {/if}
-                        <span class="text-[11px] font-semibold">
-                            {CompanyAbbreviations[share.companyId]} #{share.shareIndex + 1} → {`$${company.multiplierForShare(share.shareIndex) * company.value}`}
-                        </span>
+                        {bundles === 0 && !gameSession.pointBuyConvertShare ? 'Pass' : bundles === 0 ? 'Cash in share' : `Buy ${bundles * vpEach} VP`}
                     </button>
-                {/each}
+                </div>
             </div>
-        {/if}
-        <div class="flex flex-wrap items-center gap-2">
-            <button
-                type="button"
-                disabled={bundles <= 0}
-                onclick={() => gameSession.setPointBuyBundles(bundles - 1)}
-                class="rv-quiet px-2 py-0.5"
-            >−</button>
-            <span class="min-w-[9rem] text-center">
-                {bundles} × {pointBuyCard.pointBuyVictoryPoints} VP for {`$${bundles * pointBuyCard.pointBuyCost}`}
-            </span>
-            <button
-                type="button"
-                disabled={bundles >= maxBundles}
-                onclick={() => gameSession.setPointBuyBundles(bundles + 1)}
-                class="rv-quiet px-2 py-0.5"
-            >+</button>
-            <span class="text-xs text-[#c9a961]">
-                Money after: {`$${player.money + convertCash - bundles * pointBuyCard.pointBuyCost}`}
-            </span>
-            <button
-                type="button"
-                onclick={() => {
-                    gameSession.setPointBuyBundles(bundles)
-                    gameSession.submitPointBuy()
-                }}
-                class="rv-btn rv-primary"
-            >
-                {bundles === 0 && !gameSession.pointBuyConvertShare ? 'Pass' : 'Confirm'}
-            </button>
         </div>
     {/if}
 </div>
@@ -1173,5 +1185,43 @@
         transform: translateY(-2px);
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45);
         filter: brightness(1.12);
+    }
+
+    .point-buy {
+        background: linear-gradient(180deg, rgba(58, 42, 23, 0.92), rgba(30, 21, 12, 0.92));
+        box-shadow: inset 0 1px 0 rgba(255, 209, 102, 0.15), 0 4px 14px rgba(0, 0, 0, 0.35);
+    }
+    .share-option {
+        border: 2px solid transparent;
+        transition: transform 0.15s ease, border-color 0.15s ease;
+    }
+    .share-option:hover {
+        transform: translateY(-3px);
+    }
+    .share-option.selected {
+        border-color: #ffd166;
+        box-shadow: 0 0 12px rgba(255, 209, 102, 0.45);
+    }
+    .stepper {
+        width: 2.4rem;
+        height: 2.4rem;
+        border-radius: 9999px;
+        border: 2px solid #c9a961;
+        background: #2a1d10;
+        color: #ffd166;
+        font-size: 1.4rem;
+        font-weight: 700;
+        line-height: 1;
+        transition: background 0.15s ease, transform 0.1s ease;
+    }
+    .stepper:not(:disabled):hover {
+        background: #4a3418;
+    }
+    .stepper:not(:disabled):active {
+        transform: scale(0.94);
+    }
+    .stepper:disabled {
+        opacity: 0.35;
+        cursor: default;
     }
 </style>
