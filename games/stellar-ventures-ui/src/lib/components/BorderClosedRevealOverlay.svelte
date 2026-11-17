@@ -92,8 +92,19 @@
         }
     })
 
+    // Continue hides the dialog straight away, before any state is saved or re-rendered.
+    // Players on iPhone kept seeing the dialog stay up after a tap that had already been saved
+    // to their account, so the dismissal no longer depends on the page re-rendering in time.
+    // A newly pending Border shows the dialog again.
+    let overlayElement: HTMLDivElement | undefined = $state()
+    $effect(() => {
+        void pending?.border.level
+        overlayElement?.style.removeProperty('display')
+    })
+
     function dismiss() {
         const level = pending?.border.level
+        overlayElement?.style.setProperty('display', 'none')
         if (level === undefined) {
             return
         }
@@ -104,7 +115,7 @@
 </script>
 
 {#if pending}
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+    <div bind:this={overlayElement} class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
         <div
             class="flex w-full max-w-sm flex-col items-center gap-4 rounded-xl border border-[#3a4166] bg-[#0b0e1a] p-6 text-center text-[#e6e9f5] shadow-2xl"
         >

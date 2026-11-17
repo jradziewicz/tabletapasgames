@@ -45,7 +45,16 @@
     )
     const taxBoxIncrease = $derived(pending ? pending.taxBoxAfter - pending.taxBoxBefore : 0)
 
+    // Continue hides the dialog straight away, as in BorderClosedRevealOverlay.svelte; a newly
+    // pending payment shows it again.
+    let overlayElement: HTMLDivElement | undefined = $state()
+    $effect(() => {
+        void pending?.id
+        overlayElement?.style.removeProperty('display')
+    })
+
     function dismiss() {
+        overlayElement?.style.setProperty('display', 'none')
         // Read the id before writing seenId: pending recomputes to undefined the moment seenId
         // changes, so reading pending.id afterward threw and the account copy was never saved.
         const id = pending?.id
@@ -56,7 +65,7 @@
 </script>
 
 {#if pending}
-    <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
+    <div bind:this={overlayElement} class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
         <div
             class="flex max-h-full w-full max-w-md flex-col gap-3 overflow-y-auto rounded-xl border border-[#3a4166] bg-[#0b0e1a] p-4 text-[#e6e9f5] shadow-2xl"
         >
@@ -131,6 +140,7 @@
             <button
                 type="button"
                 onclick={dismiss}
+                style="touch-action: manipulation;"
                 class="mx-auto rounded-lg bg-[#2f6fed] px-4 py-2 text-sm font-semibold text-white transition hover:brightness-110"
             >
                 Continue
