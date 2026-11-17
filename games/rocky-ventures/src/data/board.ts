@@ -202,7 +202,7 @@ export const BoardEdges: BoardEdge[] = [
     edge('kirriemuir', 'wamphray', 4),
     edge('kirriemuir', DornochDurNodeId, { dornochDur: 6 }),
     edge('kirriemuir', 'strathfillan', 3),
-    edge('strathfillan', DornochDurNodeId, { dornochDur: 1 }),
+    edge('strathfillan', DornochDurNodeId, { dornochDur: 7 }),
     edge('strathfillan', 'glenisla', 2),
     edge('wamphray', 'westray', 4),
     edge('westray', 'tain', 2),

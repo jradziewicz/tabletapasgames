@@ -357,6 +357,11 @@
         </filter>
     </defs>
     <image href={boardArt} x="0" y="0" width={BoardArtSize.width} height={BoardArtSize.height} />
+    <!-- The art prints $1 on the Strathfillan to Dornoch-Dur link; it costs $7 (Justin, 2026-11-17). -->
+    <g transform="translate(495.5 703.1)" pointer-events="none">
+        <rect x="-13.5" y="-13.5" width="27" height="27" rx="2" transform="rotate(32)" fill="#ecc96a" stroke="#1d2433" stroke-width="2.6" />
+        <text y="7.6" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="21" fill="#1d2433">7</text>
+    </g>
 
     <!-- Company boards: share stacks, value-track cubes, delivered mines -->
     {#each CompanyIds as companyId (companyId)}
