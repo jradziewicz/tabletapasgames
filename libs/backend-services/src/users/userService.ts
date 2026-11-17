@@ -169,9 +169,7 @@ export class UserService {
         if (createdUser.email && !createdUser.emailVerified) {
             await this.sendVerificationEmail(createdUser)
         }
-        if (createdUser.username) {
-            this.usernames.push(createdUser.username)
-        }
+        this.addListedUsernameIfActive(createdUser)
         return createdUser
     }
 
@@ -262,10 +260,8 @@ export class UserService {
         }
 
         if (updatedFields.includes('username')) {
-            remove(this.usernames, originalUser.username)
-            if (updatedUser.username) {
-                this.usernames.push(updatedUser.username)
-            }
+            this.removeListedUsername(originalUser.username)
+            this.addListedUsernameIfActive(updatedUser)
         }
 
         return updatedUser
@@ -456,7 +452,7 @@ export class UserService {
                 }
             }
         )
-        remove(this.usernames, original.username)
+        this.removeListedUsername(original.username)
         return [tombstone, original]
     }
 
@@ -543,6 +539,7 @@ export class UserService {
             },
             participant: this.tokenService.consumeChallenge(code, claim)
         })
+        this.addListedUsernameIfActive(updatedUser)
         return updatedUser
     }
 
@@ -600,7 +597,8 @@ export class UserService {
             const user = await this.userStore.findByEmail(trimmed)
             return user ? [user] : []
         }
-        const usernames = await this.searchUsernames(trimmed)
+        // Administrators find every account, not only the Active ones players are offered.
+        const usernames = this.bestUsernameMatches(await this.userStore.findAllUsernames(), trimmed)
         const users = await Promise.all(
             usernames.map((username) => this.userStore.findByUsername(username))
         )
@@ -619,13 +617,18 @@ export class UserService {
         return updatedUser
     }
 
+    // Players are offered only Active accounts.
     async searchUsernames(query: string): Promise<string[]> {
         await this.initializeUsernames()
-        const [indexes, info, order] = this.uFuzzy.search(this.usernames, query.trim())
+        return this.bestUsernameMatches(this.usernames, query.trim())
+    }
+
+    private bestUsernameMatches(usernames: string[], query: string): string[] {
+        const [indexes, info, order] = this.uFuzzy.search(usernames, query)
         if (info && order) {
-            return order.map((index) => this.usernames[info.idx[index]]).slice(0, 10)
+            return order.map((index) => usernames[info.idx[index]]).slice(0, 10)
         } else {
-            return indexes?.map((index) => this.usernames[index]).slice(0, 10) ?? []
+            return indexes?.map((index) => usernames[index]).slice(0, 10) ?? []
         }
     }
 
@@ -645,7 +648,7 @@ export class UserService {
             return
         }
         this.usernamesLoading ??= this.userStore
-            .findAllUsernames()
+            .findActiveUsernames()
             .then((usernames) => {
                 this.usernames = usernames
                 this.usernamesLoadedAt = Date.now()
@@ -654,5 +657,15 @@ export class UserService {
                 this.usernamesLoading = undefined
             })
         await this.usernamesLoading
+    }
+
+    private addListedUsernameIfActive(user: User): void {
+        if (user.status !== UserStatus.Active || !user.username) return
+        const listed = user.username.trim().toLowerCase()
+        if (!this.usernames.includes(listed)) this.usernames.push(listed)
+    }
+
+    private removeListedUsername(username: string | undefined): void {
+        if (username) remove(this.usernames, username.trim().toLowerCase())
     }
 }

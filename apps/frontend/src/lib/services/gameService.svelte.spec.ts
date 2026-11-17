@@ -8,12 +8,15 @@ import {
 } from '@tabletop/frontend-components'
 import {
     GameNotificationAction,
+    GameResult,
     GameStatus,
+    GameStorage,
     NotificationCategory,
     PlayerStatus,
     Role,
     UserStatus,
     type Game,
+    type GameState,
     type User
 } from '@tabletop/common'
 import { GameService } from './gameService.svelte.js'
@@ -23,8 +26,9 @@ vi.mock('$env/static/public', () => ({ PUBLIC_VAPID_KEY: '' }))
 vi.mock('$app/navigation', () => ({ goto: vi.fn(), invalidateAll: vi.fn() }))
 
 const user: User = { id: 'user', status: UserStatus.Active, roles: [Role.User], externalIds: [] }
+const later = new Date('2026-10-02')
 
-function game(id: string): Game {
+function game(id: string, overrides: Partial<Game> = {}): Game {
     return {
         id,
         name: id,
@@ -46,7 +50,8 @@ function game(id: string): Game {
                 isHuman: true
             },
             { id: 'p2', userId: 'user', name: 'User', status: PlayerStatus.Reserved, isHuman: true }
-        ]
+        ],
+        ...overrides
     }
 }
 
@@ -115,4 +120,63 @@ it('fetches once when nothing changes during the load', async () => {
     await service.loadGames()
     expect(getMyGames).toHaveBeenCalledTimes(1)
     expect(service.waitingGames.map((waiting) => waiting.id)).toEqual(['only'])
+})
+
+function hotseat(id: string, overrides: Partial<Game> = {}): Game {
+    return game(id, {
+        ownerId: 'user',
+        status: GameStatus.Started,
+        hotseat: true,
+        storage: GameStorage.Local,
+        activePlayerIds: ['p1'],
+        updatedAt: later,
+        players: [
+            { id: 'p1', userId: 'user', name: 'One', status: PlayerStatus.Joined, isHuman: true },
+            { id: 'p2', userId: 'user', name: 'Two', status: PlayerStatus.Joined, isHuman: true }
+        ],
+        ...overrides
+    })
+}
+
+function finalState(gameId: string): GameState {
+    return {
+        id: `${gameId}-state`,
+        gameId,
+        activePlayerIds: [],
+        winningPlayerIds: ['p2'],
+        actionCount: 22,
+        result: GameResult.Win
+    } as Partial<GameState> as GameState
+}
+
+it('lists a hotseat game saved as started after it ended as finished', async () => {
+    const { service, getMyGames } = fixture()
+    getMyGames.mockResolvedValueOnce([])
+    const ended = hotseat('ended', { activePlayerIds: [] })
+    service.localGameStore.findGamesForUser = async () => [ended, hotseat('playing')]
+    service.localGameStore.loadGameState = async (gameId) =>
+        gameId === 'ended' ? finalState('ended') : undefined
+    await service.loadGames()
+
+    expect(service.activeGames.map((active) => active.id)).toEqual(['playing'])
+    expect(service.finishedLocalGames).toMatchObject([
+        {
+            id: 'ended',
+            status: GameStatus.Finished,
+            result: GameResult.Win,
+            winningPlayerIds: ['p2'],
+            finishedAt: later
+        }
+    ])
+})
+
+it('does not read the state of a hotseat game with a player to move', async () => {
+    const { service, getMyGames } = fixture()
+    getMyGames.mockResolvedValueOnce([])
+    service.localGameStore.findGamesForUser = async () => [hotseat('playing')]
+    const loadGameState = vi.fn(async () => undefined)
+    service.localGameStore.loadGameState = loadGameState
+    await service.loadGames()
+
+    expect(loadGameState).not.toHaveBeenCalled()
 })

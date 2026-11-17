@@ -7,7 +7,13 @@ import {
     type Game,
     type Player
 } from '@tabletop/common'
-import { bgStatsPlay, bgStatsPlayUrl, canPostToBgStats, meaningfulFinalScores } from './bgStats'
+import {
+    bgStatsPlay,
+    bgStatsPlayId,
+    bgStatsPlayUrl,
+    canPostToBgStats,
+    meaningfulFinalScores
+} from './bgStats'
 
 function player(id: string, overrides: Partial<Player> = {}): Player {
     return { id, name: id, status: PlayerStatus.Joined, isHuman: true, ...overrides }
@@ -72,7 +78,7 @@ describe('bgStatsPlay', () => {
     it('describes a scored play with its BGG id', () => {
         expect(bgStatsPlay(finishedGame(), 'Stellar Ventures')).toEqual({
             sourceName: 'TableTapas Games',
-            sourcePlayId: 'g1',
+            sourcePlayId: bgStatsPlayId('g1'),
             playDate: '2026-10-23 19:16:58',
             durationMin: 46,
             location: 'TableTapas Games',
@@ -137,7 +143,21 @@ describe('bgStatsPlay', () => {
 
     it('identifies players without an account by game and seat', () => {
         const game = finishedGame({ players: [player('p1', { userId: 'u1' }), player('p2')] })
-        expect(bgStatsPlay(game, 'Stellar Ventures').players[1].sourcePlayerId).toBe('g1:p2')
+        expect(bgStatsPlay(game, 'Stellar Ventures').players[1].sourcePlayerId).toBe(
+            `${bgStatsPlayId('g1')}:p2`
+        )
+    })
+
+    it('identifies a play without sending the game ID, which opens the game', () => {
+        const game = finishedGame({
+            id: 'secret-game-id',
+            players: [player('p1', { userId: 'u1' }), player('p2')]
+        })
+        const url = bgStatsPlayUrl(game, 'Stellar Ventures')
+        expect(url).not.toContain('secret-game-id')
+        expect(bgStatsPlayId('secret-game-id')).toMatch(/^[0-9a-f]{32}$/)
+        expect(bgStatsPlayId('secret-game-id')).toBe(bgStatsPlayId('secret-game-id'))
+        expect(bgStatsPlayId('secret-game-id')).not.toBe(bgStatsPlayId('other-game-id'))
     })
 })
 

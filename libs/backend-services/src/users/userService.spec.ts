@@ -323,3 +323,125 @@ describe('Password Credential changes', () => {
         expect(updatePassword).not.toHaveBeenCalled()
     })
 })
+
+describe('username search', () => {
+    function searchFixture() {
+        const store: UserStore = Object.create(null)
+        store.findActiveUsernames = vi.fn(async () => ['alice', 'alina'])
+        store.findAllUsernames = vi.fn(async () => ['alice', 'alina', 'alincomplete'])
+        store.findByUsername = vi.fn(async (username: string) => ({ ...user, username }))
+        store.updateUser = vi.fn<UserStore['updateUser']>(async ({ fields }) => {
+            const updated = { ...user, username: 'alina', ...fields }
+            return [updated, Object.keys(fields), { ...user, username: 'alina' }]
+        })
+        return {
+            store,
+            service: new UserService(store, TokenService.prototype, LocalTaskService.prototype)
+        }
+    }
+
+    const establishSession = () =>
+        new SessionService(new MemorySessionStore()).establish(user, 'authentication-method')
+
+    // The first search loads the list, and that load would overwrite anything added before it.
+    async function loadListedUsernames(service: UserService) {
+        await service.searchUsernames('any')
+    }
+
+    it('offers players only Active accounts', async () => {
+        const { service } = searchFixture()
+        expect(await service.searchUsernames('ali')).toEqual(
+            expect.not.arrayContaining(['alincomplete'])
+        )
+    })
+
+    it('lets an administrator find an account that is not Active', async () => {
+        const { service } = searchFixture()
+        const found = await service.searchUsers('alinc')
+        expect(found.map((account) => account.username)).toEqual(['alincomplete'])
+    })
+
+    it('does not offer a new account until it is Active', async () => {
+        const { service, store } = searchFixture()
+        await loadListedUsernames(service)
+        store.createUser = vi.fn(async (created: User) => created)
+
+        await service.createUser(
+            { ...user, status: UserStatus.Incomplete, username: 'Newcomer' },
+            'a long enough password'
+        )
+
+        expect(await service.searchUsernames('newcomer')).toEqual([])
+    })
+
+    it('does not offer a username an Incomplete account chooses in onboarding', async () => {
+        const { service, store } = searchFixture()
+        await loadListedUsernames(service)
+        const incomplete = { ...user, status: UserStatus.Incomplete }
+        store.updateUser = vi.fn<UserStore['updateUser']>(async ({ fields }) => [
+            { ...incomplete, ...fields },
+            ['username'],
+            incomplete
+        ])
+
+        await service.updateUser(await establishSession(), { username: 'Newcomer' })
+
+        expect(await service.searchUsernames('newcomer')).toEqual([])
+    })
+
+    it('offers an account once verifying its email makes it Active', async () => {
+        const { service, store } = searchFixture()
+        await loadListedUsernames(service)
+        const account = {
+            ...user,
+            status: UserStatus.Incomplete,
+            username: 'Newcomer',
+            email: 'a@example.test'
+        }
+        store.updateUser = vi.fn<UserStore['updateUser']>(async () => [
+            { ...account, status: UserStatus.Active },
+            ['emailVerified', 'status'],
+            account
+        ])
+        const consume = vi
+            .spyOn(TokenService.prototype, 'consumeChallenge')
+            .mockReturnValue(async () => {})
+
+        await service.verifyEmail(account, 'code')
+        expect(await service.searchUsernames('newcomer')).toEqual(['newcomer'])
+
+        await service.verifyEmail(account, 'code')
+        expect(await service.searchUsernames('newcomer')).toEqual(['newcomer'])
+        consume.mockRestore()
+    })
+
+    it('offers an account once choosing a username makes it Active', async () => {
+        const { service, store } = searchFixture()
+        await loadListedUsernames(service)
+        const account = {
+            ...user,
+            status: UserStatus.Incomplete,
+            email: 'a@example.test',
+            emailVerified: true
+        }
+        store.updateUser = vi.fn<UserStore['updateUser']>(async () => [
+            { ...account, status: UserStatus.Active, username: 'Newcomer' },
+            ['username', 'status'],
+            account
+        ])
+
+        await service.updateUser(await establishSession(), { username: 'Newcomer' })
+
+        expect(await service.searchUsernames('newcomer')).toEqual(['newcomer'])
+    })
+
+    it('offers an Active account under its new name after it renames itself', async () => {
+        const { service } = searchFixture()
+        await loadListedUsernames(service)
+
+        await service.updateUser(await establishSession(), { username: 'Zelda' })
+
+        expect(await service.searchUsernames('zelda')).toEqual(['zelda'])
+        expect(await service.searchUsernames('alina')).toEqual([])
+    })
+})
