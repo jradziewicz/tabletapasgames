@@ -192,6 +192,23 @@ export class FirestoreUserStore implements UserStore, SiteStatsUserSource {
         }
     }
 
+    async findActiveUsernames(): Promise<string[]> {
+        try {
+            const snapshot = await this.users
+                .where('status', '==', UserStatus.Active)
+                .select('cleanUsername')
+                .get()
+            this.recordRead(snapshot.size)
+            return snapshot.docs.flatMap((doc) => {
+                const { cleanUsername } = doc.data()
+                return cleanUsername ? [cleanUsername] : []
+            })
+        } catch (error) {
+            this.handleError(error, 'active')
+            throw Error('unreachable')
+        }
+    }
+
     async findAllUsers(): Promise<User[]> {
         try {
             const snapshot = await measure('firestore.user.list', () => this.users.get())
