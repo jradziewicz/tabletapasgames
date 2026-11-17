@@ -26,7 +26,7 @@ describe('gem warnings', () => {
         const playerId = state.players[0]!.playerId
         expect(gemGainBlockedReason(state, playerId)).toBeUndefined()
         state.getPlayerState(playerId).gems = 3
-        expect(gemGainBlockedReason(state, playerId)).toBe('you already hold 3 gems')
+        expect(gemGainBlockedReason(state, playerId)).toBe('you already hold 3 gems, so the gem is lost and removed from the game')
         state.getPlayerState(playerId).gems = 2
         state.gemsSpent = GemSupplySize
         expect(gemGainBlockedReason(state, playerId)).toBe('there are no gems left in the supply')

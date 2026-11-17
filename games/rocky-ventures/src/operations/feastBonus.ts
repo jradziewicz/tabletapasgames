@@ -1,4 +1,3 @@
-import { StatKind } from '../model/stats.js'
 import { OreKind } from '../data/mineTokens.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import type { HydratedRockyVenturesPlayerState } from '../model/playerState.js'
@@ -16,16 +15,12 @@ export const FeastBuyerBonuses: Record<string, { points: number[]; measure: (sta
         measure: (state, player) =>
             player.shares.reduce((sum, share) => sum + state.getCompany(share.companyId).multiplierForShare(share.shareIndex), 0)
     },
-    // The Golden Table: gold mines claimed. Claims made before the ore was recorded were all gold,
-    // since a mine is only claimable while its revealed gold token is on it.
+    // The Golden Table: gold mines the player currently holds a claim on (Justin, 2026-11-17).
     [ThirdEraCardId]: {
         points: [5, 3, 2],
         measure: (state, player) =>
-            state.statEvents.filter(
-                (event) =>
-                    event.kind === StatKind.MineClaim &&
-                    event.playerId === player.playerId &&
-                    (event.source === undefined || event.source === OreKind.Gold)
+            Object.values(state.board.mines).filter(
+                (site) => site?.ownerPlayerId === player.playerId && site.token?.ore === OreKind.Gold
             ).length
     }
 }

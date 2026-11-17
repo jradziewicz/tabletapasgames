@@ -14,7 +14,9 @@ import {
 // Why a gem this player is about to earn would not actually be gained, if it wouldn't.
 export function gemGainBlockedReason(state: HydratedRockyVenturesGameState, playerId: string): string | undefined {
     if (state.getPlayerState(playerId).gems >= MaxGems) {
-        return `you already hold ${MaxGems} gems`
+        return state.gemsLost !== undefined
+            ? `you already hold ${MaxGems} gems, so the gem is lost and removed from the game`
+            : `you already hold ${MaxGems} gems`
     }
     if (gemSupplyLeft(state) <= 0) {
         return 'there are no gems left in the supply'

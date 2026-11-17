@@ -10,12 +10,19 @@ export const GemSupplySize = 15
 
 export function gemSupplyLeft(state: HydratedRockyVenturesGameState): number {
     const held = state.players.reduce((total, player) => total + player.gems, 0)
-    return Math.max(0, GemSupplySize - state.gemsSpent - held)
+    return Math.max(0, GemSupplySize - state.gemsSpent - held - (state.gemsLost ?? 0))
 }
 
 // Gives up to `amount` gems from the supply and returns how many were actually gained.
+// In newer games a gem that can't be taken because the player already holds 3 is lost: it leaves
+// the game instead of staying in the supply.
 export function gainGems(state: HydratedRockyVenturesGameState, playerId: string, amount: number): number {
-    return state.getPlayerState(playerId).addGems(Math.min(amount, gemSupplyLeft(state)))
+    const available = Math.min(amount, gemSupplyLeft(state))
+    const gained = state.getPlayerState(playerId).addGems(available)
+    if (state.gemsLost !== undefined && available > gained) {
+        state.gemsLost += available - gained
+    }
+    return gained
 }
 
 export type GemActionKind = 'repeat' | 'market' | 'swap' | 'movePawn'
@@ -75,6 +82,9 @@ export function reasonGemActionInvalid(
             return undefined
         }
         case 'movePawn': {
+            if (state.noGemPawnMove) {
+                return 'Moving the pawn with a gem is not part of this game'
+            }
             if (state.turnActionsTaken.length > 0 || state.turnOver) {
                 return 'The pawn cannot move after taking an action'
             }

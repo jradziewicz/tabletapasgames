@@ -86,7 +86,7 @@
             const name = feastName(index + 1)
             const bonus = state.feastBuyerBonus ? FeastBuyerBonuses[cardId] : undefined
             const bonusText = bonus
-                ? ` Buyer bonus: ${bonus.points.join('/')} VP for 1st/2nd/3rd in ${['tool level', 'share multipliers', 'gold mines claimed'][index]}.`
+                ? ` Buyer bonus: ${bonus.points.join('/')} VP for 1st/2nd/3rd in ${['tool level', 'share multipliers', 'gold mines you hold a claim on'][index]}.`
                 : ''
             return {
                 key: cardId,

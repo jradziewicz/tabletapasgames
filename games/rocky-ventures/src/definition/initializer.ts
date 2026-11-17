@@ -98,6 +98,8 @@ export class RockyVenturesGameInitializer
             feastBuyerBonus: true,
             delayedMarketRefill: true,
             negativeDeliveries: true,
+            noGemPawnMove: true,
+            gemsLost: 0,
             gemsSpent: 0,
             era: 1,
             turnActionsTaken: [],

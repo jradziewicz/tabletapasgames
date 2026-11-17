@@ -115,6 +115,8 @@ export const RockyVenturesGameState = Type.Evaluate(
             feastBuyerBonus: Type.Optional(Type.Boolean()),
             delayedMarketRefill: Type.Optional(Type.Boolean()),
             negativeDeliveries: Type.Optional(Type.Boolean()),
+            noGemPawnMove: Type.Optional(Type.Boolean()),
+            gemsLost: Type.Optional(Type.Number()),
             pendingMarketDraws: Type.Optional(Type.Number()),
             eraThreeTriggered: Type.Optional(Type.Boolean()),
             gemsSpent: Type.Number(),
@@ -186,6 +188,11 @@ export class HydratedRockyVenturesGameState
     declare delayedMarketRefill?: boolean
     // A delivery can pay out less than $0: the costs above the sale come out of the player's cash.
     declare negativeDeliveries?: boolean
+    // The 1-gem "move your pawn to any tableau card" action is out of the game (Justin, 2026-11-17).
+    declare noGemPawnMove?: boolean
+    // Gems a player would have gained while holding 3: they leave the game instead of staying in
+    // the supply (new games from 2026-11-17; undefined in older games, which keep them in the supply).
+    declare gemsLost?: number
     declare pendingMarketDraws?: number
     declare eraThreeTriggered?: boolean
     declare gemsSpent: number

@@ -65,7 +65,7 @@
             <img src={gemIcon} alt="gems" class="h-4 w-auto" />{player.gems}
         </span>
         {#if mode === undefined}
-            {#each launchers as launcher (launcher.kind)}
+            {#each launchers.filter((launcher) => !(launcher.kind === 'movePawn' && gameState.noGemPawnMove)) as launcher (launcher.kind)}
                 <button
                     type="button"
                     disabled={!launchable(launcher.kind)}
