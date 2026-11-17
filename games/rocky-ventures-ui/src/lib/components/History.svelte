@@ -28,7 +28,8 @@
     import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
     import { companyLogoUrl } from '$lib/utils/companyLogos.js'
     import { GridRegion, gridCellPosition } from '$lib/utils/trackLayout.js'
-    import boardArt from '$lib/images/board.jpg'
+    import { boardPicture, type BoardPicture } from '$lib/utils/boardPicture.js'
+    import BoardPictureLayer from './BoardPictureLayer.svelte'
     import { BoardArtSize } from '@tabletop/rocky-ventures'
 
     // Same shape as the other Board Together games' History (e.g. Kaivai): newest first on a
@@ -76,6 +77,8 @@
         tucked: Record<string, string[]>
         huntDrawn?: WeaponTokenKind[]
         statCount: number
+        // The map at this moment, so pictures stay as they were instead of following the live board.
+        picture: BoardPicture
     }
 
     function snapshot(state: HydratedRockyVenturesGameState): Snapshot {
@@ -103,7 +106,8 @@
             tableaus,
             tucked,
             huntDrawn: state.pendingHunt ? [...state.pendingHunt.drawn] : undefined,
-            statCount: state.statEvents.length
+            statCount: state.statEvents.length,
+            picture: boardPicture(state, (playerId) => gameSession.colors.getPlayerUiColor(playerId))
         }
     }
 
@@ -602,9 +606,12 @@
                                 {/if}
                                 {#if pictures.zoom}
                                     {@const glowColor = action.playerId ? gameSession.colors.getPlayerUiColor(action.playerId) : '#ffd166'}
+                                    {@const moment = action.type === ActionType.ExtractAndSell ? (entry.before ?? entry.after) : (entry.after ?? entry.before)}
                                     <svg viewBox="{pictures.zoom.x} {pictures.zoom.y} {pictures.zoom.width} {pictures.zoom.height}" class="block aspect-[4/3] w-full max-w-xs rounded border border-[#8a6d3b] bg-black" xmlns="http://www.w3.org/2000/svg">
-                                        <image href={boardArt} x="0" y="0" width={BoardArtSize.width} height={BoardArtSize.height} />
-                                        <use href="#rv-board-svg" />
+                                        <!-- The board as it was: right after the step, or for a delivery just before it (the mine still showing the gold taken) -->
+                                        {#if moment}
+                                            <BoardPictureLayer picture={moment.picture} />
+                                        {/if}
                             <defs><filter id={`rv-history-glow-${entry.id}`} x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="3" /></filter></defs>
                                         {#if pictures.routeIds}
                                             {@const points = routePolylinePoints(pictures.routeIds)}
