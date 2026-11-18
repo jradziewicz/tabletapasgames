@@ -13,7 +13,11 @@ export const ResolveHunt = Type.Evaluate(
             type: Type.Literal(ActionType.ResolveHunt),
             playerId: Type.String(),
             tokenIndexes: Type.Array(Type.Number()),
-            hitTargets: Type.Array(Type.String())
+            hitTargets: Type.Array(Type.String()),
+            // Bonus tokens (by index) taken as $3 instead of their effect.
+            cashIndexes: Type.Optional(Type.Array(Type.Number())),
+            // The level 2 gold mine claimed for free with the claim bonus token.
+            claimNodeId: Type.Optional(Type.String())
         })
     ])
 )
@@ -32,13 +36,15 @@ export class HydratedResolveHunt
     declare playerId: string
     declare tokenIndexes: number[]
     declare hitTargets: string[]
+    declare cashIndexes?: number[]
+    declare claimNodeId?: string
 
     constructor(data: ResolveHunt) {
         super(data, ResolveHuntValidator)
     }
 
     apply(state: HydratedRockyVenturesGameState, _context?: MachineContext) {
-        const request = { tokenIndexes: this.tokenIndexes, hitTargets: this.hitTargets }
+        const request = { tokenIndexes: this.tokenIndexes, hitTargets: this.hitTargets, cashIndexes: this.cashIndexes, claimNodeId: this.claimNodeId }
         const invalidReason = reasonResolveHuntInvalid(state, this.playerId, request)
         if (invalidReason) {
             throw Error(invalidReason)

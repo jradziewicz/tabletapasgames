@@ -258,7 +258,7 @@
             {:else if shown.kind === 'hunt' && shown.hunt}
                 <div class="flex flex-wrap items-center justify-center gap-3">
                     {#each shown.hunt.tokens as token, index (index)}
-                        {@const url = weaponTokenImageUrl(token.kind as WeaponTokenKind)}
+                        {@const url = weaponTokenImageUrl(token.kind as WeaponTokenKind, gameSession.gameState.bonusTokenCash)}
                         {#if url}<img src={url} alt={token.kind} class="h-20 w-20 {token.applied ? '' : 'opacity-35 grayscale'}" draggable="false" />{/if}
                     {/each}
                     {#each shown.hunt.hitTargets as target, index (index)}

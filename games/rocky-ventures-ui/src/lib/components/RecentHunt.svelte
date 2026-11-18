@@ -62,7 +62,7 @@
         </div>
         <div class="mt-1 flex flex-wrap items-center gap-1.5">
             {#each result.tokens as token, index (index)}
-                {@const url = weaponTokenImageUrl(token.kind)}
+                {@const url = weaponTokenImageUrl(token.kind, gameSession.gameState.bonusTokenCash)}
                 {#if url}
                     <img
                         src={url}

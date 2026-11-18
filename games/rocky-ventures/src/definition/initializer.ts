@@ -100,6 +100,7 @@ export class RockyVenturesGameInitializer
             negativeDeliveries: true,
             noGemPawnMove: true,
             gemsLost: 0,
+            bonusTokenCash: true,
             gemsSpent: 0,
             era: 1,
             turnActionsTaken: [],

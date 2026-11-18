@@ -8,6 +8,8 @@
         finalScores,
         ActionType,
         BoardNodesById,
+        freeBonusClaimMineIds,
+        isBonusToken,
         CardActionKind,
         CardKind,
         CompanyAbbreviations,
@@ -255,7 +257,7 @@
             </div>
             <div class="mt-1 flex flex-wrap items-center gap-2">
                 {#each pending.drawn as kind, index (index)}
-                    {@const url = weaponTokenImageUrl(kind)}
+                    {@const url = weaponTokenImageUrl(kind, gameSession.gameState.bonusTokenCash)}
                     {#if url}
                         <img
                             src={url}
@@ -944,7 +946,7 @@
             {#each pending.drawn as kind, index (index)}
                 {@const selected = gameSession.huntSelected.includes(index)}
                 {@const focused = gameSession.huntFocusHit === index && selected}
-                {@const url = weaponTokenImageUrl(kind)}
+                {@const url = weaponTokenImageUrl(kind, gameSession.gameState.bonusTokenCash)}
                 <button
                     type="button"
                     onclick={() => gameSession.toggleHuntToken(index)}
@@ -972,6 +974,43 @@
             </button>
         </div>
         {@const huntPlayerId = gameState.activePlayerIds[0]}
+        {#if gameState.bonusTokenCash}
+            <!-- Newer games: each chosen bonus token can be used or taken as $3 -->
+            {@const chosenBonuses = gameSession.huntSelected.filter((index) => isBonusToken(pending.drawn[index]!))}
+            {#each chosenBonuses as index (index)}
+                {@const kind = pending.drawn[index]!}
+                {@const cash = gameSession.huntCashIndexes.includes(index)}
+                {@const url = weaponTokenImageUrl(kind, true)}
+                <div class="mt-2 flex flex-wrap items-center gap-2 rounded-md border border-[#8a6d3b] bg-[#2a1d10] px-2 py-1">
+                    {#if url}<img src={url} alt={kind} class="h-9 w-9 rounded-full" draggable="false" />{/if}
+                    <div class="inline-flex overflow-hidden rounded-full border border-[#c9a961] text-xs">
+                        <button type="button" onclick={() => cash && gameSession.toggleHuntCash(index)} class="px-3 py-1 {cash ? 'text-[#c9a961]' : 'bg-[#c9a961] font-semibold text-[#1b140c]'}">
+                            {kind === WeaponTokenKind.BonusGold ? 'Claim a level 2 mine' : 'Use it'}
+                        </button>
+                        <button type="button" onclick={() => !cash && gameSession.toggleHuntCash(index)} class="px-3 py-1 {cash ? 'bg-[#c9a961] font-semibold text-[#1b140c]' : 'text-[#c9a961]'}">
+                            Take $3
+                        </button>
+                    </div>
+                    {#if kind === WeaponTokenKind.BonusGold && !cash && huntPlayerId}
+                        {@const open = freeBonusClaimMineIds(gameState, huntPlayerId)}
+                        {#if open.length === 0}
+                            <span class="text-xs text-[#ff8a7a]">No open level 2 gold mine to claim: take $3 instead.</span>
+                        {:else}
+                            <span class="text-xs text-[#c9a961]">Pick the mine:</span>
+                            {#each open as nodeId (nodeId)}
+                                <button
+                                    type="button"
+                                    onclick={() => (gameSession.huntClaimNodeId = nodeId)}
+                                    class="rounded-full border px-2 py-0.5 text-xs {gameSession.huntClaimNodeId === nodeId ? 'border-[#ffd166] bg-[#ffd166] font-semibold text-[#1b140c]' : 'border-[#8a6d3b] text-[#e8d9b8] hover:border-[#ffd166]'}"
+                                >
+                                    {BoardNodesById[nodeId]?.name ?? nodeId}
+                                </button>
+                            {/each}
+                        {/if}
+                    {/if}
+                </div>
+            {/each}
+        {/if}
         {@const bonusWarnings = huntPlayerId
             ? huntBonusWarnings(gameState, huntPlayerId, gameSession.huntSelected.map((index) => pending.drawn[index]!))
             : []}

@@ -531,7 +531,7 @@
                 .map((event) => ({
                     text: event.text,
                     imageUrl: event.imageUrl,
-                    iconUrl: event.iconUrl ?? (event.tokenKind ? weaponTokenImageUrl(event.tokenKind as WeaponTokenKind) : undefined),
+                    iconUrl: event.iconUrl ?? (event.tokenKind ? weaponTokenImageUrl(event.tokenKind as WeaponTokenKind, gameSession.gameState.bonusTokenCash) : undefined),
                     // A newly revealed mine: show where on the map, ringed.
                     zoom: event.nodeId ? around(nodePoint(event.nodeId)) : undefined,
                     rings: event.nodeId ? nodePoint(event.nodeId) : undefined
@@ -735,7 +735,7 @@
                     {#if entry.tokens?.length}
                         <div class="flex flex-wrap justify-center gap-x-9 gap-y-7 px-3 py-4">
                             {#each entry.tokens as token, tokenIndex (tokenIndex)}
-                                {@const url = weaponTokenImageUrl(token.kind as WeaponTokenKind)}
+                                {@const url = weaponTokenImageUrl(token.kind as WeaponTokenKind, gameSession.gameState.bonusTokenCash)}
                                 {#if url}
                                     <!-- The token as printed, with a gold circle over it once picked -->
                                     <div class="relative h-14 w-14">

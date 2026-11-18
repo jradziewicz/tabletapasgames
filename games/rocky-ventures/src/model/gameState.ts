@@ -117,6 +117,7 @@ export const RockyVenturesGameState = Type.Evaluate(
             negativeDeliveries: Type.Optional(Type.Boolean()),
             noGemPawnMove: Type.Optional(Type.Boolean()),
             gemsLost: Type.Optional(Type.Number()),
+            bonusTokenCash: Type.Optional(Type.Boolean()),
             pendingMarketDraws: Type.Optional(Type.Number()),
             eraThreeTriggered: Type.Optional(Type.Boolean()),
             gemsSpent: Type.Number(),
@@ -193,6 +194,9 @@ export class HydratedRockyVenturesGameState
     // Gems a player would have gained while holding 3: they leave the game instead of staying in
     // the supply (new games from 2026-11-17; undefined in older games, which keep them in the supply).
     declare gemsLost?: number
+    // Any bonus token can be taken as $3 instead, and the gold bonus becomes a free claim on a
+    // level 2 gold mine (Justin, 2026-11-18; new games).
+    declare bonusTokenCash?: boolean
     declare pendingMarketDraws?: number
     declare eraThreeTriggered?: boolean
     declare gemsSpent: number

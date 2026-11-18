@@ -6,8 +6,10 @@
         DragonTrackerSlots,
         weaponTokenImageUrl
     } from '$lib/utils/dragonImages.js'
+    import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
     let { tokens, onclose }: { tokens: WeaponTokenKind[]; onclose: () => void } = $props()
+    const gameSession = getGameSession()
 
     const Titles = ['Something stirs', 'A distant rumble', 'Smoke on the peaks', 'The mountain trembles', 'It is almost awake']
 
@@ -53,7 +55,7 @@
                 <image href={DragonTrackerImageUrl} width={DragonTrackerSize.width} height={DragonTrackerSize.height} />
                 {#each tokens as kind, index (index)}
                     {@const slot = DragonTrackerSlots[index]}
-                    {@const url = weaponTokenImageUrl(kind)}
+                    {@const url = weaponTokenImageUrl(kind, gameSession.gameState.bonusTokenCash)}
                     {#if slot && url}
                         <image
                             href={url}

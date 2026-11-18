@@ -200,6 +200,9 @@ export class RockyVenturesGameSession extends GameSession<
     swapPickSlot: number | undefined = $state()
     discardPick: { cityId: DeliveryCityId; letter: AgreementLetter } | undefined = $state()
     huntSelected: number[] = $state([])
+    // Bonus tokens (by index) to take as $3, and the level 2 mine for the claim bonus.
+    huntCashIndexes: number[] = $state([])
+    huntClaimNodeId: string | undefined = $state(undefined)
     huntHitTargets: Record<number, string> = $state({})
     huntFocusHit: number | undefined = $state()
     extractNodeId: string | undefined = $state()
@@ -259,6 +262,8 @@ export class RockyVenturesGameSession extends GameSession<
         this.swapPickSlot = undefined
         this.discardPick = undefined
         this.huntSelected = []
+        this.huntCashIndexes = []
+        this.huntClaimNodeId = undefined
         this.huntHitTargets = {}
         this.huntFocusHit = undefined
         this.extractNodeId = undefined
@@ -442,7 +447,7 @@ export class RockyVenturesGameSession extends GameSession<
                     await this.applyAction(this.createPlayerAction(Hunt, { region: move.region }))
                     return
                 case ActionType.ResolveHunt:
-                    await this.applyAction(this.createPlayerAction(ResolveHunt, { tokenIndexes: move.tokenIndexes, hitTargets: move.hitTargets }))
+                    await this.applyAction(this.createPlayerAction(ResolveHunt, { tokenIndexes: move.tokenIndexes, hitTargets: move.hitTargets, cashIndexes: move.cashIndexes, claimNodeId: move.claimNodeId }))
                     return
                 case ActionType.Acquire:
                     await this.applyAction(this.createPlayerAction(Acquire, { choice: move.choice }))
@@ -575,11 +580,31 @@ export class RockyVenturesGameSession extends GameSession<
         if (pending.drawn.length > 0 && this.huntSelected.length < 1) {
             return false
         }
+        if (this.huntClaimNeeded && !this.huntClaimNodeId) {
+            return false
+        }
         return this.huntSelected.every(
             (index) =>
                 pending.drawn[index] !== WeaponTokenKind.Hit ||
                 this.huntHitTargets[index] !== undefined
         )
+    }
+
+    // A chosen claim bonus (newer games) that isn't being taken as $3 needs a mine picked.
+    get huntClaimNeeded(): boolean {
+        const pending = this.gameState.pendingHunt
+        return (
+            !!pending &&
+            !!this.gameState.bonusTokenCash &&
+            this.huntSelected.some((index) => pending.drawn[index] === WeaponTokenKind.BonusGold && !this.huntCashIndexes.includes(index))
+        )
+    }
+
+    toggleHuntCash(index: number) {
+        this.huntCashIndexes = this.huntCashIndexes.includes(index)
+            ? this.huntCashIndexes.filter((other) => other !== index)
+            : [...this.huntCashIndexes, index]
+        if (!this.huntClaimNeeded) this.huntClaimNodeId = undefined
     }
 
     // Decline every drawn token ("apply up to N" allows none); they all go back in the bag.
@@ -588,6 +613,8 @@ export class RockyVenturesGameSession extends GameSession<
             return
         }
         this.huntSelected = []
+        this.huntCashIndexes = []
+        this.huntClaimNodeId = undefined
         this.huntHitTargets = {}
         await this.submit(ActionType.ResolveHunt, async () => {
             await this.applyAction(this.createPlayerAction(ResolveHunt, { tokenIndexes: [], hitTargets: [] }))
@@ -603,12 +630,21 @@ export class RockyVenturesGameSession extends GameSession<
         const hitTargets = tokenIndexes
             .filter((index) => pending.drawn[index] === WeaponTokenKind.Hit)
             .map((index) => this.huntHitTargets[index]!)
+        const cashIndexes = this.huntCashIndexes.filter((index) => tokenIndexes.includes(index))
+        const claimNodeId = this.huntClaimNeeded ? this.huntClaimNodeId : undefined
         await this.submit(ActionType.ResolveHunt, async () => {
             await this.applyAction(
-                this.createPlayerAction(ResolveHunt, { tokenIndexes, hitTargets })
+                this.createPlayerAction(ResolveHunt, {
+                    tokenIndexes,
+                    hitTargets,
+                    ...(cashIndexes.length ? { cashIndexes } : {}),
+                    ...(claimNodeId ? { claimNodeId } : {})
+                })
             )
         })
         this.huntSelected = []
+        this.huntCashIndexes = []
+        this.huntClaimNodeId = undefined
         this.huntHitTargets = {}
         this.huntFocusHit = undefined
     }

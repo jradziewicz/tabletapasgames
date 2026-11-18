@@ -11,7 +11,9 @@ import {
     WeaponTokenKind
 } from '../data/weaponBag.js'
 import { BonusTokensToSummonDragon, DragonLevel } from '../data/scourges.js'
-import { recordActionStat, recordCash, recordGems, recordVictoryPoints } from './stats.js'
+import { recordActionStat, recordCash, recordGems, recordStat, recordVictoryPoints } from './stats.js'
+import { StatKind } from '../model/stats.js'
+import { OreKind } from '../data/mineTokens.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { advanceWeapon } from './grid.js'
 import { currentPlayerId, remainingActionKinds } from './turn.js'
@@ -147,6 +149,25 @@ export function startClaimHunt(
 export interface ResolveHuntRequest {
     tokenIndexes: number[]
     hitTargets: string[]
+    cashIndexes?: number[]
+    claimNodeId?: string
+}
+
+// What a bonus token can be swapped for, in games with that option.
+export const BonusTokenCashAmount = 3
+
+export function isBonusToken(kind: WeaponTokenKind): boolean {
+    return kind !== WeaponTokenKind.Hit && kind !== WeaponTokenKind.Miss
+}
+
+export const BonusClaimMineLevel = 2
+
+// Level 2 gold mines the player could claim for free with the claim bonus token.
+export function freeBonusClaimMineIds(state: HydratedRockyVenturesGameState, playerId: string): string[] {
+    if (state.getPlayerState(playerId).claimTokens <= 0) return []
+    return Object.entries(state.board.mines)
+        .filter(([, site]) => site && !site.empty && site.ownerPlayerId === undefined && site.token?.ore === OreKind.Gold && site.token.level === BonusClaimMineLevel)
+        .map(([nodeId]) => nodeId)
 }
 
 export function reasonResolveHuntInvalid(
@@ -180,6 +201,32 @@ export function reasonResolveHuntInvalid(
     const targets = huntTargets(state, pending.region).map((target) => target.id)
     if (request.hitTargets.some((target) => !targets.includes(target))) {
         return 'That target is not in the hunted region'
+    }
+    const cash = request.cashIndexes ?? []
+    if (cash.length > 0 && !state.bonusTokenCash) {
+        return 'Bonus tokens cannot be taken as cash in this game'
+    }
+    if (cash.some((index) => !request.tokenIndexes.includes(index) || !isBonusToken(pending.drawn[index]!))) {
+        return 'Only applied bonus tokens can be taken as cash'
+    }
+    if (new Set(cash).size !== cash.length) {
+        return 'Choose each token only once'
+    }
+    const claims = request.tokenIndexes.filter(
+        (index) => state.bonusTokenCash && pending.drawn[index] === WeaponTokenKind.BonusGold && !cash.includes(index)
+    )
+    if (claims.length > 1) {
+        return 'Only one claim bonus can be used at a time; take the other as $3'
+    }
+    if (claims.length === 1) {
+        if (!request.claimNodeId) {
+            return 'Choose a level 2 gold mine to claim, or take the token as $3'
+        }
+        if (!freeBonusClaimMineIds(state, playerId).includes(request.claimNodeId)) {
+            return 'That mine cannot be claimed with the bonus'
+        }
+    } else if (request.claimNodeId) {
+        return 'There is no claim bonus to use'
     }
     return undefined
 }
@@ -245,11 +292,32 @@ function applyHit(state: HydratedRockyVenturesGameState, playerId: string, regio
     }
 }
 
-function applyBonus(state: HydratedRockyVenturesGameState, playerId: string, kind: WeaponTokenKind) {
+function applyBonus(
+    state: HydratedRockyVenturesGameState,
+    playerId: string,
+    kind: WeaponTokenKind,
+    asCash = false,
+    claimNodeId?: string
+) {
     const player = state.getPlayerState(playerId)
     state.dragon.trackerTokens.push(kind)
     if (state.dragon.trackerTokens.length >= BonusTokensToSummonDragon) {
         state.dragon.summoned = true
+    }
+    if (asCash) {
+        player.money += BonusTokenCashAmount
+        recordCash(state, playerId, BonusTokenCashAmount, 'huntBonus')
+        return
+    }
+    if (kind === WeaponTokenKind.BonusGold && state.bonusTokenCash) {
+        // The claim bonus: a free claim on a level 2 gold mine. It is not the Claim Mine action
+        // and starts no hunt.
+        if (claimNodeId) {
+            player.claimTokens -= 1
+            state.board.getMine(claimNodeId).ownerPlayerId = playerId
+            recordStat(state, { kind: StatKind.MineClaim, playerId, amount: 0, nodeId: claimNodeId, source: OreKind.Gold })
+        }
+        return
     }
     switch (kind) {
         case WeaponTokenKind.BonusGold:
@@ -293,7 +361,7 @@ export function resolveHuntAt(
         } else if (kind === WeaponTokenKind.Miss) {
             continue
         } else {
-            applyBonus(state, playerId, kind)
+            applyBonus(state, playerId, kind, (request.cashIndexes ?? []).includes(index), request.claimNodeId)
         }
     }
     pending.drawn.forEach((kind, index) => {

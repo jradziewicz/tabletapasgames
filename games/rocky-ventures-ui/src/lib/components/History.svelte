@@ -59,7 +59,7 @@
     }
 
     const BonusNames: Partial<Record<WeaponTokenKind, string>> = {
-        [WeaponTokenKind.BonusGold]: 'Gold',
+        [WeaponTokenKind.BonusGold]: 'Gold / Claim',
         [WeaponTokenKind.BonusWeaponLevel]: 'Weapon Level',
         [WeaponTokenKind.BonusGem]: 'Gem',
         [WeaponTokenKind.BonusInvest]: 'Invest'
@@ -628,7 +628,7 @@
                                             <img src={url} alt="" class="h-56 max-w-full w-auto rounded" draggable="false" />
                                         {/each}
                                         {#each pictures.tokens as token, tokenIndex (tokenIndex)}
-                                            {@const url = weaponTokenImageUrl(token.kind)}
+                                            {@const url = weaponTokenImageUrl(token.kind, gameSession.gameState.bonusTokenCash)}
                                             {#if url}
                                                 <div class="relative mx-2 h-10 w-10">
                                                     <img src={url} alt={token.kind} class="h-full w-full object-contain" draggable="false" />

@@ -1,5 +1,7 @@
 import {
     ActionType,
+    currentPlayerId,
+    freeBonusClaimMineIds,
     BoardBoxLocations,
     CardBonusKind,
     CardKind,
@@ -54,7 +56,7 @@ export type BotMove =
     | { type: ActionType.LayTrack; companyId: CompanyId; boxId: string }
     | { type: ActionType.ExtractAndSell; nodeId: string; cityId?: DeliveryCityId; creditCompanyId?: CompanyId }
     | { type: ActionType.Hunt; region: string }
-    | { type: ActionType.ResolveHunt; tokenIndexes: number[]; hitTargets: string[] }
+    | { type: ActionType.ResolveHunt; tokenIndexes: number[]; hitTargets: string[]; cashIndexes?: number[]; claimNodeId?: string }
     | { type: ActionType.Acquire; choice: AcquireChoice }
     | { type: ActionType.ChooseShare; companyId: CompanyId }
     | { type: ActionType.PointBuy; bundles: number; convertShare?: { companyId: CompanyId; shareIndex: number } }
@@ -263,6 +265,14 @@ function resolveHuntMove(state: HydratedRockyVenturesGameState): BotMove | undef
             target.left -= 1
             hitTargets.push(target.id)
         }
+    }
+    // Newer games: the claim bonus claims a level 2 gold mine if one is open, else it's taken as $3.
+    if (state.bonusTokenCash) {
+        const claims = chosen.filter((index) => pending.drawn[index] === WeaponTokenKind.BonusGold)
+        const open = freeBonusClaimMineIds(state, currentPlayerId(state))
+        const claimNodeId = claims.length > 0 ? open[0] : undefined
+        const cashIndexes = claims.filter((index, position) => !(claimNodeId && position === 0))
+        return { type: ActionType.ResolveHunt, tokenIndexes: chosen, hitTargets, cashIndexes, ...(claimNodeId ? { claimNodeId } : {}) }
     }
     return { type: ActionType.ResolveHunt, tokenIndexes: chosen, hitTargets }
 }

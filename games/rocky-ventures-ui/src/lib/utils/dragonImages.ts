@@ -7,7 +7,13 @@ const dragonImagesByName: Record<string, string> = Images
 export const DragonTrackerImageUrl = dragonImagesByName['tracker']
 export const DragonTileImageUrl = dragonImagesByName['dragon']
 
-export function weaponTokenImageUrl(kind: WeaponTokenKind): string | undefined {
+// Newer games print a "$3" swap on every bonus token, and the gold bonus is the free level 2 claim.
+export function weaponTokenImageUrl(kind: WeaponTokenKind, cashTokens?: boolean): string | undefined {
+    if (cashTokens) {
+        if (kind === WeaponTokenKind.BonusGold) return dragonImagesByName['bonusClaim']
+        const cash = dragonImagesByName[`${kind}Cash`]
+        if (cash) return cash
+    }
     return dragonImagesByName[kind]
 }
 

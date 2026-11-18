@@ -13,14 +13,14 @@
     const dragon = $derived(gameSession.gameState.dragon)
     const bag = $derived(gameSession.gameState.weaponBag)
 
-    const bagRows: { kind: WeaponTokenKind; label: string }[] = [
+    const bagRows: { kind: WeaponTokenKind; label: string }[] = $derived([
         { kind: WeaponTokenKind.Hit, label: 'Hit' },
         { kind: WeaponTokenKind.Miss, label: 'Miss' },
-        { kind: WeaponTokenKind.BonusGold, label: '+3 gold' },
+        { kind: WeaponTokenKind.BonusGold, label: gameSession.gameState.bonusTokenCash ? 'Free level 2 claim' : '+3 gold' },
         { kind: WeaponTokenKind.BonusWeaponLevel, label: '+1 weapon level' },
         { kind: WeaponTokenKind.BonusGem, label: '+1 gem' },
         { kind: WeaponTokenKind.BonusInvest, label: 'Invest action' }
-    ]
+    ])
 </script>
 
 <div class="h-full overflow-y-auto p-4 text-[#f1e6cf]">
@@ -34,7 +34,7 @@
                 <image href={DragonTrackerImageUrl} x="0" y="0" width={DragonTrackerSize.width} height={DragonTrackerSize.height} />
                 {#each dragon.trackerTokens as kind, index (index)}
                     {@const slot = DragonTrackerSlots[index]}
-                    {@const url = weaponTokenImageUrl(kind)}
+                    {@const url = weaponTokenImageUrl(kind, gameSession.gameState.bonusTokenCash)}
                     {#if slot && url}
                         <image href={url} x={slot.x - 42} y={slot.y - 42} width="84" height="84" />
                     {/if}
@@ -65,7 +65,7 @@
             <table class="text-sm">
                 <tbody>
                     {#each bagRows as row (row.kind)}
-                        {@const url = weaponTokenImageUrl(row.kind)}
+                        {@const url = weaponTokenImageUrl(row.kind, gameSession.gameState.bonusTokenCash)}
                         <tr class="border-t border-[#4a3620]">
                             <td class="py-1 pr-2">
                                 {#if url}<img src={url} alt="" class="h-8 w-8 rounded" />{/if}
