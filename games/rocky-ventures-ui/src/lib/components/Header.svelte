@@ -33,11 +33,13 @@
     // Two players have a smaller gem total, so warn later there.
     const GemsWarnLeft = $derived(gameSession.gameState.players.length === 2 ? 3 : 4)
     const DragonWarnHitsLeft = 3
-    type ChipLevel = 'far' | 'close' | 'met'
+    type ChipLevel = 'far' | 'close' | 'met' | 'done'
     const ChipColors: Record<ChipLevel, { border: string; text: string; background: string }> = {
         far: { border: '#2f8f57', text: '#7ee2a2', background: 'rgba(47, 143, 87, 0.15)' },
         close: { border: '#e0b02a', text: '#ffd166', background: 'rgba(224, 176, 42, 0.18)' },
-        met: { border: '#e0574a', text: '#ffffff', background: '#a3241a' }
+        met: { border: '#e0574a', text: '#ffffff', background: '#a3241a' },
+        // A Feast that has already been bought and scored: greyed out.
+        done: { border: '#4b4b4b', text: '#7d7d7d', background: 'rgba(110, 110, 110, 0.12)' }
     }
 
     // `struck` draws a line through the label's first word (the slain dragon).
@@ -88,11 +90,13 @@
             const bonusText = bonus
                 ? ` Buyer bonus: ${bonus.points.join('/')} VP for 1st/2nd/3rd in ${['tool level', 'share multipliers', 'gold mines you hold a claim on'][index]}.`
                 : ''
+            // Bought and its point buy over: the Feast is complete.
+            const done = slot < 0 && !inDeck && state.pointBuy?.cardId !== cardId
             return {
                 key: cardId,
                 label: `FEAST ${index + 1}: ${['TOOL', 'SHARES', 'MINES'][index]}`,
-                goldWord: index === 2 ? 'MINES' : undefined,
-                level: slot >= 0 ? 'close' : 'far',
+                goldWord: index === 2 && !done ? 'MINES' : undefined,
+                level: done ? 'done' : slot >= 0 ? 'close' : 'far',
                 struck: false,
                 tip: `${name}: ${slot >= 0 ? 'in the market now' : inDeck ? 'still in the deck' : 'already taken'}.${bonusText}`
             }
