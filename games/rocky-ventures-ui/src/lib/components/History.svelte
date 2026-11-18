@@ -11,6 +11,8 @@
         CompanyId,
         Definition,
         DragonHuntRegion,
+        GemActionCosts,
+        type GemActionKind,
         RegionNames,
         StatKind,
         WeaponTokenKind,
@@ -572,19 +574,21 @@
                 return describeResolveHunt(entry, action)
             case ActionType.Acquire:
                 return describeAcquire(entry, action)
-            case ActionType.GemAction:
+            case ActionType.GemAction: {
+                const gems = plural(GemActionCosts[action['kind'] as GemActionKind] ?? 1, 'gem')
                 switch (action['kind']) {
                     case 'repeat':
-                        return 'spent a gem to repeat an action'
+                        return `spent ${gems} to repeat an action`
                     case 'market':
-                        return 'spent a gem at the market'
+                        return `spent ${gems} to use a market card`
                     case 'swap':
-                        return 'spent a gem to swap'
+                        return `spent ${gems} to swap market cards`
                     case 'movePawn':
-                        return `spent a gem to move ${their} pawn`
+                        return `spent ${gems} to move ${their} pawn`
                     default:
-                        return 'spent a gem'
+                        return `spent ${gems}`
                 }
+            }
             case ActionType.DiscardAgreement:
                 return `discarded an agreement${forCompany}`
             case ActionType.SellVictoryPoints:
@@ -625,7 +629,7 @@
                                 {#if pictures.cards.length || pictures.tokens.length || pictures.logo}
                                     <div class="flex flex-wrap items-center gap-2">
                                         {#each pictures.cards as url, cardIndex (cardIndex)}
-                                            <img src={url} alt="" class="h-56 max-w-full w-auto rounded" draggable="false" />
+                                            <img src={url} alt="" class="h-56 w-auto max-w-full rounded object-contain" draggable="false" />
                                         {/each}
                                         {#each pictures.tokens as token, tokenIndex (tokenIndex)}
                                             {@const url = weaponTokenImageUrl(token.kind, gameSession.gameState.bonusTokenCash)}
@@ -684,7 +688,7 @@
                                 {#each pictures.entered as scourge, scourgeIndex (scourgeIndex)}
                                     <div class="flex flex-col gap-1">
                                         <div class="text-sm text-[#e8d9b8]">A scourge entered {scourge.region}</div>
-                                        {#if scourge.url}<img src={scourge.url} alt="scourge" class="h-56 max-w-full w-auto rounded" draggable="false" />{/if}
+                                        {#if scourge.url}<img src={scourge.url} alt="scourge" class="h-40 w-auto max-w-full self-start rounded object-contain" draggable="false" />{/if}
                                     </div>
                                 {/each}
                             </div>
