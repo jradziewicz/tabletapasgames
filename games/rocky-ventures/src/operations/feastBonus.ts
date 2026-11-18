@@ -8,7 +8,7 @@ import { recordVictoryPoints } from './stats.js'
 // (Justin, 2026-11-13). Ties share the rank; 4th place and below score nothing.
 export const FeastBuyerBonuses: Record<string, { points: number[]; measure: (state: HydratedRockyVenturesGameState, player: HydratedRockyVenturesPlayerState) => number }> = {
     // The Lantern Feast: position on the tool track.
-    [FirstEraCardId]: { points: [3, 1, 1], measure: (_state, player) => player.toolLevel },
+    [FirstEraCardId]: { points: [3, 2, 1], measure: (_state, player) => player.toolLevel },
     // The Feast of the Deep Seam: share multipliers held.
     [SecondEraCardId]: {
         points: [4, 2, 1],

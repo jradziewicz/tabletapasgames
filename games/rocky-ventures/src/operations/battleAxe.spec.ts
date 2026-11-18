@@ -72,7 +72,7 @@ describe('Feast buyer bonus', () => {
         b!.toolLevel = 1
         c!.toolLevel = 1
         expect(feastBuyerBonus(state, a!.playerId, FirstEraCardId)).toBe(3)
-        expect(feastBuyerBonus(state, b!.playerId, FirstEraCardId)).toBe(1)
+        expect(feastBuyerBonus(state, b!.playerId, FirstEraCardId)).toBe(2)
     })
 
     it('shares a rank on a tie and gives nothing below third', () => {
