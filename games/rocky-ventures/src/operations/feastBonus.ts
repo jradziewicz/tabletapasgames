@@ -11,13 +11,13 @@ export const FeastBuyerBonuses: Record<string, { points: number[]; measure: (sta
     [FirstEraCardId]: { points: [3, 2, 1], measure: (_state, player) => player.toolLevel },
     // The Feast of the Deep Seam: share multipliers held.
     [SecondEraCardId]: {
-        points: [4, 2, 1],
+        points: [4, 3, 2],
         measure: (state, player) =>
             player.shares.reduce((sum, share) => sum + state.getCompany(share.companyId).multiplierForShare(share.shareIndex), 0)
     },
     // The Golden Table: gold mines the player currently holds a claim on (Justin, 2026-11-17).
     [ThirdEraCardId]: {
-        points: [5, 3, 2],
+        points: [5, 4, 3],
         measure: (state, player) =>
             Object.values(state.board.mines).filter(
                 (site) => site?.ownerPlayerId === player.playerId && site.token?.ore === OreKind.Gold
