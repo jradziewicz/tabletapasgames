@@ -140,7 +140,7 @@
                     <span class="font-mono">{oreCapacity.gold}</span> Gold
                 </span>
                 <span class="flex items-center gap-1 whitespace-nowrap" title="Up to {oreCapacity.silver} Mana per extract">
-                    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background: radial-gradient(circle at 35% 35%, #ffffff, #9aa3b2);"></span>
+                    <span class="inline-block h-2.5 w-2.5 rounded-full" style="background: radial-gradient(circle at 35% 35%, #d9c8ff, #6e3fd2);"></span>
                     <span class="font-mono">{oreCapacity.silver}</span> Mana
                 </span>
             </div>
