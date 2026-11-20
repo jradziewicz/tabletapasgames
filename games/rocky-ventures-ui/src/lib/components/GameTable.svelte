@@ -56,11 +56,9 @@
     setGameSession(session)
     setRevisedCardArt(session.gameState.revisedCards === true)
     setFeastBonusArt(session.gameState.feastBuyerBonus === true)
-    // Games from before the drawn Feasts show the new card art and names for the Feast that matches
-    // their scoring (Justin, 2026-11-20): tool level, share multipliers, gold mines held.
-    const shownFeasts =
-        session.gameState.feastCategories ??
-        (session.gameState.feastBuyerBonus ? { era1: 'tool', era2: 'shares', era3: 'goldMines' } : undefined)
+    // Every game from before the drawn Feasts (with or without the buyer bonus) shows the new card
+    // art and names, matched to the original three (Justin, 2026-11-20: "even on the old ones").
+    const shownFeasts = session.gameState.feastCategories ?? { era1: 'tool', era2: 'shares', era3: 'goldMines' }
     setFeastCardCategories(shownFeasts)
     setFeastCategories(shownFeasts)
     setAgreementDeliveryScoring(session.gameState.agreementsScoreOnDelivery === true)
