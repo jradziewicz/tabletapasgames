@@ -65,9 +65,9 @@ export const TwoSidedAgreementBacks: Partial<Record<AgreementLetter, AgreementBa
 
 export const AgreementDescriptions: Record<AgreementLetter, string> = {
     [AgreementLetter.A]: '+$2 per gold ore sold into this city',
-    [AgreementLetter.B]: "+$2 per silver ore from mines in this city's half of the map",
+    [AgreementLetter.B]: "+$2 per Mana from mines in this city's half of the map",
     [AgreementLetter.C]: '-$3 transport/terrain/scourge costs for a sale into this city',
-    [AgreementLetter.D]: 'After a gold delivery into this city, buy 3 VP for $6 from that income (not after silver sales)',
+    [AgreementLetter.D]: 'After a gold delivery into this city, buy 3 VP for $6 from that income (not after Mana sales)',
     [AgreementLetter.One]: 'After a gold sale into this city, buy 3 VP for $3',
     [AgreementLetter.Two]: 'After a gold sale into this city, buy 4 VP for $5',
     [AgreementLetter.Three]: 'After a gold sale into this city, buy 5 VP for $7',

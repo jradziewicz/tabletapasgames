@@ -608,6 +608,11 @@ export function extractAndSellAt(
             emptyMine(state, playerId, request.nodeId)
         }
     } else {
+        // Extracting a Mana mine: in games with the new Feasts the player keeps the token.
+        if (state.feastCategories) {
+            const player = state.getPlayerState(playerId)
+            player.emptyMines = (player.emptyMines ?? 0) + 1
+        }
         emptyMine(state, playerId, request.nodeId)
     }
     if (action?.addsScourge) {

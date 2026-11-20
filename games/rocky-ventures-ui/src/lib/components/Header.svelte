@@ -9,7 +9,8 @@
         endTriggers,
         getCard,
         gemTriggerThreshold,
-        FeastBuyerBonuses
+        FeastBuyerBonuses,
+        feastCategoryFor
     } from '@tabletop/rocky-ventures'
     import { feastName } from '$lib/utils/feastNames.js'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -87,15 +88,16 @@
             const inDeck = state.market.drawPile.includes(cardId)
             const name = feastName(index + 1)
             const bonus = state.feastBuyerBonus ? FeastBuyerBonuses[cardId] : undefined
-            const bonusText = bonus
-                ? ` Buyer bonus: ${bonus.points.join('/')} VP for 1st/2nd/3rd in ${['tool level', 'share multipliers', 'gold mines you hold a claim on'][index]}.`
-                : ''
+            // Newer games draw one of three Feasts per card; older ones keep the original three.
+            const category = feastCategoryFor(state, cardId)
+            const measure = category?.measureLabel ?? ['tool level', 'share multipliers', 'gold mines you hold a claim on'][index]
+            const bonusText = bonus ? ` Buyer bonus: ${bonus.points.join('/')} VP for 1st/2nd/3rd in ${measure}.` : ''
             // Bought and its point buy over: the Feast is complete.
             const done = slot < 0 && !inDeck && state.pointBuy?.cardId !== cardId
             return {
                 key: cardId,
-                label: `FEAST ${index + 1}: ${['TOOL', 'SHARES', 'MINES'][index]}`,
-                goldWord: index === 2 && !done ? 'MINES' : undefined,
+                label: `FEAST ${index + 1}: ${category?.shortLabel ?? ['TOOL', 'SHARES', 'MINES'][index]}`,
+                goldWord: !done ? (category ? (category.id === 'goldMines' ? 'GOLD' : undefined) : index === 2 ? 'MINES' : undefined) : undefined,
                 level: done ? 'done' : slot >= 0 ? 'close' : 'far',
                 struck: false,
                 tip: `${name}: ${slot >= 0 ? 'in the market now' : inDeck ? 'still in the deck' : 'already taken'}.${bonusText}`

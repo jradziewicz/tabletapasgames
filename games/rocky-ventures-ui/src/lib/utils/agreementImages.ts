@@ -62,9 +62,9 @@ export function agreementTooltip(cityId: DeliveryCityId, letter: AgreementLetter
     }
     const ability: Record<string, string> = {
         A: `+$2 per gold ore you sell to ${city}`,
-        B: `+$2 per silver ore extracted from mines in ${SilverHalves[cityId]}`,
+        B: `+$2 per Mana extracted from mines in ${SilverHalves[cityId]}`,
         C: `-$3 off transport and security costs when you sell gold to ${city}`,
-        D: `After a gold sale to ${city} that earns $6 or more, you may buy 3 VP for $6 (not after silver sales)`
+        D: `After a gold sale to ${city} that earns $6 or more, you may buy 3 VP for $6 (not after Mana sales)`
     }
     return `${city} Agreement ${letter}: ${ability[letter]}.${discardAllowed ? ' Or discard it to lay 2 free track for one railroad.' : ''}`
 }

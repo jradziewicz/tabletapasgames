@@ -21,7 +21,10 @@ function startedState(): HydratedRockyVenturesGameState {
         },
         Definition
     )
-    return Definition.runtime.hydrator.hydrateState(engine.startGame(game).initialState) as HydratedRockyVenturesGameState
+    const state = Definition.runtime.hydrator.hydrateState(engine.startGame(game).initialState) as HydratedRockyVenturesGameState
+    // Pin the original three Feasts so the expected categories don't depend on the setup draw.
+    state.feastCategories = { era1: 'tool', era2: 'shares', era3: 'goldMines' }
+    return state
 }
 
 describe('battle axe hit tracker', () => {

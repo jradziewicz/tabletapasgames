@@ -27,7 +27,7 @@
                 <th>Weapon</th>
                 <th>Hunt draw / apply</th>
                 <th>Tool</th>
-                <th>Gold / silver ore</th>
+                <th>Gold / Mana</th>
                 <th>Restricted mines</th>
             </tr>
         </thead>

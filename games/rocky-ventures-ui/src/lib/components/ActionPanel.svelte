@@ -537,7 +537,7 @@
                         onclick={() => gameSession.confirmExtract()}
                         class="rv-btn self-start text-sm"
                     >
-                        Extract {extractPlan.oreCount} silver · +{`$${extractPlan.net}`}
+                        Extract {extractPlan.oreCount} Mana · +{`$${extractPlan.net}`}
                     </button>
                 {/if}
                 {#if extractNodeId && extractToken?.ore === OreKind.Gold && gameSession.extractCustomRoute}
@@ -667,7 +667,7 @@
                             <span class="flex items-baseline gap-2 font-mono font-black">
                                 <span class="text-xl text-[#ffd166]">{ore?.gold ?? '?'}<span class="ml-0.5 text-[10px] font-semibold">gold</span>{#if goldUp}<span class="ml-0.5 text-sm text-[#3ddc84]">▲</span>{/if}</span>
                                 <span class="text-sm" style="color: {accent};">·</span>
-                                <span class="text-xl text-[#d9dde3]">{ore?.silver ?? '?'}<span class="ml-0.5 text-[10px] font-semibold">silver</span>{#if silverUp}<span class="ml-0.5 text-sm text-[#3ddc84]">▲</span>{/if}</span>
+                                <span class="text-xl text-[#d9dde3]">{ore?.silver ?? '?'}<span class="ml-0.5 text-[10px] font-semibold">Mana</span>{#if silverUp}<span class="ml-0.5 text-sm text-[#3ddc84]">▲</span>{/if}</span>
                             </span>
                         {/if}
                         {#if unlocksRed || unlocksBlue || plan.victoryPoints > 0}

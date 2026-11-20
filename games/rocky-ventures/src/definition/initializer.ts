@@ -8,6 +8,7 @@ import {
     HydratedTurnManager,
     shuffle
 } from '@tabletop/common'
+import { pickFeastCategories } from '../operations/feastBonus.js'
 import { DummyPlayerCount } from '../model/dummy.js'
 import { HydratedRockyVenturesGameState, RockyVenturesGameState } from '../model/gameState.js'
 import { HydratedRockyVenturesPlayerState, RockyVenturesPlayerState } from '../model/playerState.js'
@@ -101,6 +102,7 @@ export class RockyVenturesGameInitializer
             noGemPawnMove: true,
             gemsLost: 0,
             bonusTokenCash: true,
+            feastCategories: pickFeastCategories(prng.random),
             gemsSpent: 0,
             era: 1,
             turnActionsTaken: [],

@@ -16,8 +16,17 @@ export function setFeastBonusArt(on: boolean) {
     feastBonusArt = on
 }
 
+// Newer games draw one of three Feasts per card; each has its own card art (card id -> Feast id).
+let feastCategories: Record<string, string> | undefined
+
+export function setFeastCardCategories(categories: Record<string, string> | undefined) {
+    feastCategories = categories
+}
+
 export function cardImageUrl(cardId: string): string | undefined {
+    const category = feastCategories?.[cardId]
     return (
+        (category ? cardImagesById[`feast-${category}`] : undefined) ??
         (feastBonusArt ? cardImagesById[`${cardId}-bonus`] : undefined) ??
         (revisedCardArt ? cardImagesById[`${cardId}-revised`] : undefined) ??
         cardImagesById[cardId]

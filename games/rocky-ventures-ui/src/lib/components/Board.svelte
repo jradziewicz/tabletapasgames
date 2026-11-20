@@ -1368,14 +1368,14 @@
         {/if}
     {/each}
 
-    <!-- Extract & Sell: hovering a silver mine shows what extracting it would pay -->
+    <!-- Extract & Sell: hovering a mine with Mana shows what extracting it would pay -->
     {#if gameSession.isMyTurn && !gameSession.isViewingHistory && gameSession.extractHoverNodeId && gameSession.extractableNodeIds.includes(gameSession.extractHoverNodeId) && gameSession.gameState.board.mines[gameSession.extractHoverNodeId]?.token?.ore === OreKind.Silver}
         {@const hoverId = gameSession.extractHoverNodeId}
         {@const node = BoardNodesById[hoverId]}
         {@const activeId = gameSession.gameState.activePlayerIds[0]}
         {@const plan = activeId ? planExtraction(gameSession.gameState, activeId, { nodeId: hoverId }) : undefined}
         {#if node && plan && typeof plan !== 'string'}
-            {@const label = `${plan.oreCount} Silver: ${plan.net < 0 ? '-' : '+'}$${Math.abs(plan.net)}`}
+            {@const label = `${plan.oreCount} Mana: ${plan.net < 0 ? '-' : '+'}$${Math.abs(plan.net)}`}
             <g pointer-events="none">
                 <rect x={node.x - label.length * 6.5 - 12} y={node.y + 32} width={label.length * 13 + 24} height="32" rx="16" fill="#1b140c" fill-opacity="0.92" stroke="#c0c6d0" stroke-width="3" />
                 <text x={node.x} y={node.y + 54} text-anchor="middle" font-size="20" font-weight="700" fill="#fff">{label}</text>

@@ -139,11 +139,17 @@
                     <span class="inline-block h-2.5 w-2.5 rounded-full" style="background: radial-gradient(circle at 35% 35%, #ffe08a, #c99a2e);"></span>
                     <span class="font-mono">{oreCapacity.gold}</span> Gold
                 </span>
-                <span class="flex items-center gap-1 whitespace-nowrap" title="Up to {oreCapacity.silver} silver ore per extract">
+                <span class="flex items-center gap-1 whitespace-nowrap" title="Up to {oreCapacity.silver} Mana per extract">
                     <span class="inline-block h-2.5 w-2.5 rounded-full" style="background: radial-gradient(circle at 35% 35%, #ffffff, #9aa3b2);"></span>
-                    <span class="font-mono">{oreCapacity.silver}</span> Silver
+                    <span class="font-mono">{oreCapacity.silver}</span> Mana
                 </span>
             </div>
+            {#if gameSession.gameState.feastCategories}
+                <!-- Newer games: Mana tokens kept from extracting Mana, one per mine emptied -->
+                <div class="mt-0.5 text-xs" title="Mana tokens kept: one for each mine you emptied by extracting its Mana">
+                    Empty mines <span class="font-mono font-semibold">{playerState.emptyMines ?? 0}</span>
+                </div>
+            {/if}
         </div>
     </div>
 

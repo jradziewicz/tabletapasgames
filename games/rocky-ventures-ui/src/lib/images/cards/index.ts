@@ -49,13 +49,22 @@ import image46 from './d29-revised.png'
 import image47 from './d29.png'
 import image48 from './d30-revised.png'
 import image49 from './d30.png'
-import image50 from './era1-bonus.png'
-import image51 from './era1.png'
-import image52 from './era2-bonus.png'
-import image53 from './era2.png'
-import image54 from './era3-bonus.png'
-import image55 from './era3.png'
-import image56 from './gameOver.png'
+import image53 from './era1-bonus.png'
+import image54 from './era1.png'
+import image59 from './era2-bonus.png'
+import image60 from './era2.png'
+import image65 from './era3-bonus.png'
+import image66 from './era3.png'
+import image67 from './feast-devCards.png'
+import image68 from './feast-emptyMines.png'
+import image69 from './feast-gems.png'
+import image70 from './feast-goldMines.png'
+import image71 from './feast-hits.png'
+import image72 from './feast-manaMines.png'
+import image73 from './feast-shares.png'
+import image74 from './feast-tool.png'
+import image75 from './feast-weapon.png'
+import image76 from './gameOver.png'
 
 // Image URL by file name (without .png)
 export const Images: Record<string, string> = {
@@ -109,11 +118,20 @@ export const Images: Record<string, string> = {
     'd29': image47,
     'd30-revised': image48,
     'd30': image49,
-    'era1-bonus': image50,
-    'era1': image51,
-    'era2-bonus': image52,
-    'era2': image53,
-    'era3-bonus': image54,
-    'era3': image55,
-    'gameOver': image56,
+    'era1-bonus': image53,
+    'era1': image54,
+    'era2-bonus': image59,
+    'era2': image60,
+    'era3-bonus': image65,
+    'era3': image66,
+    'feast-devCards': image67,
+    'feast-emptyMines': image68,
+    'feast-gems': image69,
+    'feast-goldMines': image70,
+    'feast-hits': image71,
+    'feast-manaMines': image72,
+    'feast-shares': image73,
+    'feast-tool': image74,
+    'feast-weapon': image75,
+    'gameOver': image76,
 }

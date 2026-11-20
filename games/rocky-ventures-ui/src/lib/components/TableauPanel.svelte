@@ -95,7 +95,7 @@
         <span>🏆 {selectedPlayer.victoryPoints} VP</span>
         <span>
             Weapon {selectedPlayer.weaponLevel} / Tool {selectedPlayer.toolLevel}
-            (up to {OreCapacityByToolLevel[selectedPlayer.toolLevel].gold} gold, {OreCapacityByToolLevel[selectedPlayer.toolLevel].silver} silver ore)
+            (up to {OreCapacityByToolLevel[selectedPlayer.toolLevel].gold} gold, {OreCapacityByToolLevel[selectedPlayer.toolLevel].silver} Mana)
         </span>
         {#if selectedPlayer.tuckedCardIds.length > 0}
             <span>Tucked under your mat: {selectedPlayer.tuckedCardIds.length} (next tax {`$${taxIncomeFor(selectedPlayer.tuckedCardIds.length + 1)}`})</span>

@@ -100,7 +100,7 @@
             const event = recent?.after.statEvents.slice(recent.before.statEvents.length).find((candidate) => candidate.kind === StatKind.MineExtract)
             if (recent && event) {
                 const detail = Object.fromEntries((event.detail ?? '').split(';').map((pair) => pair.split('=') as [string, string]))
-                const ore = event.source === 'gold' ? 'Gold' : event.source === 'silver' ? 'Silver' : 'ore'
+                const ore = event.source === 'gold' ? 'Gold' : event.source === 'silver' ? 'Mana' : 'ore'
                 const token = recent.before.board.getMine(recent.action.nodeId).token
                 const companyId = recent.action.creditCompanyId
                 // Recreate the sale on the state before it, for the money breakdown.

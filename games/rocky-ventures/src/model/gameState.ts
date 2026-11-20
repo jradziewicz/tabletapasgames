@@ -118,6 +118,7 @@ export const RockyVenturesGameState = Type.Evaluate(
             noGemPawnMove: Type.Optional(Type.Boolean()),
             gemsLost: Type.Optional(Type.Number()),
             bonusTokenCash: Type.Optional(Type.Boolean()),
+            feastCategories: Type.Optional(Type.Record(Type.String(), Type.String())),
             pendingMarketDraws: Type.Optional(Type.Number()),
             eraThreeTriggered: Type.Optional(Type.Boolean()),
             gemsSpent: Type.Number(),
@@ -197,6 +198,9 @@ export class HydratedRockyVenturesGameState
     // Any bonus token can be taken as $3 instead, and the gold bonus becomes a free claim on a
     // level 2 gold mine (Justin, 2026-11-18; new games).
     declare bonusTokenCash?: boolean
+    // Which of its three Feasts each Feast card is in this game, by card id (new games from
+    // 2026-11-20; drawn at setup). Older games keep the original three.
+    declare feastCategories?: Record<string, string>
     declare pendingMarketDraws?: number
     declare eraThreeTriggered?: boolean
     declare gemsSpent: number

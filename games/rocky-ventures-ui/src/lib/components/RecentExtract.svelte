@@ -17,7 +17,7 @@
             .find((candidate) => candidate.kind === StatKind.MineExtract)
         if (!event) return undefined
         const detail = Object.fromEntries((event.detail ?? '').split(';').map((pair) => pair.split('=') as [string, string]))
-        const ore = event.source === 'gold' ? 'Gold' : event.source === 'silver' ? 'Silver' : undefined
+        const ore = event.source === 'gold' ? 'Gold' : event.source === 'silver' ? 'Mana' : undefined
         const creditCompanyId = recent.action.creditCompanyId
 
         // A sale to a city where they hold an agreement offers a point buy straight after it.

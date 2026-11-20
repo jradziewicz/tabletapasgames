@@ -296,7 +296,7 @@
             (extract?.detail ?? '').split(';').map((pair) => pair.split('=') as [string, string])
         )
         const oreCount = Number(detail['ore'])
-        const ore = extract?.source === 'silver' ? 'Silver' : extract?.source === 'gold' ? 'Gold' : undefined
+        const ore = extract?.source === 'silver' ? 'Mana' : extract?.source === 'gold' ? 'Gold' : undefined
         const city = placeName(detail['city'] ?? action['cityId'])
         const credit = companyName(action['creditCompanyId'])
         const earned = delta(entry, playerId, 'money')
@@ -451,7 +451,7 @@
                         .filter((event) => event.kind === StatKind.Cash && event.source === 'agreement' && event.playerId === playerId)
                         .reduce((sum, event) => sum + event.amount, 0)
                     const price = sale + bonus
-                    const ore = extract.source === 'silver' ? 'Silver' : 'Gold'
+                    const ore = extract.source === 'silver' ? 'Mana' : 'Gold'
                     result.lines = [
                         { label: `${ore} price (${oreCount} × $${oreCount ? Math.round(sale / oreCount) : 0}${bonus ? ` + $${bonus} agreement` : ''})`, amount: price },
                         { label: ore === 'Gold' ? 'Expenses (transport & security)' : 'Expenses (dragon)', amount: -(price - extract.amount) },

@@ -29,7 +29,8 @@
     import CardHoverPreview from '$lib/components/CardHoverPreview.svelte'
     import GameOverOverlay from '$lib/components/GameOverOverlay.svelte'
     import PointSources from '$lib/components/PointSources.svelte'
-    import { setFeastBonusArt, setRevisedCardArt } from '$lib/utils/cardImages.js'
+    import { setFeastBonusArt, setFeastCardCategories, setRevisedCardArt } from '$lib/utils/cardImages.js'
+    import { setFeastCategories } from '$lib/utils/feastNames.js'
     import { setAgreementDeliveryScoring, setAgreementDiscardAllowed } from '$lib/utils/agreementImages.js'
     import DragonOverlay from '$lib/components/DragonOverlay.svelte'
     import DragonBonusOverlay from '$lib/components/DragonBonusOverlay.svelte'
@@ -55,6 +56,8 @@
     setGameSession(session)
     setRevisedCardArt(session.gameState.revisedCards === true)
     setFeastBonusArt(session.gameState.feastBuyerBonus === true)
+    setFeastCardCategories(session.gameState.feastCategories)
+    setFeastCategories(session.gameState.feastCategories)
     setAgreementDeliveryScoring(session.gameState.agreementsScoreOnDelivery === true)
     setAgreementDiscardAllowed(session.gameState.noAgreementDiscard !== true)
 

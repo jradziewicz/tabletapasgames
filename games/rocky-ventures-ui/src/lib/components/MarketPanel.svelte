@@ -19,7 +19,7 @@
         const labels: string[] = []
         if (index === 0) labels.push('Tax card')
         if (index === 1) labels.push('Manor gold price')
-        if (index === 2) labels.push('Silver price')
+        if (index === 2) labels.push('Mana price')
         if (index === 3) labels.push('Dornoch gold price')
         return `$${MarketSlotPrices[index]}${labels.length ? ` · ${labels.join(', ')}` : ''}`
     }
@@ -35,7 +35,7 @@
         <h2 class="text-xs font-semibold uppercase tracking-widest text-[#c9a961]">Development market <span class="normal-case tracking-normal">· {market.drawPile.length} left in draw pile</span></h2>
         <div class="text-xs text-[#c9a961]">
             Gold Dornoch {`$${gameState.goldPriceFor(DeliveryCityId.Dornoch)}`} · Gold Manor
-            {`$${gameState.goldPriceFor(DeliveryCityId.Manor)}`} · Silver {`$${gameState.silverPrice}`}
+            {`$${gameState.goldPriceFor(DeliveryCityId.Manor)}`} · Mana {`$${gameState.silverPrice}`}
         </div>
     </div>
     <div class="flex flex-row flex-wrap items-start gap-3">

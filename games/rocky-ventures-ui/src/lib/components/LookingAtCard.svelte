@@ -221,7 +221,7 @@
     // The money lines of a sale: what the ore sold for and what the route cost.
     function saleLines(plan: ReturnType<typeof planExtraction>): { label: string; amount: number }[] {
         if (typeof plan === 'string') return []
-        const ore = plan.ore === 'gold' ? 'Gold' : plan.ore === 'silver' ? 'Silver' : 'Ore'
+        const ore = plan.ore === 'gold' ? 'Gold' : plan.ore === 'silver' ? 'Mana' : 'Ore'
         const expenses = plan.transport + plan.security + plan.dragon - plan.discount
         return [
             { label: `${ore} price (${plan.oreCount} × $${plan.price}${plan.agreementBonus ? ` + $${plan.agreementBonus} bonus` : ''})`, amount: plan.sale + plan.agreementBonus },
@@ -380,7 +380,7 @@
                 case ActionType.ExtractAndSell: {
                     const event = extracts[extractIndex++]
                     const detail = Object.fromEntries((event?.detail ?? '').split(';').map((pair) => pair.split('=') as [string, string]))
-                    const ore = event?.source === 'gold' ? 'Gold' : event?.source === 'silver' ? 'Silver' : 'ore'
+                    const ore = event?.source === 'gold' ? 'Gold' : event?.source === 'silver' ? 'Mana' : 'ore'
                     const mine = BoardNodesById[data.nodeId as string]?.name ?? 'a mine'
                     const city = BoardNodesById[detail['city'] ?? '']?.name
                     // The way the gold went: recorded with the delivery, chosen by the player, or replayed.
