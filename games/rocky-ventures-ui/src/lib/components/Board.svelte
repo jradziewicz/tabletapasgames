@@ -18,6 +18,8 @@
         CompanyId,
         DeliveryCityId,
         planExtraction,
+        gemSupplyLeft,
+        GemSupplySize,
         MineTier,
         MineTokensById,
         RedRestrictedMineLevel,
@@ -156,6 +158,7 @@
     })
 
     const MineTokenRadius = 24
+    const gemsLeft = $derived(gemSupplyLeft(gameSession.gameState))
 
     // Live play: watchers see the spots the current player is choosing between, glowing big.
     const watching = $derived(
@@ -832,6 +835,21 @@
         {/if}
     {/each}
 
+    <!-- Gems left in the supply: newer games (no gem end trigger) fill one hex per gem left, and
+         every game shows the count on a tag at the top of the box -->
+    {#if gameSession.gameState.eraThreeEndsGame}
+        {#each GemTrackFillOrder as spot, index (index)}
+            {#if index < gemsLeft}
+                <polygon points={hexagonPoints(spot, GemHexRadius - 2)} fill="#e0234f" stroke="#5c0a1e" stroke-width="2" style="pointer-events: none;" />
+                <polygon points={hexagonPoints(spot, GemHexRadius - 8)} fill="none" stroke="#ff9db4" stroke-width="1.5" opacity="0.8" style="pointer-events: none;" />
+            {/if}
+        {/each}
+    {/if}
+    <g style="pointer-events: none;">
+        <title>{gemsLeft} of {GemSupplySize} gems left in the supply</title>
+        <rect x={1538 - 52} y="66" width="104" height="24" rx="12" fill="#1b140c" fill-opacity="0.92" stroke="#e0234f" stroke-width="2" />
+        <text x="1538" y="83" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">{gemsLeft} GEMS LEFT</text>
+    </g>
     {#each GemTrackFillOrder as spot, index (index)}
         {#if !gameSession.gameState.eraThreeEndsGame && index < gameSession.gameState.gemsSpent}
             <polygon
