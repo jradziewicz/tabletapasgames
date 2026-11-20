@@ -19,7 +19,6 @@
         DeliveryCityId,
         planExtraction,
         gemSupplyLeft,
-        GemSupplySize,
         MineTier,
         MineTokensById,
         RedRestrictedMineLevel,
@@ -835,8 +834,7 @@
         {/if}
     {/each}
 
-    <!-- Gems left in the supply: newer games (no gem end trigger) fill one hex per gem left, and
-         every game shows the count on a tag at the top of the box -->
+    <!-- Gems left in the supply, shown as gems on the track (newer games, no gem end trigger) -->
     {#if gameSession.gameState.eraThreeEndsGame}
         {#each GemTrackFillOrder as spot, index (index)}
             {#if index < gemsLeft}
@@ -845,11 +843,6 @@
             {/if}
         {/each}
     {/if}
-    <g style="pointer-events: none;">
-        <title>{gemsLeft} of {GemSupplySize} gems left in the supply</title>
-        <rect x={1538 - 52} y="66" width="104" height="24" rx="12" fill="#1b140c" fill-opacity="0.92" stroke="#e0234f" stroke-width="2" />
-        <text x="1538" y="83" text-anchor="middle" font-size="15" font-weight="700" fill="#fff">{gemsLeft} GEMS LEFT</text>
-    </g>
     {#each GemTrackFillOrder as spot, index (index)}
         {#if !gameSession.gameState.eraThreeEndsGame && index < gameSession.gameState.gemsSpent}
             <polygon
