@@ -56,11 +56,9 @@
     setGameSession(session)
     setRevisedCardArt(session.gameState.revisedCards === true)
     setFeastBonusArt(session.gameState.feastBuyerBonus === true)
-    // Every game from before the drawn Feasts (with or without the buyer bonus) shows the new card
-    // art and names, matched to the original three (Justin, 2026-11-20: "even on the old ones").
-    const shownFeasts = session.gameState.feastCategories ?? { era1: 'tool', era2: 'shares', era3: 'goldMines' }
-    setFeastCardCategories(shownFeasts)
-    setFeastCategories(shownFeasts)
+    // Older games keep their original Feast cards and names (only their Mana colour was updated).
+    setFeastCardCategories(session.gameState.feastCategories)
+    setFeastCategories(session.gameState.feastCategories)
     setAgreementDeliveryScoring(session.gameState.agreementsScoreOnDelivery === true)
     setAgreementDiscardAllowed(session.gameState.noAgreementDiscard !== true)
 
