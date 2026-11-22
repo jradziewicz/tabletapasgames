@@ -1,6 +1,7 @@
 import {
     Notification,
     NotificationCategory,
+    PlayerVoteKind,
     UserNotification,
     UserNotificationAction
 } from '@tabletop/common'
@@ -33,6 +34,8 @@ export function discordMessageForNotification(
             return `${notification.data.owner.username} invited you to join their ${title} game [${gameName}](${FRONTEND_HOST}/dashboard)`
         case UserNotificationAction.IsYourTurn:
             return `It's your turn in your ${title} game [${gameName}](${FRONTEND_HOST}/game/${notification.data.game.id})`
+        case UserNotificationAction.PlayerVoteRequested:
+            return `${notification.data.initiator.name} ${notification.data.kind === PlayerVoteKind.Call ? 'asks to end' : 'asks to go back in'} your ${title} game [${gameName}](${FRONTEND_HOST}/game/${notification.data.game.id}). Open it to vote.`
     }
     return
 }

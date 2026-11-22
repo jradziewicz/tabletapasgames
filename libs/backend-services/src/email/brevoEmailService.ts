@@ -7,13 +7,15 @@ import {
     GameInvitation,
     GameEnd,
     YourTurn,
+    VoteRequested,
     ContentReport,
     emailVerificationText,
     passwordResetText,
     accountChangeNotificationText,
     gameInvitationText,
     gameEndText,
-    yourTurnText
+    yourTurnText,
+    voteRequestedText
 } from '@tabletop/email'
 
 import { SecretsService } from '../secrets/secretsService'
@@ -275,6 +277,29 @@ export class BrevoEmailService implements EmailService {
         await this.send({
             to: toEmail,
             subject: `It's your turn in ${gameName}!`,
+            html: emailHTML,
+            text: emailText
+        })
+    }
+
+    async sendVoteRequestedEmail({
+        title,
+        gameName,
+        request,
+        url,
+        toEmail
+    }: {
+        title: string
+        gameName: string
+        request: string
+        url: string
+        toEmail: string
+    }): Promise<void> {
+        const emailHTML = await render(VoteRequested({ title, gameName, request, url }))
+        const emailText = voteRequestedText({ title, gameName, request, url })
+        await this.send({
+            to: toEmail,
+            subject: `${request} in ${gameName}`,
             html: emailHTML,
             text: emailText
         })

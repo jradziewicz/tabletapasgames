@@ -51,4 +51,12 @@ export interface EmailService {
         url: string
         toEmail: string
     }): Promise<void>
+    // Another player asked for a vote (a rewind, or calling the game).
+    sendVoteRequestedEmail(args: {
+        title: string
+        gameName: string
+        request: string
+        url: string
+        toEmail: string
+    }): Promise<void>
 }

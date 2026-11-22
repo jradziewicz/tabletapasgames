@@ -29,6 +29,8 @@ export class NullEmailService implements EmailService {
         console.log(`EMAIL NOT CONFIGURED: Game End Email`)
     }
 
+    async sendVoteRequestedEmail(): Promise<void> {}
+
     async sendTurnNotificationEmail(): Promise<void> {
         console.log(`EMAIL NOT CONFIGURED: Turn Notification Email`)
     }

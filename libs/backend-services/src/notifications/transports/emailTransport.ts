@@ -1,6 +1,7 @@
 import {
     Notification,
     NotificationCategory,
+    PlayerVoteKind,
     UserNotification,
     UserNotificationAction
 } from '@tabletop/common'
@@ -41,7 +42,12 @@ export class EmailTransport implements NotificationTransport {
             // Only "it's your turn" alerts go out over email for now, so people
             // aren't flooded with a message for every join/decline/invite as well,
             // the way Discord DMs and web push already cover those.
-            if (notification.action !== UserNotificationAction.IsYourTurn) {
+            // ...plus a player asking the others to vote on a rewind or on calling the game
+            // (Justin, 2026-11-22), so nobody misses a request that's waiting on them.
+            if (
+                notification.action !== UserNotificationAction.IsYourTurn &&
+                notification.action !== UserNotificationAction.PlayerVoteRequested
+            ) {
                 return { success: false, unregister: false }
             }
 
@@ -67,6 +73,17 @@ export class EmailTransport implements NotificationTransport {
                 .name
             const url = `${FRONTEND_HOST}/game/${notification.data.game.id}`
 
+            if (notification.action === UserNotificationAction.PlayerVoteRequested) {
+                await this.emailService.sendVoteRequestedEmail({
+                    title: title ?? 'your game',
+                    gameName: notification.data.game.name,
+                    request: voteRequestText(notification.data.initiator.name, notification.data.kind),
+                    url,
+                    toEmail: user.email
+                })
+                return { success: true, unregister: false }
+            }
+
             await this.emailService.sendTurnNotificationEmail({
                 title: title ?? 'your game',
                 gameName: notification.data.game.name,
@@ -84,4 +101,9 @@ export class EmailTransport implements NotificationTransport {
     private isUserNotification(notification: Notification): notification is UserNotification {
         return notification.type === NotificationCategory.User
     }
+}
+
+// "Ana asks to go back" / "Ana asks to end the game", as the web push alert words it.
+export function voteRequestText(initiatorName: string, kind: PlayerVoteKind): string {
+    return kind === PlayerVoteKind.Call ? `${initiatorName} asks to end the game` : `${initiatorName} asks to go back`
 }

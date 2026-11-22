@@ -151,3 +151,24 @@ export const yourTurnText = ({
         ],
         "You're receiving this because it's your turn in an active game. You won't get another email for this turn unless it stays open for a while.",
     )
+
+export const voteRequestedText = ({
+    title,
+    gameName,
+    request,
+    url,
+}: {
+    title: string
+    gameName: string
+    request: string
+    url: string
+}): string =>
+    plainTextEmail(
+        request,
+        [
+            'The game is waiting on your vote. Open it to approve or decline.',
+            `${gameName} (${title})`,
+            `Vote now: ${url}`,
+        ],
+        "You're receiving this because a player in one of your games asked for a vote.",
+    )
