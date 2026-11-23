@@ -46,7 +46,7 @@ const minesHeld = (ore: OreKind): Measure => (state, player) =>
 export const FeastCategories: FeastCategory[] = [
     { id: 'tool', cardId: FirstEraCardId, name: 'Feast of the Lantern', measureLabel: 'tool level', shortLabel: 'TOOL', measure: (_state, player) => player.toolLevel },
     { id: 'weapon', cardId: FirstEraCardId, name: 'Feast of the Forge', measureLabel: 'weapon level', shortLabel: 'WEAPON', measure: (_state, player) => player.weaponLevel },
-    { id: 'manaMines', cardId: FirstEraCardId, name: 'Feast of the Mana Spring', measureLabel: 'mines held that give Mana', shortLabel: 'MANA', measure: minesHeld(OreKind.Silver) },
+    { id: 'manaMines', cardId: FirstEraCardId, name: 'Feast of the Mana Spring', measureLabel: 'Mana mines held', shortLabel: 'MANA', measure: minesHeld(OreKind.Silver) },
     { id: 'hits', cardId: SecondEraCardId, name: 'Feast of the Warrior', measureLabel: 'hits (battle axe)', shortLabel: 'HITS', measure: (_state, player) => player.huntHits ?? 0 },
     { id: 'shares', cardId: SecondEraCardId, name: 'Feast of the Mogul', measureLabel: 'share multipliers', shortLabel: 'SHARES', measure: FeastBuyerBonuses[SecondEraCardId]!.measure },
     { id: 'gems', cardId: SecondEraCardId, name: 'Feast of the Hoard', measureLabel: 'unspent gems', shortLabel: 'GEMS', measure: (_state, player) => player.gems },
