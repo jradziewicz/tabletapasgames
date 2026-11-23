@@ -27,22 +27,22 @@
         if (back !== undefined) {
             switch (back) {
                 case AgreementBackEffect.GoldOreBonus:
-                    return { text: '+2 / gold', icon: 'coin' }
+                    return { text: '+2', icon: 'coin' }
                 case AgreementBackEffect.ExpenseDiscount:
-                    return { text: '−3 costs', icon: 'discount' }
+                    return { text: '−3', icon: 'discount' }
                 case AgreementBackEffect.IgnoreDragon:
-                    return { text: 'no dragon', icon: 'dragon' }
+                    return { text: '', icon: 'dragon' }
                 default:
-                    return { text: 'flipped', muted: true }
+                    return { text: '—', muted: true }
             }
         }
         switch (letter) {
             case AgreementLetter.A:
-                return { text: '+2 / gold', icon: 'coin' }
+                return { text: '+2', icon: 'coin' }
             case AgreementLetter.B:
-                return { text: '+2 / Mana', icon: 'coin' }
+                return { text: '+2', icon: 'coin' }
             case AgreementLetter.C:
-                return { text: '−3 costs', icon: 'discount' }
+                return { text: '−3', icon: 'discount' }
             case AgreementLetter.D:
                 return { text: 'buy 3 VP' }
             default:
