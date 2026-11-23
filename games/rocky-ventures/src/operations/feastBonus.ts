@@ -105,3 +105,12 @@ export function scoreFeastBuyerBonus(state: HydratedRockyVenturesGameState, play
         recordVictoryPoints(state, playerId, points, 'feastBonus', { cardId })
     }
 }
+
+// Feast point buy prices from 2026-11-23 (Justin): Era I $15 and Era II $20 for 5 VP; Era III stays
+// $5 for 1 VP.
+export const NewFeastPointBuyCosts: Record<string, number> = { [FirstEraCardId]: 15, [SecondEraCardId]: 20 }
+
+// What one point buy bundle costs for this Feast in this game.
+export function feastPointBuyCost(state: HydratedRockyVenturesGameState, card: { id: string; pointBuyCost: number }): number {
+    return state.feastPointBuyCosts?.[card.id] ?? card.pointBuyCost
+}

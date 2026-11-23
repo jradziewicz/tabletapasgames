@@ -1,3 +1,4 @@
+import { feastPointBuyCost } from './feastBonus.js'
 import { Prng } from '@tabletop/common'
 import { CardKind, getCard } from '../data/cards.js'
 import { TaxSlotIndex, taxIncomeFor } from '../data/setup.js'
@@ -72,11 +73,11 @@ export function dummyPointBuy(state: HydratedRockyVenturesGameState, cardId: str
     if (!dummy || card.kind !== CardKind.EndOfEra) {
         return
     }
-    const bundles = Math.floor(dummy.money / card.pointBuyCost)
+    const bundles = Math.floor(dummy.money / feastPointBuyCost(state, card))
     if (bundles === 0) {
         return
     }
-    dummy.money -= bundles * card.pointBuyCost
+    dummy.money -= bundles * feastPointBuyCost(state, card)
     dummy.victoryPoints += bundles * card.pointBuyVictoryPoints
     recordStat(state, {
         kind: StatKind.VictoryPoints,
@@ -88,7 +89,7 @@ export function dummyPointBuy(state: HydratedRockyVenturesGameState, cardId: str
     recordStat(state, {
         kind: StatKind.Cash,
         playerId: DummyPlayerId,
-        amount: -bundles * card.pointBuyCost,
+        amount: -bundles * feastPointBuyCost(state, card),
         source: 'pointBuy',
         cardId
     })

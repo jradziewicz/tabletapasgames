@@ -9,6 +9,7 @@
         ActionType,
         BoardNodesById,
         freeBonusClaimMineIds,
+        feastPointBuyCost,
         isBonusToken,
         CardActionKind,
         CardKind,
@@ -195,7 +196,7 @@
         return company.multiplierForShare(selection.shareIndex) * company.value
     })
     const maxBundles = $derived(
-        player && pointBuyCard ? Math.floor((player.money + convertCash) / pointBuyCard.pointBuyCost) : 0
+        player && pointBuyCard ? Math.floor((player.money + convertCash) / feastPointBuyCost(gameState, pointBuyCard)) : 0
     )
     const bundles = $derived(Math.min(gameSession.pointBuyBundles, maxBundles))
 </script>
@@ -1200,7 +1201,7 @@
         </div>
     {:else if gameState.machineState === MachineState.PointBuy && pointBuyCard}
         {@const feastUrl = gameState.pointBuy?.cardId ? cardImageUrl(gameState.pointBuy.cardId) : undefined}
-        {@const cost = pointBuyCard.pointBuyCost}
+        {@const cost = feastPointBuyCost(gameState, pointBuyCard)}
         {@const vpEach = pointBuyCard.pointBuyVictoryPoints}
         {@const moneyAfter = player.money + convertCash - bundles * cost}
         <!-- Feast point buy: the Feast card, an optional share to cash in, and a VP stepper -->

@@ -4,6 +4,7 @@ import { MaxGems } from '../model/playerState.js'
 import { getCard, CardKind } from '../data/cards.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { FirstEraCardId, SecondEraCardId, ThirdEraCardId } from './market.js'
+import { NewFeastPointBuyCosts } from './feastBonus.js'
 
 // Running games Justin asked to move onto the two-sided agreements and the 2-gem start
 // (2026-11-03). Each switches the first time it loads after the change, as long as nobody holds
@@ -125,6 +126,8 @@ export function migrateRunningGame(state: HydratedRockyVenturesGameState) {
         }
         if (FeastLastInDecadeGameIds.includes(state.gameId)) {
             migrateFeastsLastInDecade(state)
+            // ...and the new Feast point buy prices (Justin, 2026-11-23).
+            if (!state.feastPointBuyCosts) state.feastPointBuyCosts = { ...NewFeastPointBuyCosts }
         }
         if (InOrderAndDeliveryScoringGameIds.includes(state.gameId)) {
             state.actionsInOrder = true

@@ -2,6 +2,7 @@ import {
     ActionType,
     currentPlayerId,
     freeBonusClaimMineIds,
+    feastPointBuyCost,
     BoardBoxLocations,
     CardBonusKind,
     CardKind,
@@ -167,9 +168,9 @@ function reserveFor(state: HydratedRockyVenturesGameState): number {
         return 0
     }
     if (eraInMarket) {
-        return era.pointBuyCost * 2
+        return feastPointBuyCost(state, era) * 2
     }
-    return deckIndex < 6 ? era.pointBuyCost : 0
+    return deckIndex < 6 ? feastPointBuyCost(state, era) : 0
 }
 
 function routeBoxIds(state: HydratedRockyVenturesGameState, playerId: string): Set<string> {
@@ -210,9 +211,9 @@ function pointBuyMoves(state: HydratedRockyVenturesGameState, player: HydratedRo
     const best = [...player.shares]
         .map((share) => ({ share, value: shareValue(state, share.companyId, share.shareIndex) }))
         .sort((left, right) => right.value - left.value)[0]
-    const plain = Math.max(0, Math.floor((player.money - keep) / card.pointBuyCost))
+    const plain = Math.max(0, Math.floor((player.money - keep) / feastPointBuyCost(state, card)))
     if (best) {
-        const withShare = Math.max(0, Math.floor((player.money + best.value - keep) / card.pointBuyCost))
+        const withShare = Math.max(0, Math.floor((player.money + best.value - keep) / feastPointBuyCost(state, card)))
         if (withShare > plain) {
             return [
                 {
@@ -293,7 +294,7 @@ function taxBotMoves(state: HydratedRockyVenturesGameState, playerId: string, va
         case MachineState.PointBuy: {
             const cardId = state.pointBuy?.cardId
             const card = cardId ? getCard(cardId) : undefined
-            const bundles = card && card.kind === CardKind.EndOfEra ? Math.floor(player.money / card.pointBuyCost) : 0
+            const bundles = card && card.kind === CardKind.EndOfEra ? Math.floor(player.money / feastPointBuyCost(state, card)) : 0
             return [{ type: ActionType.PointBuy, bundles }, { type: ActionType.PointBuy, bundles: 0 }]
         }
         case MachineState.Hunt: {

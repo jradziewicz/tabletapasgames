@@ -1,3 +1,4 @@
+import { feastPointBuyCost } from '../operations/feastBonus.js'
 import * as Type from 'typebox'
 import { recordCash, recordVictoryPoints } from '../operations/stats.js'
 import { Compile } from 'typebox/compile'
@@ -70,9 +71,9 @@ export class HydratedPointBuy extends HydratableAction<typeof PointBuy> implemen
             })
             player.shares.splice(index, 1)
         }
-        player.spendMoney(card.pointBuyCost * this.bundles)
+        player.spendMoney(feastPointBuyCost(state, card) * this.bundles)
         player.addVictoryPoints(card.pointBuyVictoryPoints * this.bundles)
-        recordCash(state, this.playerId, -card.pointBuyCost * this.bundles, 'pointBuy', {
+        recordCash(state, this.playerId, -feastPointBuyCost(state, card) * this.bundles, 'pointBuy', {
             cardId: pointBuy.cardId
         })
         recordVictoryPoints(state, this.playerId, card.pointBuyVictoryPoints * this.bundles, 'pointBuy', {
@@ -116,7 +117,7 @@ export class HydratedPointBuy extends HydratableAction<typeof PointBuy> implemen
             const company = state.getCompany(convertShare.companyId)
             money += company.multiplierForShare(convertShare.shareIndex) * company.value
         }
-        if (card.pointBuyCost * bundles > money) {
+        if (feastPointBuyCost(state, card) * bundles > money) {
             return 'Not enough money to buy that many points'
         }
         return undefined
