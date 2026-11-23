@@ -47,6 +47,7 @@
     } from '@tabletop/rocky-ventures'
     import { CalledGameEnding, PlayerName } from '@tabletop/frontend-components'
     import { CityRouteColors } from '$lib/utils/routePath.js'
+    import { deliveryVictoryPoints } from '$lib/utils/deliveryPoints.js'
     import AgreementDiscard from '$lib/components/AgreementDiscard.svelte'
     import GemActions from '$lib/components/GemActions.svelte'
     import gemIcon from '$lib/images/icons/gem.png'
@@ -605,6 +606,52 @@
                             Modify
                         </button>
                     </div>
+                {/if}
+                <!-- Sale summary for the city being hovered or picked (Justin, 2026-11-23) -->
+                {#if extractNodeId && extractToken}
+                {@const hoverPlan =
+                    extractNodeId && activeId && gameSession.extractHoverCityId && !gameSession.extractCustomRoute
+                        ? planExtraction(gameState, activeId, { nodeId: extractNodeId, cityId: gameSession.extractHoverCityId })
+                        : undefined}
+                {@const summary = hoverPlan && typeof hoverPlan !== 'string' ? hoverPlan : extractPlan}
+                {#if summary}
+                    {@const isGold = summary.ore === OreKind.Gold}
+                    {@const cityName = BoardNodesById[summary.saleCityId]?.name ?? ''}
+                    {@const total = summary.sale + summary.agreementBonus}
+                    {@const summaryVp = isGold && activeId ? deliveryVictoryPoints(gameState, activeId, summary.saleCityId) : 0}
+                    <div class="w-full max-w-md rounded-lg border border-[#8a6d3b] bg-[#2a1d10] px-3 py-2 text-sm">
+                        {#if isGold}<div class="mb-1 text-[11px] uppercase tracking-widest text-[#c9a961]">Sell to {cityName}</div>{/if}
+                        <div class="grid grid-cols-[1fr_auto] gap-x-4 gap-y-0.5">
+                            <span class="text-[#e8d9b8]" style="font-family: Georgia, serif;">{isGold ? 'Gold' : 'Mana'} sale ({summary.oreCount} × ${summary.price})</span>
+                            <span class="text-right font-mono">${summary.sale}</span>
+                            {#if summary.agreementBonus}
+                                <span class="text-[#e8d9b8]" style="font-family: Georgia, serif;">{cityName} agreement</span>
+                                <span class="text-right font-mono text-[#8fd18f]">+${summary.agreementBonus}</span>
+                                <span class="border-t border-[#5a4630] pt-0.5 font-bold text-white" style="font-family: Georgia, serif;">Total</span>
+                                <span class="border-t border-[#5a4630] pt-0.5 text-right font-mono font-bold text-white">${total}</span>
+                            {/if}
+                            {#if isGold}
+                                <span class="text-[#e8d9b8]" style="font-family: Georgia, serif;">Less transport</span>
+                                <span class="text-right font-mono text-[#ff8a7a]">−${summary.transport}</span>
+                                {#if summary.security}
+                                    <span class="text-[#e8d9b8]" style="font-family: Georgia, serif;">Less scourge security</span>
+                                    <span class="text-right font-mono text-[#ff8a7a]">−${summary.security}</span>
+                                {/if}
+                            {/if}
+                            {#if summary.dragon}
+                                <span class="text-[#e8d9b8]" style="font-family: Georgia, serif;">Less dragon</span>
+                                <span class="text-right font-mono text-[#ff8a7a]">−${summary.dragon}</span>
+                            {/if}
+                            {#if summary.discount}
+                                <span class="text-[#e8d9b8]" style="font-family: Georgia, serif;">Agreement discount</span>
+                                <span class="text-right font-mono text-[#8fd18f]">+${summary.discount}</span>
+                            {/if}
+                            <span class="mt-0.5 border-t-2 border-[#c9a961] pt-1 text-base font-bold text-[#ffd166]" style="font-family: Georgia, serif;">Profit</span>
+                            <span class="mt-0.5 border-t-2 border-[#c9a961] pt-1 text-right font-mono text-base font-bold {summary.net < 0 ? 'text-[#ff8a7a]' : 'text-[#ffd166]'}">{summary.net < 0 ? '−' : ''}${Math.abs(summary.net)}</span>
+                        </div>
+                        {#if summaryVp}<div class="mt-1 text-xs text-[#a88d5a]">+{summaryVp} VP from the {cityName} agreement</div>{/if}
+                    </div>
+                {/if}
                 {/if}
                 {#if extractPlan && extractPlan.creditCandidates.length > 1}
                     <div class="flex flex-wrap items-center gap-2 text-xs">
