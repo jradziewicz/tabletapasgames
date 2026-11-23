@@ -37,6 +37,10 @@ function migrateFinalFeastToBottomThree(state: HydratedRockyVenturesGameState) {
     state.market = { ...state.market, drawPile }
 }
 
+function isFeastCard(cardId: string): boolean {
+    return getCard(cardId).kind === CardKind.EndOfEra
+}
+
 // Same on every load until it's saved, so the spot comes from the pile itself, not the game's
 // random numbers.
 function stablePick(text: string, choices: number): number {
@@ -99,6 +103,15 @@ export function migrateRunningGame(state: HydratedRockyVenturesGameState) {
         state.negativeDeliveries = true
         // Every open game moves onto Feasts that the buyer doesn't tuck (Justin, 2026-11-23).
         state.feastNotTucked = true
+        // ...and in games with the Feast purchase bonus, Feasts already tucked come back out of the
+        // tuck (Justin, 2026-11-23). New arrays only: hydrated state shares objects with storage.
+        if (state.feastBuyerBonus) {
+            for (const player of state.players) {
+                if (player.tuckedCardIds.some(isFeastCard)) {
+                    player.tuckedCardIds = player.tuckedCardIds.filter((cardId) => !isFeastCard(cardId))
+                }
+            }
+        }
         if (FinalFeastBottomThreeGameIds.includes(state.gameId)) {
             migrateFinalFeastToBottomThree(state)
         }
