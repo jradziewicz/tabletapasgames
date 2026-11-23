@@ -12,6 +12,8 @@
         Definition,
         DragonHuntRegion,
         GemActionCosts,
+        FeastBuyerBonuses,
+        feastCategoryFor,
         type GemActionKind,
         RegionNames,
         StatKind,
@@ -354,6 +356,8 @@
         lines?: { label: string; amount: number }[]
         credit?: string
         creditLogo?: string
+        // Feast scoring and point buys, line by line (Justin, 2026-11-23).
+        scoring?: { label: string; value: string; tone?: 'good' | 'bad' | 'total' }[]
         // Scourges that came onto the board during the step.
         entered: { url?: string; region: string }[]
         zoom?: Zoom
@@ -392,6 +396,34 @@
         return node ? [{ x: node.x, y: node.y }] : []
     }
 
+    // What buying a Feast scored: the buyer's purchase bonus, then every player's battle axe hits.
+    function feastScoring(events: StatEvent[], cardId: string, buyerId: string): NonNullable<Visual['scoring']> {
+        const rows: NonNullable<Visual['scoring']> = []
+        const vpOf = (source: string, id?: string) =>
+            events
+                .filter((event) => event.kind === StatKind.VictoryPoints && event.source === source && (id === undefined || event.playerId === id) && (source !== 'hunt' || event.cardId === cardId))
+        const bonus = vpOf('feastBonus', buyerId).reduce((sum, event) => sum + event.amount, 0)
+        const points = FeastBuyerBonuses[cardId]?.points ?? []
+        const measure =
+            feastCategoryFor(gameSession.gameState, cardId)?.measureLabel ??
+            ({ era1: 'tool level', era2: 'share multipliers', era3: 'gold mines held' } as Record<string, string>)[cardId] ??
+            ''
+        const rank = points.indexOf(bonus) + 1
+        rows.push({
+            label: `${gameSession.getPlayerName(buyerId)}: purchase bonus${bonus ? ` (${['1st', '2nd', '3rd'][rank - 1] ?? ''} in ${measure})` : ` (not top 3 in ${measure})`}`.replace(' ()', ''),
+            value: `+${bonus} VP`,
+            tone: bonus ? 'good' : undefined
+        })
+        let total = bonus
+        for (const event of vpOf('hunt')) {
+            if (!event.playerId) continue
+            rows.push({ label: `${gameSession.getPlayerName(event.playerId)}: battle axe (${plural(event.amount, 'hit')})`, value: `+${event.amount} VP`, tone: 'good' })
+            total += event.amount
+        }
+        rows.push({ label: 'Total scored', value: `+${total} VP`, tone: 'total' })
+        return rows
+    }
+
     function visual(entry: Entry): Visual {
         const action = entry.actions[0] as unknown as Record<string, unknown>
         const playerId = String(action['playerId'])
@@ -413,8 +445,22 @@
                 break
             }
             case ActionType.Invest: {
-                const url = cardPicture(events.find((event) => event.kind === StatKind.Purchase)?.cardId, playerId)
+                const boughtId = events.find((event) => event.kind === StatKind.Purchase)?.cardId
+                const url = cardPicture(boughtId, playerId)
                 if (url) result.cards.push(url)
+                if (boughtId && FeastBuyerBonuses[boughtId]) result.scoring = feastScoring(events, boughtId, playerId)
+                break
+            }
+            case ActionType.PointBuy: {
+                const vpEvents = events.filter((event) => event.kind === StatKind.VictoryPoints && event.source === 'pointBuy' && event.playerId === playerId)
+                const shareCash = events.filter((event) => event.kind === StatKind.Cash && event.source === 'shareSale' && event.playerId === playerId).reduce((sum, event) => sum + event.amount, 0)
+                const spent = -events.filter((event) => event.kind === StatKind.Cash && event.source === 'pointBuy' && event.playerId === playerId).reduce((sum, event) => sum + event.amount, 0)
+                const vp = vpEvents.reduce((sum, event) => sum + event.amount, 0)
+                const rows: NonNullable<Visual['scoring']> = []
+                if (shareCash) rows.push({ label: 'Cashed in a share', value: `+${money(shareCash)}`, tone: 'good' })
+                if (spent) rows.push({ label: 'Spent on points', value: `-${money(spent)}`, tone: 'bad' })
+                rows.push({ label: 'VP bought', value: `+${vp} VP`, tone: 'total' })
+                result.scoring = rows
                 break
             }
             case ActionType.Tax: {
@@ -664,6 +710,14 @@
                                             <circle cx={point.x} cy={point.y} r={pictures.ringRadius ?? 27} fill="none" stroke={glowColor} stroke-width={pictures.ringRadius ? 5 : 7} opacity="0.75" filter="url(#{`rv-history-glow-${entry.id}`})" />
                                         {/each}
                                     </svg>
+                                {/if}
+                                {#if pictures.scoring}
+                                    <div class="grid w-full max-w-xs grid-cols-[1fr_auto] gap-x-4 text-xs text-[#e8d9b8]">
+                                        {#each pictures.scoring as row, rowIndex (rowIndex)}
+                                            <span class={row.tone === 'total' ? 'border-t border-[#5a4630] pt-0.5 font-bold text-[#ffd166]' : ''}>{row.label}</span>
+                                            <span class="text-right font-mono {row.tone === 'total' ? 'border-t border-[#5a4630] pt-0.5 font-bold text-[#ffd166]' : row.tone === 'bad' ? 'text-[#ff8a7a]' : row.tone === 'good' ? 'text-[#8fd18f]' : ''}">{row.value}</span>
+                                        {/each}
+                                    </div>
                                 {/if}
                                 {#if pictures.lines}
                                     <div class="grid w-full max-w-xs grid-cols-[auto_auto] gap-x-4 text-xs text-[#e8d9b8]">
