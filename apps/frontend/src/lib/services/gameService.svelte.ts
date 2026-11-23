@@ -10,7 +10,8 @@ import {
     isDataEvent,
     isDiscontinuityEvent,
     NotificationChannel,
-    IndexedDbGameStore
+    IndexedDbGameStore,
+    localGameRecord
 } from '@tabletop/frontend-components'
 import {
     type GameCreationOptions,
@@ -121,6 +122,14 @@ export class GameService implements GameServiceInterface {
             .slice(0, 20)
     )
 
+    /** Hotseat games live only in this browser, so the server's history never lists them. */
+    finishedLocalGames: Game[] = $derived(
+        Array.from(this.localGamesById.values()).filter(
+            (game) =>
+                game.status === GameStatus.Finished && game.category !== GameCategory.Exploration
+        )
+    )
+
     openGamesByTitleId: Map<string, Game[]> = new SvelteMap()
 
     constructor(
@@ -193,12 +202,28 @@ export class GameService implements GameServiceInterface {
     ): Promise<{ games: Game[]; localGames: Game[] } | undefined> {
         const [games, localGames] = await Promise.all([
             this.api.getMyGames('current'),
-            sessionUser ? this.localGameStore.findGamesForUser(sessionUser) : []
+            sessionUser ? this.findLocalGames(sessionUser) : []
         ])
         if (this.authorizationService.getSessionUser()?.id !== sessionUser?.id) {
             return undefined
         }
         return { games, localGames }
+    }
+
+    private async findLocalGames(user: User): Promise<Game[]> {
+        const games = await this.localGameStore.findGamesForUser(user)
+        return Promise.all(games.map((game) => this.withFinishedOutcome(game)))
+    }
+
+    /**
+     * Saves before the fix for finished hotseat games left them started, with nobody to move.
+     * Their state still holds the result.
+     */
+    private async withFinishedOutcome(game: Game): Promise<Game> {
+        if (game.status !== GameStatus.Started || game.activePlayerIds?.length) return game
+        const state = await this.localGameStore.loadGameState(game.id)
+        if (!state?.result) return game
+        return localGameRecord(game, state, game.updatedAt ?? game.lastActionAt ?? game.createdAt)
     }
 
     // Should debounce this
@@ -337,11 +362,9 @@ export class GameService implements GameServiceInterface {
         state: GameState
         actions: GameAction[]
     }) {
-        const gameData = structuredClone(game)
         const stateData = structuredClone(state)
+        const gameData = localGameRecord(structuredClone(game), stateData)
         const actionsData = actions.map((action) => structuredClone(action))
-
-        gameData.activePlayerIds = stateData.activePlayerIds
 
         if (game.storage !== GameStorage.Local) {
             throw new Error('Can only save local games locally')

@@ -15,6 +15,8 @@ export interface UserStore {
     findById(id: string): Promise<User | undefined>
     findByUsernameAndPassword(username: string, password: string): Promise<User | undefined>
     findAllUsernames(): Promise<string[]>
+    // Lower-cased usernames of Active accounts only
+    findActiveUsernames(): Promise<string[]>
     findAllUsers(): Promise<User[]>
     findIncompleteUsers(): Promise<User[]>
 
