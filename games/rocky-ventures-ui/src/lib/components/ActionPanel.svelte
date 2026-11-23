@@ -6,6 +6,7 @@
     import {
         DummyPlayerId,
         finalScores,
+        emptyMinesBreakTies,
         ActionType,
         BoardNodesById,
         freeBonusClaimMineIds,
@@ -224,6 +225,7 @@
                     <th class="pr-4">Total cash</th>
                     <th class="pr-4">Cash ÷ 5 = VP</th>
                     <th>Total</th>
+                    {#if emptyMinesBreakTies(gameState)}<th class="pl-4" title="Ties are broken by most empty mines (Mana tokens kept), then cash">Empty mines</th>{/if}
                 </tr>
             </thead>
             <tbody>
@@ -236,6 +238,7 @@
                         <td class="pr-4">{`$${score.money + score.shareValue}`}</td>
                         <td class="pr-4">+{score.conversionVictoryPoints}</td>
                         <td>{score.total}</td>
+                        {#if emptyMinesBreakTies(gameState)}<td class="pl-4">{score.emptyMines}</td>{/if}
                     </tr>
                 {/each}
             </tbody>

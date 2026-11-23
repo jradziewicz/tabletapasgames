@@ -1,6 +1,6 @@
 <script lang="ts">
     import { PlayerName } from '@tabletop/frontend-components'
-    import { endTriggers, finalScores, tableWinners } from '@tabletop/rocky-ventures'
+    import { emptyMinesBreakTies, endTriggers, finalScores, tableWinners } from '@tabletop/rocky-ventures'
     import { DummyPlayerId } from '@tabletop/rocky-ventures'
     import { DummyColor, DummyName } from '$lib/utils/dummyDisplay.js'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -86,6 +86,7 @@
                         <th class="pb-2 pr-3">Total cash</th>
                         <th class="pb-2 pr-3">Cash ÷ 5</th>
                         <th class="pb-2">Final</th>
+                        {#if emptyMinesBreakTies(gameState)}<th class="pb-2 pl-3" title="Ties are broken by most empty mines (Mana tokens kept), then cash">Empty mines</th>{/if}
                     </tr>
                 </thead>
                 <tbody>
@@ -106,6 +107,7 @@
                             <td class="py-2 pr-3">{`$${score.money + score.shareValue}`}</td>
                             <td class="py-2 pr-3">+{score.conversionVictoryPoints}</td>
                             <td class="py-2 text-lg">{score.total}</td>
+                            {#if emptyMinesBreakTies(gameState)}<td class="py-2 pl-3">{score.emptyMines}</td>{/if}
                         </tr>
                     {/each}
                 </tbody>
