@@ -716,6 +716,29 @@
                 </button>
             </div>
         {:else if gameSession.huntActive}
+            {#if gameSession.huntPreviewRegion}
+                <!-- Touch screens: the region's monsters and their hits before drawing -->
+                {@const previewRegion = gameSession.huntPreviewRegion}
+                {@const previewTargets = huntTargets(gameState, previewRegion)}
+                <div class="mb-2 rounded-lg border border-[#8a6d3b] bg-[#2a1d10] p-2">
+                    <div class="mb-2 text-sm font-semibold">Hunt in {regionLabel(previewRegion)}?</div>
+                    <div class="flex flex-wrap items-end gap-3">
+                        {#each previewTargets as target (target.id)}
+                            {@const targetUrl = target.id === DragonHuntRegion ? DragonTileImageUrl : scourgeImageUrl(target.id)}
+                            <div class="flex flex-col items-center gap-1">
+                                {#if targetUrl}<img src={targetUrl} alt="" class="h-24 w-auto rounded" draggable="false" />{/if}
+                                <span class="text-xs font-semibold">{target.hits} / {target.level} hits</span>
+                            </div>
+                        {:else}
+                            <span class="text-xs text-[#c9a961]">No monsters here.</span>
+                        {/each}
+                    </div>
+                    <div class="mt-2 flex gap-2">
+                        <button type="button" onclick={() => gameSession.hunt(previewRegion)} class="rv-btn rv-primary">Draw</button>
+                        <button type="button" onclick={() => (gameSession.huntPreviewRegion = undefined)} class="rv-quiet">Choose another</button>
+                    </div>
+                </div>
+            {/if}
             <div class="flex flex-wrap items-center gap-2">
                 {#each huntableRegions(gameState) as region (region)}
                     {@const remaining = huntTargets(gameState, region).reduce((total, target) => total + Math.max(0, target.level - target.hits), 0)}

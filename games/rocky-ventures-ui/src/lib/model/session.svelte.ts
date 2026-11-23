@@ -265,6 +265,8 @@ export class RockyVenturesGameSession extends GameSession<
         this.huntCashIndexes = []
         this.huntClaimNodeId = undefined
         this.huntHitTargets = {}
+        this.huntManualHits = []
+        this.huntPreviewRegion = undefined
         this.huntFocusHit = undefined
         this.extractNodeId = undefined
         this.extractCityId = undefined
@@ -504,7 +506,17 @@ export class RockyVenturesGameSession extends GameSession<
         this.huntMode = true
     }
 
+    // On touch screens a first tap on a region shows its monsters and hits; Draw then hunts there
+    // (Justin, 2026-11-23). Mouse users hunt on the click, as before.
+    huntPreviewRegion: string | undefined = $state(undefined)
+
     async hunt(region: string) {
+        const touch = typeof window !== 'undefined' && !window.matchMedia('(hover: hover)').matches
+        if (touch && this.huntPreviewRegion !== region) {
+            this.huntPreviewRegion = region
+            return
+        }
+        this.huntPreviewRegion = undefined
         await this.submit(ActionType.Hunt, async () => {
             await this.applyAction(this.createPlayerAction(Hunt, { region }))
         })
@@ -520,14 +532,47 @@ export class RockyVenturesGameSession extends GameSession<
         return Object.values(this.huntHitTargets).filter((assigned) => assigned === targetId).length
     }
 
-    private autoHuntTarget(): string | undefined {
-        const targets = [...this.huntTargetsForPending].sort(
-            (left, right) => left.level - right.level || right.hits - left.hits
+    // Hits the player placed by hand; every other chosen hit is placed automatically.
+    huntManualHits: number[] = $state([])
+
+    // Default hit placement (Justin, 2026-11-23): first kill the most valuable target the hits can
+    // finish, then put the rest on targets from low to high. Hits placed by hand stay where they are.
+    private placeAutoHits() {
+        const pending = this.gameState.pendingHunt
+        if (!pending) return
+        const autoHits = this.huntSelected.filter(
+            (index) => pending.drawn[index] === WeaponTokenKind.Hit && !this.huntManualHits.includes(index)
         )
-        const open = targets.find(
-            (target) => target.level - target.hits - this.huntAssignedCount(target.id) > 0
+        const manual = Object.fromEntries(
+            Object.entries(this.huntHitTargets).filter(([index]) => this.huntManualHits.includes(Number(index)))
         )
-        return open?.id ?? targets.at(-1)?.id
+        const placed: Record<number, string> = { ...manual }
+        const targets = this.huntTargetsForPending
+        const need = new Map(
+            targets.map((target) => [
+                target.id,
+                target.level - target.hits - Object.values(manual).filter((id) => id === target.id).length
+            ])
+        )
+        let remaining = [...autoHits]
+        const give = (targetId: string, count: number) => {
+            for (const index of remaining.splice(0, count)) placed[index] = targetId
+            need.set(targetId, (need.get(targetId) ?? 0) - count)
+        }
+        const killable = targets
+            .filter((target) => (need.get(target.id) ?? 0) > 0 && (need.get(target.id) ?? 0) <= remaining.length)
+            .sort((left, right) => right.level - left.level || (need.get(left.id) ?? 0) - (need.get(right.id) ?? 0))[0]
+        if (killable) give(killable.id, need.get(killable.id) ?? 0)
+        const lowToHigh = [...targets].sort((left, right) => left.level - right.level || right.hits - left.hits)
+        for (const target of lowToHigh) {
+            if (remaining.length === 0) break
+            const open = need.get(target.id) ?? 0
+            if (open > 0) give(target.id, Math.min(open, remaining.length))
+        }
+        // More hits than there is left to kill: the extras go on the last target.
+        const last = lowToHigh.at(-1)
+        if (remaining.length > 0 && last) give(last.id, remaining.length)
+        this.huntHitTargets = placed
     }
 
     toggleHuntToken(index: number) {
@@ -544,6 +589,8 @@ export class RockyVenturesGameSession extends GameSession<
             this.huntSelected = this.huntSelected.filter((selected) => selected !== index)
             const { [index]: _removed, ...rest } = this.huntHitTargets
             this.huntHitTargets = rest
+            this.huntManualHits = this.huntManualHits.filter((manual) => manual !== index)
+            this.placeAutoHits()
             if (this.huntFocusHit === index) {
                 this.huntFocusHit = this.huntSelected
                     .filter((selected) => pending.drawn[selected] === WeaponTokenKind.Hit)
@@ -556,10 +603,7 @@ export class RockyVenturesGameSession extends GameSession<
         }
         this.huntSelected = [...this.huntSelected, index].sort((a, b) => a - b)
         if (isHit) {
-            const target = this.autoHuntTarget()
-            if (target !== undefined) {
-                this.huntHitTargets = { ...this.huntHitTargets, [index]: target }
-            }
+            this.placeAutoHits()
             this.huntFocusHit = index
         }
     }
@@ -570,6 +614,7 @@ export class RockyVenturesGameSession extends GameSession<
             return
         }
         this.huntHitTargets = { ...this.huntHitTargets, [index]: targetId }
+        if (!this.huntManualHits.includes(index)) this.huntManualHits = [...this.huntManualHits, index]
     }
 
     get huntReady(): boolean {
@@ -616,6 +661,7 @@ export class RockyVenturesGameSession extends GameSession<
         this.huntCashIndexes = []
         this.huntClaimNodeId = undefined
         this.huntHitTargets = {}
+        this.huntManualHits = []
         await this.submit(ActionType.ResolveHunt, async () => {
             await this.applyAction(this.createPlayerAction(ResolveHunt, { tokenIndexes: [], hitTargets: [] }))
         })
@@ -646,6 +692,7 @@ export class RockyVenturesGameSession extends GameSession<
         this.huntCashIndexes = []
         this.huntClaimNodeId = undefined
         this.huntHitTargets = {}
+        this.huntManualHits = []
         this.huntFocusHit = undefined
     }
 
