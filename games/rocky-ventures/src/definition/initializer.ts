@@ -206,18 +206,27 @@ export class RockyVenturesGameInitializer
         return stacks
     }
 
-    // Decade 1 on top, then Decade 2 with End of Era I shuffled in, Decade 3 with End of Era II,
-    // and Decade 4 with End of Era III. No card sits at the bottom: the game ends when
-    // End of Era III is bought, or when it meets End of Era II in the market.
+    // Decade 1 on top, then Decade 2 ending with End of Era I, Decade 3 ending with End of Era II,
+    // and Decade 4 ending with End of Era III at the bottom. The game ends when End of Era III is
+    // bought, or when it meets End of Era II in the market.
     private buildDrawPile(prng: Prng): string[] {
         const decade1 = developmentCardIdsForDecade(1)
-        const decade2 = [...developmentCardIdsForDecade(2), EndOfEraCards[0]!.id]
-        const decade3 = [...developmentCardIdsForDecade(3), EndOfEraCards[1]!.id]
-        const decade4 = [...developmentCardIdsForDecade(4), EndOfEraCards[2]!.id]
+        const decade2 = developmentCardIdsForDecade(2)
+        const decade3 = developmentCardIdsForDecade(3)
+        const decade4 = developmentCardIdsForDecade(4)
         for (const decade of [decade1, decade2, decade3, decade4]) {
             shuffle(decade, prng.random)
         }
-        return [...decade1, ...decade2, ...decade3, ...decade4]
+        // Each Feast is the last card of its decade, not shuffled in (Justin, 2026-11-23).
+        return [
+            ...decade1,
+            ...decade2,
+            EndOfEraCards[0]!.id,
+            ...decade3,
+            EndOfEraCards[1]!.id,
+            ...decade4,
+            EndOfEraCards[2]!.id
+        ]
     }
 
     private placeDornochDurMine(state: HydratedRockyVenturesGameState) {

@@ -3,7 +3,7 @@ import { isTwoSidedAgreement, TwoSidedAgreementLetters } from '../data/agreement
 import { MaxGems } from '../model/playerState.js'
 import { getCard, CardKind } from '../data/cards.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
-import { ThirdEraCardId } from './market.js'
+import { FirstEraCardId, SecondEraCardId, ThirdEraCardId } from './market.js'
 
 // Running games Justin asked to move onto the two-sided agreements and the 2-gem start
 // (2026-11-03). Each switches the first time it loads after the change, as long as nobody holds
@@ -18,23 +18,34 @@ export const InOrderAndDeliveryScoringGameIds: string[] = [
     'oQaV2siAfrrbFOfbLkgvv' // Paulies Robot
 ]
 
-// Games trying the final Feast shuffled into the bottom 3 cards of the deck (Justin, 2026-11-23,
-// Rocky Balboa 2 only).
-export const FinalFeastBottomThreeGameIds: string[] = [
+// Games trying each Feast as the last card of its decade instead of shuffled in (Justin,
+// 2026-11-23, Rocky Balboa 2 only): Feast I closes Decade 2, Feast II Decade 3, Feast III Decade 4.
+export const FeastLastInDecadeGameIds: string[] = [
     'WP4HCv2YJSiFsAjLzaVJe' // Rocky Balboa 2
 ]
 
-function migrateFinalFeastToBottomThree(state: HydratedRockyVenturesGameState) {
-    const pile = state.market.drawPile
-    const at = pile.indexOf(ThirdEraCardId)
-    if (at < 0 || at >= pile.length - 3) {
-        return
+const FeastDecades: Record<string, number> = { [FirstEraCardId]: 2, [SecondEraCardId]: 3, [ThirdEraCardId]: 4 }
+
+function migrateFeastsLastInDecade(state: HydratedRockyVenturesGameState) {
+    let drawPile = [...state.market.drawPile]
+    let changed = false
+    for (const [feastId, decade] of Object.entries(FeastDecades)) {
+        const at = drawPile.indexOf(feastId)
+        if (at < 0) continue
+        const rest = drawPile.filter((cardId) => cardId !== feastId)
+        // After the last card of its decade still in the deck (or where it is, if none are left).
+        const lastOfDecade = rest.findLastIndex((cardId) => {
+            const card = getCard(cardId)
+            return card.kind === CardKind.Development && card.decade === decade
+        })
+        if (lastOfDecade < 0) continue
+        const target = lastOfDecade + 1
+        if (target === at) continue
+        rest.splice(target, 0, feastId)
+        drawPile = rest
+        changed = true
     }
-    const rest = pile.filter((cardId) => cardId !== ThirdEraCardId)
-    const bottom = Math.min(3, rest.length + 1)
-    const drawPile = [...rest]
-    drawPile.splice(rest.length + 1 - bottom + stablePick(rest.join(), bottom), 0, ThirdEraCardId)
-    state.market = { ...state.market, drawPile }
+    if (changed) state.market = { ...state.market, drawPile }
 }
 
 function isFeastCard(cardId: string): boolean {
@@ -112,8 +123,8 @@ export function migrateRunningGame(state: HydratedRockyVenturesGameState) {
                 }
             }
         }
-        if (FinalFeastBottomThreeGameIds.includes(state.gameId)) {
-            migrateFinalFeastToBottomThree(state)
+        if (FeastLastInDecadeGameIds.includes(state.gameId)) {
+            migrateFeastsLastInDecade(state)
         }
         if (InOrderAndDeliveryScoringGameIds.includes(state.gameId)) {
             state.actionsInOrder = true
