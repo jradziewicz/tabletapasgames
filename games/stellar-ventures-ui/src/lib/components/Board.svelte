@@ -406,7 +406,7 @@
     // in a multi-step build lands on the board. Clicking an unhighlighted hex is still allowed
     // (see the comment above canClickHex) - this is a visual hint on top of that, not a new
     // restriction.
-    const validHexIds = $derived.by(() => {
+    const myValidHexIds = $derived.by(() => {
         if (!canClickHex || !gameSession.myPlayer) {
             return new Set<string>()
         }
@@ -491,10 +491,29 @@
     // Which hexes the player's already picked this Develop Planet(s) selection - highlighted
     // distinctly (a stronger fill) from merely-still-selectable hexes in validHexIds above, so
     // confirmed picks read differently from open options.
+    // Live play: while another player is acting, show their build targets and unsubmitted picks
+    // on this board too (gameSession.watchedSelection), and publish this player's own while it's
+    // their turn. Watchers only see; they still can't click.
+    const watchedSelection = $derived(gameSession.watchedSelection)
+    const validHexIds = $derived(
+        canClickHex ? myValidHexIds : new Set<string>(watchedSelection?.targets ?? [])
+    )
+    const displayBoardMode = $derived(canClickHex ? activeBoardActionMode : watchedSelection?.mode)
+    const displayWormholeHexId = $derived(
+        gameSession.wormholeSelectedHexId ?? watchedSelection?.wormholeHexId
+    )
+    const watchedPickHexIds = $derived(new Set<string>(watchedSelection?.picks ?? []))
+    $effect(() => {
+        gameSession.liveBoardTargets = canClickHex ? [...myValidHexIds] : []
+        gameSession.liveBoardMode = canClickHex ? activeBoardActionMode : undefined
+    })
+
     const selectedDevelopPlanetsHexIds = $derived(
         activeBoardActionMode === ActionType.DevelopPlanets
             ? new Set(gameSession.developPlanetsHexIds)
-            : new Set<string>()
+            : displayBoardMode === ActionType.DevelopPlanets
+              ? watchedPickHexIds
+              : new Set<string>()
     )
 
     // Same idea as selectedDevelopPlanetsHexIds above, for Forced Purchase's own hex-picking.
@@ -503,7 +522,10 @@
             ? new Set(gameSession.forcedShipPurchaseHexIds)
             : activeBoardActionMode === ActionType.PayTax
               ? new Set(gameSession.taxLoanHexIds)
-              : new Set<string>()
+              : displayBoardMode === ActionType.ForcedShipPurchase ||
+                  displayBoardMode === ActionType.PayTax
+                ? watchedPickHexIds
+                : new Set<string>()
     )
 
     // Once a Create Wormhole hex is tentatively picked (gameSession.wormholeSelectedHexId - see
@@ -516,10 +538,10 @@
     // while only the hexes strictly in between get the blue "this is what you're paying for"
     // treatment.
     const wormholeNearestOutpostHex = $derived.by(() => {
-        const selectedHexId = gameSession.wormholeSelectedHexId
+        const selectedHexId = displayWormholeHexId
         const corporationId = gameSession.gameState.activeCorporationId
         if (
-            activeBoardActionMode !== ActionType.CreateWormhole ||
+            displayBoardMode !== ActionType.CreateWormhole ||
             !selectedHexId ||
             !corporationId
         ) {
@@ -545,7 +567,7 @@
         return nearest
     })
     const wormholePathHexIds = $derived.by(() => {
-        const selectedHexId = gameSession.wormholeSelectedHexId
+        const selectedHexId = displayWormholeHexId
         const nearest = wormholeNearestOutpostHex
         if (!selectedHexId || !nearest) {
             return new Set<string>()
@@ -560,7 +582,7 @@
     // Create Wormhole hex is picked, since wormholePathHexIds above takes over as the more
     // specific, informative highlight at that point.
     const showAllValidHexHighlight = $derived(
-        !(activeBoardActionMode === ActionType.CreateWormhole && gameSession.wormholeSelectedHexId)
+        !(displayBoardMode === ActionType.CreateWormhole && displayWormholeHexId)
     )
 
     // While the player is choosing where to build an Outpost (Expand Network, Create Wormhole,
@@ -569,11 +591,11 @@
     // built on - rather than the old "highlight the legal hexes but still let a bad click fail
     // with an error". Uses the same validHexIds the highlight is drawn from.
     const maskUnbuildableHexes = $derived(
-        canClickHex &&
-            (activeBoardActionMode === ActionType.ExpandNetwork ||
-                activeBoardActionMode === ActionType.CreateWormhole ||
-                activeBoardActionMode === ActionType.JerryRig ||
-                activeBoardActionMode === ActionType.PrivateContractor)
+        (canClickHex || watchedSelection !== undefined) &&
+            (displayBoardMode === ActionType.ExpandNetwork ||
+                displayBoardMode === ActionType.CreateWormhole ||
+                displayBoardMode === ActionType.JerryRig ||
+                displayBoardMode === ActionType.PrivateContractor)
     )
     // Hexes that stay unmasked even though they're not in validHexIds: the picked Wormhole target,
     // its nearest Outpost, and the path between them (see wormholePathHexIds).
@@ -582,7 +604,7 @@
             maskUnbuildableHexes &&
             !validHexIds.has(hexId) &&
             !wormholePathHexIds.has(hexId) &&
-            gameSession.wormholeSelectedHexId !== hexId &&
+            displayWormholeHexId !== hexId &&
             wormholeNearestOutpostHex?.id !== hexId
         )
     }
@@ -853,12 +875,12 @@
                         validHexIds.has(hex.id)
                             ? 'valid-expansion-hex'
                             : ''} {wormholePathHexIds.has(hex.id) &&
-                        gameSession.wormholeSelectedHexId !== hex.id &&
+                        displayWormholeHexId !== hex.id &&
                         wormholeNearestOutpostHex?.id !== hex.id
                             ? 'wormhole-path-hex'
                             : ''} {selectedDevelopPlanetsHexIds.has(hex.id) ||
                         selectedForcedShipPurchaseHexIds.has(hex.id) ||
-                        gameSession.wormholeSelectedHexId === hex.id ||
+                        displayWormholeHexId === hex.id ||
                         wormholeNearestOutpostHex?.id === hex.id
                             ? 'selected-develop-hex'
                             : ''}"

@@ -22,7 +22,8 @@ export type StellarVenturesGameConfig = Type.Static<typeof StellarVenturesGameCo
 export const StellarVenturesGameConfig = Type.Object({
     difficulty: Type.Enum(Difficulty),
     useNewInvestorSetup: Type.Boolean(),
-    boardMap: Type.Optional(Type.Enum(BoardMap))
+    boardMap: Type.Optional(Type.Enum(BoardMap)),
+    livePlay: Type.Optional(Type.Boolean())
 })
 
 export const StellarVenturesGameConfigOptions: GameConfigOptions = [
@@ -58,5 +59,13 @@ export const StellarVenturesGameConfigOptions: GameConfigOptions = [
         description:
             'Skips the Initial Auction and assigns starting Corporation Presidents automatically, for a faster start.',
         default: false
+    },
+    {
+        id: 'livePlay',
+        type: ConfigOptionType.Boolean,
+        name: 'Live play',
+        description:
+            "Everyone sees the current player's picks on the board as they click, and where they can build.",
+        default: true
     }
 ]

@@ -42,6 +42,16 @@
     }: { gameSession: GameSession<StellarVenturesGameState, HydratedStellarVenturesGameState> } =
         $props()
     const session = gameSession as StellarVenturesGameSession
+
+    // Live play: pass each change of this player's board picks on to the others, gathering quick
+    // clicks into one message.
+    let liveSelectionTimer: ReturnType<typeof setTimeout> | undefined
+    $effect(() => {
+        JSON.stringify(session.mySelection)
+        clearTimeout(liveSelectionTimer)
+        liveSelectionTimer = setTimeout(() => session.shareMySelection(), 120)
+        return () => clearTimeout(liveSelectionTimer)
+    })
     setGameSession(session)
 
     // The board and its reference views (Shipyard, Charter, Investor Board, The Agreement,

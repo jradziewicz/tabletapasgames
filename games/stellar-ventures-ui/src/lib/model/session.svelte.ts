@@ -63,6 +63,15 @@ import {
     type HydratedStellarVenturesGameState
 } from '@tabletop/stellar-ventures'
 
+// Live play: the acting player's unsubmitted board picks, relayed to the other players.
+export type StellarLiveSelection = {
+    actionCount: number
+    mode?: ActionType
+    targets: string[]
+    wormholeHexId?: string
+    picks: string[]
+}
+
 /**
  * Minimal Stellar Ventures game session. Most actions still go through the generic
  * submitGenericAction below (see ActionPanel.svelte) by letting the player pick any
@@ -196,6 +205,49 @@ export class StellarVenturesGameSession extends GameSession<
     // mounted regardless of machineState. Remove alongside testingUndoLiquidation/
     // testingRedoLiquidation once Backroom Deal/Accounting Gimmick testing is done.
     testingLiquidationRedoAction: GameAction | undefined = $state()
+
+    // Live play: what the current player is picking on the board before anything is submitted,
+    // shared with everyone else at the table so they can follow along. Board.svelte publishes the
+    // acting player's build targets and mode into liveBoardTargets/liveBoardMode; the staged picks
+    // come from the fields above. Watchers keep the latest one they received in remoteSelection,
+    // good only for the position it was made in.
+    liveBoardTargets: string[] = $state([])
+    liveBoardMode: ActionType | undefined = $state()
+    private remoteSelection: StellarLiveSelection | undefined = $state()
+
+    get livePlay(): boolean {
+        return (
+            (this.primaryGame.config as { livePlay?: boolean } | undefined)?.livePlay === true &&
+            !this.primaryGame.hotseat
+        )
+    }
+
+    get mySelection(): StellarLiveSelection {
+        return {
+            actionCount: this.gameState.actionCount,
+            mode: this.liveBoardMode,
+            targets: [...this.liveBoardTargets],
+            wormholeHexId: this.wormholeSelectedHexId,
+            picks: [...this.developPlanetsHexIds, ...this.forcedShipPurchaseHexIds, ...this.taxLoanHexIds]
+        }
+    }
+
+    // The acting player's picks as another player sees them, while they're still current.
+    get watchedSelection(): StellarLiveSelection | undefined {
+        const selection = this.remoteSelection
+        if (!this.livePlay || this.isMyTurn || this.isViewingHistory) return undefined
+        return selection?.actionCount === this.gameState.actionCount ? selection : undefined
+    }
+
+    shareMySelection() {
+        if (this.livePlay && this.isMyTurn && !this.isViewingHistory) {
+            this.sendLiveSelection({ ...this.mySelection })
+        }
+    }
+
+    protected override onLiveSelection(_playerId: string, selection: Record<string, unknown>) {
+        this.remoteSelection = selection as StellarLiveSelection
+    }
 
     override beforeNewState(): void {
         this.lastActionError = undefined
