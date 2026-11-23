@@ -8,6 +8,47 @@
         type HydratedRockyVenturesPlayerState
     } from '@tabletop/rocky-ventures'
     import { agreementTooltip } from '$lib/utils/agreementImages.js'
+    import { CityRouteColors } from '$lib/utils/routePath.js'
+    import {
+        AgreementBackEffect,
+        AgreementLetter,
+        BoardNodesById,
+        TwoSidedAgreementBacks,
+        TwoSidedAgreementDeliveryPoints
+    } from '@tabletop/rocky-ventures'
+
+
+    // What an agreement does right now, for its chip: a two-sided front scores VP on delivery; once
+    // flipped it gives its back bonus. The original A-D agreements keep their one effect.
+    function agreementFace(letter: AgreementLetter, flipped?: boolean): { text: string; icon?: 'coin' | 'discount' | 'dragon'; muted?: boolean } {
+        const deliveryVp = TwoSidedAgreementDeliveryPoints[letter]
+        if (deliveryVp !== undefined && !flipped) return { text: `${deliveryVp} VP` }
+        const back = TwoSidedAgreementBacks[letter]
+        if (back !== undefined) {
+            switch (back) {
+                case AgreementBackEffect.GoldOreBonus:
+                    return { text: '+2 / gold', icon: 'coin' }
+                case AgreementBackEffect.ExpenseDiscount:
+                    return { text: '−3 costs', icon: 'discount' }
+                case AgreementBackEffect.IgnoreDragon:
+                    return { text: 'no dragon', icon: 'dragon' }
+                default:
+                    return { text: 'flipped', muted: true }
+            }
+        }
+        switch (letter) {
+            case AgreementLetter.A:
+                return { text: '+2 / gold', icon: 'coin' }
+            case AgreementLetter.B:
+                return { text: '+2 / Mana', icon: 'coin' }
+            case AgreementLetter.C:
+                return { text: '−3 costs', icon: 'discount' }
+            case AgreementLetter.D:
+                return { text: 'buy 3 VP' }
+            default:
+                return { text: letter }
+        }
+    }
     import { cardChipBackground } from '$lib/utils/cardActionColors.js'
     import { BotProfileNames } from '$lib/bots/rockyBots.js'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
@@ -205,7 +246,20 @@
                 <span class="ml-1 text-[10px] font-semibold uppercase tracking-wide" style="color: #7f88ad;">Agreements</span>
             {/if}
             {#each playerState.agreements as agreement, i (i)}
-                <span class="rounded border px-1.5 py-0.5" style="border-color: #2a3155;" title={agreementTooltip(agreement.cityId, agreement.letter, agreement.flipped)}>{agreement.cityId} {agreement.letter}</span>
+                {@const face = agreementFace(agreement.letter, agreement.flipped)}
+                <!-- Agreement chip: the city, then what it does now (VP on delivery, or its back bonus) -->
+                <span
+                    class="inline-flex items-center overflow-hidden rounded-md border text-[11px] font-semibold"
+                    style="border-color: {CityRouteColors[agreement.cityId] ?? '#8a6d3b'}; background: #161a30;"
+                    title={agreementTooltip(agreement.cityId, agreement.letter, agreement.flipped)}
+                >
+                    <span class="px-1.5 py-0.5 text-[#0f1220]" style="background: {CityRouteColors[agreement.cityId] ?? '#8a6d3b'};"
+                        >{BoardNodesById[agreement.cityId]?.name ?? agreement.cityId}</span
+                    >
+                    <span class="flex items-center gap-1 px-1.5 py-0.5 {face.muted ? 'text-[#7f88ad]' : 'text-[#ffd166]'}">
+                        {#if face.icon === 'coin'}<span class="agree-coin">$</span>{:else if face.icon === 'dragon'}<span class="agree-icon">🐉</span><span class="-ml-1 text-[#ff8a7a]">✕</span>{:else if face.icon === 'discount'}<span class="agree-coin">$</span>{/if}{face.text}
+                    </span>
+                </span>
             {/each}
         </div>
     {/if}
@@ -215,6 +269,22 @@
 </div>
 
 <style>
+    .agree-coin {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 13px;
+        height: 13px;
+        border-radius: 9999px;
+        background: radial-gradient(circle at 35% 35%, #ffe08a, #c99a2e);
+        color: #3b2a07;
+        font-size: 9px;
+        font-weight: 900;
+    }
+    .agree-icon {
+        font-size: 11px;
+        line-height: 1;
+    }
 
     /* Live play: the card the playing player has picked, as watchers see it. */
     .move-picked {
