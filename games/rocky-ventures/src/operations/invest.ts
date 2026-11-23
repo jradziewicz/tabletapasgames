@@ -145,7 +145,10 @@ export function investInMarketCard(
     }
 
     if (card.kind === CardKind.EndOfEra) {
-        player.tuckedCardIds.push(cardId)
+        // Older games tucked the Feast (it counted toward tax income); now the card just leaves.
+        if (!state.feastNotTucked) {
+            player.tuckedCardIds.push(cardId)
+        }
         scoreFeastBuyerBonus(state, playerId, cardId)
         startPointBuy(state, cardId)
         return

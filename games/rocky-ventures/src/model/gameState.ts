@@ -119,6 +119,7 @@ export const RockyVenturesGameState = Type.Evaluate(
             gemsLost: Type.Optional(Type.Number()),
             bonusTokenCash: Type.Optional(Type.Boolean()),
             feastCategories: Type.Optional(Type.Record(Type.String(), Type.String())),
+            feastNotTucked: Type.Optional(Type.Boolean()),
             pendingMarketDraws: Type.Optional(Type.Number()),
             eraThreeTriggered: Type.Optional(Type.Boolean()),
             gemsSpent: Type.Number(),
@@ -201,6 +202,8 @@ export class HydratedRockyVenturesGameState
     // Which of its three Feasts each Feast card is in this game, by card id (new games from
     // 2026-11-20; drawn at setup). Older games keep the original three.
     declare feastCategories?: Record<string, string>
+    // The player who buys a Feast no longer tucks it (Justin, 2026-11-23; every open game).
+    declare feastNotTucked?: boolean
     declare pendingMarketDraws?: number
     declare eraThreeTriggered?: boolean
     declare gemsSpent: number

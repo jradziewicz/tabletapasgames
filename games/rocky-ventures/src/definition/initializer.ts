@@ -102,6 +102,7 @@ export class RockyVenturesGameInitializer
             noGemPawnMove: true,
             gemsLost: 0,
             bonusTokenCash: true,
+            feastNotTucked: true,
             feastCategories: pickFeastCategories(prng.random),
             gemsSpent: 0,
             era: 1,
