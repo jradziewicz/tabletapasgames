@@ -18,6 +18,25 @@ export const InOrderAndDeliveryScoringGameIds: string[] = [
     'oQaV2siAfrrbFOfbLkgvv' // Paulies Robot
 ]
 
+// Games trying the final Feast shuffled into the bottom 3 cards of the deck (Justin, 2026-11-23,
+// Rocky Balboa 2 only).
+export const FinalFeastBottomThreeGameIds: string[] = [
+    'WP4HCv2YJSiFsAjLzaVJe' // Rocky Balboa 2
+]
+
+function migrateFinalFeastToBottomThree(state: HydratedRockyVenturesGameState) {
+    const pile = state.market.drawPile
+    const at = pile.indexOf(ThirdEraCardId)
+    if (at < 0 || at >= pile.length - 3) {
+        return
+    }
+    const rest = pile.filter((cardId) => cardId !== ThirdEraCardId)
+    const bottom = Math.min(3, rest.length + 1)
+    const drawPile = [...rest]
+    drawPile.splice(rest.length + 1 - bottom + stablePick(rest.join(), bottom), 0, ThirdEraCardId)
+    state.market = { ...state.market, drawPile }
+}
+
 // Same on every load until it's saved, so the spot comes from the pile itself, not the game's
 // random numbers.
 function stablePick(text: string, choices: number): number {
@@ -80,6 +99,9 @@ export function migrateRunningGame(state: HydratedRockyVenturesGameState) {
         state.negativeDeliveries = true
         // Every open game moves onto Feasts that the buyer doesn't tuck (Justin, 2026-11-23).
         state.feastNotTucked = true
+        if (FinalFeastBottomThreeGameIds.includes(state.gameId)) {
+            migrateFinalFeastToBottomThree(state)
+        }
         if (InOrderAndDeliveryScoringGameIds.includes(state.gameId)) {
             state.actionsInOrder = true
             state.agreementsScoreOnDelivery = true
