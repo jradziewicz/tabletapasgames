@@ -617,7 +617,15 @@
                     extractNodeId && activeId && gameSession.extractHoverCityId && !gameSession.extractCustomRoute
                         ? planExtraction(gameState, activeId, { nodeId: extractNodeId, cityId: gameSession.extractHoverCityId })
                         : undefined}
-                {@const summary = hoverPlan && typeof hoverPlan !== 'string' ? hoverPlan : extractPlan}
+                <!-- No hover on touch screens: with no city picked yet, show the better-paying city -->
+                {@const bestCityPlan =
+                    activeId && extractToken.ore === OreKind.Gold && !gameSession.extractCityId && !gameSession.extractCustomRoute
+                        ? [DeliveryCityId.Dornoch, DeliveryCityId.Manor]
+                              .map((cityId) => planExtraction(gameState, activeId, { nodeId: extractNodeId, cityId }))
+                              .filter((plan) => typeof plan !== 'string')
+                              .sort((left, right) => right.net - left.net)[0]
+                        : undefined}
+                {@const summary = hoverPlan && typeof hoverPlan !== 'string' ? hoverPlan : (bestCityPlan ?? extractPlan)}
                 {#if summary}
                     {@const isGold = summary.ore === OreKind.Gold}
                     {@const cityName = BoardNodesById[summary.saleCityId]?.name ?? ''}
