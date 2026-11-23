@@ -1017,6 +1017,9 @@
                 {@const selected = gameSession.huntSelected.includes(index)}
                 {@const focused = gameSession.huntFocusHit === index && selected}
                 {@const url = weaponTokenImageUrl(kind, gameSession.gameState.bonusTokenCash)}
+                {@const cashOffered = gameState.bonusTokenCash && isBonusToken(kind)}
+                {@const takingCash = gameSession.huntCashIndexes.includes(index) && selected}
+                <div class="flex flex-col items-center gap-1">
                 <button
                     type="button"
                     onclick={() => gameSession.toggleHuntToken(index)}
@@ -1029,6 +1032,17 @@
                         <span class="block h-[72px] w-[72px]">{kind}</span>
                     {/if}
                 </button>
+                {#if cashOffered}
+                    <!-- Every bonus token can be taken as $3 instead (newer games) -->
+                    <button
+                        type="button"
+                        onclick={() => gameSession.takeHuntCash(index)}
+                        class="rounded-full border px-2 py-0.5 text-[11px] font-semibold {takingCash ? 'border-[#ffd166] bg-[#ffd166] text-[#1b140c]' : 'border-[#c9a961] text-[#ffd166] hover:bg-[#3a2a17]'}"
+                    >
+                        {takingCash ? '✓ $3' : 'Take $3'}
+                    </button>
+                {/if}
+                </div>
             {/each}
             <button
                 type="button"

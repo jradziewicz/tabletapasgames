@@ -645,6 +645,17 @@ export class RockyVenturesGameSession extends GameSession<
         )
     }
 
+    // The "Take $3" button under a bonus token: picks the token if it isn't picked, then takes $3.
+    takeHuntCash(index: number) {
+        if (!this.huntSelected.includes(index)) {
+            this.toggleHuntToken(index)
+            if (!this.huntSelected.includes(index)) return
+            if (!this.huntCashIndexes.includes(index)) this.toggleHuntCash(index)
+            return
+        }
+        this.toggleHuntCash(index)
+    }
+
     toggleHuntCash(index: number) {
         this.huntCashIndexes = this.huntCashIndexes.includes(index)
             ? this.huntCashIndexes.filter((other) => other !== index)
