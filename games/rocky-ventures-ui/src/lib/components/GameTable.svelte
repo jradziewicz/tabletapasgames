@@ -141,7 +141,7 @@
         { id: 'grid', label: 'Weapon / Tool Grid' },
         { id: 'dragon', label: 'Dragon' },
         { id: 'railroads', label: 'Railroads' },
-        { id: 'aids', label: 'Aids', closable: false },
+        { id: 'aids', label: 'Player Aid', closable: false },
         // Admin only: where everyone's points came from.
         ...(session.isActingAdmin || session.isViewingHost ? [{ id: 'points', label: 'Points' }] : [])
     ])
