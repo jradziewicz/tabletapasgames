@@ -85,10 +85,15 @@ describe('Gain Mine', () => {
     })
 })
 
-describe('final Feast base cost', () => {
-    it('adds $10 to the final Feast only', () => {
+describe('Feast base costs', () => {
+    it('adds $2, $6 and $10 to the Feasts', () => {
         const state = startedState()
         state.market.slots = ['era1', 'era2', 'era3']
+        expect([0, 1, 2].map((slot) => investCost(state, slot))).toEqual([3, 8, 13])
+        state.bonusInvest = true
+        expect([0, 1, 2].map((slot) => investCost(state, slot))).toEqual([1, 2, 3])
+        delete state.bonusInvest
+        delete state.earlyFeastBaseCosts
         expect([0, 1, 2].map((slot) => investCost(state, slot))).toEqual([1, 2, 13])
         delete state.finalFeastBaseCost
         expect(investCost(state, 2)).toBe(3)

@@ -4,7 +4,7 @@ import { MarketSlotPrices, TaxSlotIndex, taxIncomeFor } from '../data/setup.js'
 import type { CompanyId } from '../data/companies.js'
 import type { DeliveryCityId } from '../data/board.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
-import { ThirdEraCardId, marketCardCost, removeFromMarket } from './market.js'
+import { FirstEraCardId, SecondEraCardId, ThirdEraCardId, marketCardCost, removeFromMarket } from './market.js'
 import { startPointBuy } from './turn.js'
 import { scoreFeastBuyerBonus } from './feastBonus.js'
 import { recordActionStat, recordCash, recordGems, recordStat } from './stats.js'
@@ -27,7 +27,17 @@ export function investCost(
     if (state.bonusInvest && state.bonusInvestSlotCost) {
         return MarketSlotPrices[slotIndex] ?? 0
     }
-    return card.id === ThirdEraCardId ? cost + (state.finalFeastBaseCost ?? 0) : cost
+    return cost + feastBaseCost(state, card.id)
+}
+
+// The first two Feasts' base costs, on top of their market slot's price (Justin, 2026-11-24).
+const EarlyFeastBaseCosts: Record<string, number> = { [FirstEraCardId]: 2, [SecondEraCardId]: 6 }
+
+function feastBaseCost(state: HydratedRockyVenturesGameState, cardId: string): number {
+    if (cardId === ThirdEraCardId) {
+        return state.finalFeastBaseCost ?? 0
+    }
+    return state.earlyFeastBaseCosts ? (EarlyFeastBaseCosts[cardId] ?? 0) : 0
 }
 
 // Why picking `letter` from the city's agreement pile isn't allowed, if it isn't. Picking the top

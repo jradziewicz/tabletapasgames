@@ -100,6 +100,7 @@ export class RockyVenturesGameInitializer
             gainMineBonus: true,
             weaponFiveAppliesThree: true,
             finalFeastBaseCost: FinalFeastBaseCost,
+            earlyFeastBaseCosts: true,
             agreementsScoreOnDelivery: true,
             noAgreementDiscard: true,
             gemOnlyOnCircle: true,

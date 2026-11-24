@@ -29,7 +29,7 @@
     import CardHoverPreview from '$lib/components/CardHoverPreview.svelte'
     import GameOverOverlay from '$lib/components/GameOverOverlay.svelte'
     import PointSources from '$lib/components/PointSources.svelte'
-    import { setFeastBonusArt, setFeastCardCategories, setFinalFeastCostArt, setRevisedCardArt, setTrackAndHuntArt } from '$lib/utils/cardImages.js'
+    import { setFeastBonusArt, setFeastCardCategories, setFeastCostArt, setRevisedCardArt, setTrackAndHuntArt } from '$lib/utils/cardImages.js'
     import { setGainMineArt } from '$lib/utils/dragonImages.js'
     import { setFeastCategories } from '$lib/utils/feastNames.js'
     import { setAgreementDeliveryScoring, setAgreementDiscardAllowed } from '$lib/utils/agreementImages.js'
@@ -57,7 +57,10 @@
     setGameSession(session)
     setRevisedCardArt(session.gameState.revisedCards === true)
     setTrackAndHuntArt(session.gameState.trackAndHuntCards === true)
-    setFinalFeastCostArt(session.gameState.finalFeastBaseCost !== undefined)
+    setFeastCostArt([
+        ...(session.gameState.earlyFeastBaseCosts ? ['era1', 'era2'] : []),
+        ...(session.gameState.finalFeastBaseCost !== undefined ? ['era3'] : [])
+    ])
     setGainMineArt(session.gameState.gainMineBonus === true)
     setFeastBonusArt(session.gameState.feastBuyerBonus === true)
     // Older games keep their original Feast cards and names (only their Mana colour was updated).

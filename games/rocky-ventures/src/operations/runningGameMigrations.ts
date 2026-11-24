@@ -64,6 +64,7 @@ function migrateToCardListNov24(state: HydratedRockyVenturesGameState) {
     state.gainMineBonus = true
     state.weaponFiveAppliesThree = true
     state.finalFeastBaseCost = FinalFeastBaseCost
+    state.earlyFeastBaseCosts = true
     if (state.huntStarterCard) return
     state.huntStarterCard = true
     for (const player of state.players) {
