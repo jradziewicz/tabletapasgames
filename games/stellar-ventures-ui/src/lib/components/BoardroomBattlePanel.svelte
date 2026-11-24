@@ -354,8 +354,8 @@
                     ? 'border-[#4f7cf2]'
                     : 'border-[#2a3155]'} bg-[#12162b] px-3 py-2"
             >
-                <div class="flex items-center justify-between gap-2">
-                    <span class="flex items-center gap-1.5 text-xs font-semibold">
+                <div class="flex items-center text-[11px] font-semibold">
+                    <span class="flex min-w-0 max-w-full items-center gap-1">
                         {#if PlayerSymbolIcons[gameSession.colors.getPlayerColor(info.playerId)]}
                             <img
                                 src={PlayerSymbolIcons[gameSession.colors.getPlayerColor(info.playerId)]}
@@ -370,16 +370,10 @@
                                 )}
                             ></span>
                         {/if}
-                        <PlayerName playerId={info.playerId} />
-                        <span
-                            class="ml-0.5 font-mono text-[11px] font-semibold text-[#c3c9e6]"
-                            title="Liquid Funds"
-                        >
-                            <CreditsIcon />{info.liquidFunds}
-                        </span>
+                        <PlayerName playerId={info.playerId} additionalClasses="block min-w-0 truncate" />
                     </span>
                 </div>
-                <div class="mt-1 flex flex-wrap gap-1">
+                <div class="mt-1 flex flex-wrap items-center gap-1">
                     {#if info.isDirector}
                         <span
                             class="rounded-full border border-[#e0b23d] px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#f0d27a]"
@@ -418,6 +412,12 @@
                             {info.passed ? 'Passed' : 'Not Voted'}
                         </span>
                     {/if}
+                    <span
+                        class="ml-0.5 whitespace-nowrap font-mono text-[11px] font-semibold text-[#c3c9e6]"
+                        title="Liquid Funds"
+                    >
+                        <CreditsIcon />{info.liquidFunds}
+                    </span>
                 </div>
                 <div class="mt-1.5 flex flex-wrap items-center gap-1">
                     {#if info.remaining > 0}
