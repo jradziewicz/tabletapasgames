@@ -19,6 +19,7 @@
     import TableauPanel from '$lib/components/TableauPanel.svelte'
     import MarketPanel from '$lib/components/MarketPanel.svelte'
     import GridPanel from '$lib/components/GridPanel.svelte'
+    import { PlayerAidTabId, withPlayerAidTab } from '$lib/utils/workspaceTabs.js'
     import AidsPanel from '$lib/components/AidsPanel.svelte'
     import DragonPanel from '$lib/components/DragonPanel.svelte'
     import CardZoom from '$lib/components/CardZoom.svelte'
@@ -136,12 +137,12 @@
 
     const workspaceTabs: WorkspaceTab[] = $derived([
         { id: 'board', label: 'Map', closable: false },
+        { id: PlayerAidTabId, label: 'Player Aid', closable: false },
         { id: 'tableau', label: 'Tableau' },
         { id: 'market', label: 'Market' },
         { id: 'grid', label: 'Weapon / Tool Grid' },
         { id: 'dragon', label: 'Dragon' },
         { id: 'railroads', label: 'Railroads' },
-        { id: 'aids', label: 'Player Aid', closable: false },
         // Admin only: where everyone's points came from.
         ...(session.isActingAdmin || session.isViewingHost ? [{ id: 'points', label: 'Points' }] : [])
     ])
@@ -239,7 +240,7 @@
 
     $effect(() => {
         if (session.aidRequest) {
-            workspaceTab = 'aids'
+            workspaceTab = PlayerAidTabId
         }
     })
 
@@ -582,7 +583,7 @@
                             bind:selected={workspaceTab}
                             tabs={workspaceTabs}
                             label="Rocky Ventures"
-                            savedLayout={workspaceLayoutPreference.value}
+                            savedLayout={withPlayerAidTab(workspaceLayoutPreference.value)}
                             onLayoutChange={(value) => workspaceLayoutPreference.change(value)}
                         >
                             {#snippet children(id, _active)}
@@ -602,7 +603,7 @@
                                     <div class="p-2">
                                         <CompaniesPanel />
                                     </div>
-                                {:else if id === 'aids'}
+                                {:else if id === PlayerAidTabId}
                                     <AidsPanel />
                                 {:else if id === 'points' && (session.isActingAdmin || session.isViewingHost)}
                                     <PointSources />
