@@ -602,7 +602,7 @@
                             {#if (corporation.cargoBoostCubesOnCharter ?? 0) > 0}
                                 <div class="mt-0.5 flex flex-wrap items-center gap-1">
                                     {#each Array.from({ length: corporation.cargoBoostCubesOnCharter ?? 0 }, (_, i) => i) as index (index)}
-                                        <img src={alienTechCube} alt="Alien Tech" title="Alien Tech" class="h-5 w-5 drop-shadow" />
+                                        <img src={alienTechCube} alt="Alien Tech" title="Alien Tech" class="h-5 w-5 object-contain" />
                                     {/each}
                                 </div>
                             {:else}
@@ -615,7 +615,7 @@
                             </div>
                             {#if corporation.wormholeActive}
                                 <div class="mt-0.5 flex items-center">
-                                    <img src={alienTechCube} alt="Wormhole Technology active" title="Wormhole Technology active" class="h-5 w-5 drop-shadow" />
+                                    <img src={alienTechCube} alt="Wormhole Technology active" title="Wormhole Technology active" class="h-5 w-5 object-contain" />
                                 </div>
                             {:else}
                                 <div class="text-[11px] text-[#7f88ad]">Not active</div>
