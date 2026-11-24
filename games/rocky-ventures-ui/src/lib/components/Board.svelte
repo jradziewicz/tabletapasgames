@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { BattleAxeCenter, BattleAxePath } from '$lib/utils/battleAxe.js'
     import {
         DragonLevel,
         BoardArtSize,
@@ -1005,8 +1006,19 @@
             <!-- CSS transform so a new hit slides the axe along the track instead of jumping -->
             <g style="transform: translate({spot.x + offset.dx + 14}px, {spot.y + offset.dy + 14}px); transition: transform 1.2s ease-in-out;">
                 <title>{gameSession.getPlayerName(player.playerId)}'s battle axe: {hits} hits</title>
-                <rect x="-13" y="-13" width="26" height="26" rx="3" transform="rotate(45)" fill={gameSession.colors.getPlayerUiColor(player.playerId)} stroke="#111" stroke-width="3" />
-                <text text-anchor="middle" dominant-baseline="central" font-size="18">🪓</text>
+                <rect x="-14" y="-14" width="28" height="28" rx="2" transform="rotate(45)" fill={gameSession.colors.getPlayerUiColor(player.playerId)} stroke="#111" stroke-width="3" />
+                {#each [45, 90, 135, 225, 270, 315] as angle (angle)}
+                    <line x1={angle % 90 ? 9.5 : 13} x2={angle % 90 ? 11.5 : 16} y1="0" y2="0" transform="rotate({angle - 90})" stroke="#fff" stroke-width="1" />
+                {/each}
+                <path
+                    d={BattleAxePath}
+                    transform="scale(0.35) translate({-BattleAxeCenter.x} {-BattleAxeCenter.y})"
+                    fill="#1b2433"
+                    stroke="#f6efe0"
+                    stroke-width="5"
+                    stroke-linejoin="round"
+                    paint-order="stroke"
+                />
             </g>
         {/each}
     {/if}

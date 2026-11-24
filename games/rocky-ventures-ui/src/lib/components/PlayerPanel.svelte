@@ -57,6 +57,7 @@
     import Pawn from '$lib/components/Pawn.svelte'
     import { cardActionsTooltip } from '$lib/utils/cardActionText.js'
     import { cardImageUrl } from '$lib/utils/cardImages.js'
+    import { BattleAxePath, BattleAxeViewBox } from '$lib/utils/battleAxe.js'
     import { playerCardImageUrl } from '$lib/utils/playerCardImages.js'
 
     const gameSession = getGameSession()
@@ -169,7 +170,8 @@
             </div>
             {#if gameSession.gameState.huntHitsScoreAtFeasts}
                 <div class="mt-0.5 text-xs" title="Battle axe: hits dealt so far. Each Feast scores this many points.">
-                    🪓 <span class="font-mono font-semibold">{playerState.huntHits ?? 0}</span> hits
+                    <svg viewBox={BattleAxeViewBox} class="mr-0.5 inline-block h-4 w-auto align-[-3px]" aria-hidden="true"><path d={BattleAxePath} fill="currentColor" /></svg>
+                    <span class="font-mono font-semibold">{playerState.huntHits ?? 0}</span> hits
                 </div>
             {/if}
         </div>
