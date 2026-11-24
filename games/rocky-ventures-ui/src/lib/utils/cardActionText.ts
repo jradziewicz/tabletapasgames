@@ -1,5 +1,5 @@
 import { feastName } from '$lib/utils/feastNames.js'
-import { AcquireMode, CardActionKind, CardKind, cardActionsFor, getCard, StartingPlayerCardId, type CardAction } from '@tabletop/rocky-ventures'
+import { AcquireMode, CardActionKind, CardKind, cardActionsFor, getCard, StartingPlayerCardId, type CardAction, type CardRevision } from '@tabletop/rocky-ventures'
 
 function plural(count: number, word: string) {
     return `${count} ${word}${count === 1 ? '' : 's'}`
@@ -44,7 +44,7 @@ export function cardActionText(action: CardAction): string {
 }
 
 // Hover text for a card in a player's tableau: its name and every action on it.
-export function cardActionsTooltip(cardId: string, revised?: boolean): string {
+export function cardActionsTooltip(cardId: string, revision?: CardRevision): string {
     const card = getCard(cardId)
     if (card.kind === CardKind.EndOfEra) return feastName(card.era)
     if (card.kind === CardKind.GameOver) return 'Game Over'
@@ -55,5 +55,5 @@ export function cardActionsTooltip(cardId: string, revised?: boolean): string {
               ? 'Player mat'
               : `Card ${card.numeral}`
     const joiner = card.kind === CardKind.Player && card.exclusiveActions ? '\nor ' : '\n'
-    return `${title}\n${cardActionsFor(card, revised).map(cardActionText).join(joiner)}`
+    return `${title}\n${cardActionsFor(card, revision).map(cardActionText).join(joiner)}`
 }

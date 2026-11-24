@@ -41,7 +41,7 @@
         taxIncomeFor,
         getCard,
         isDiscardable,
-        marketCardCost,
+        investCost,
         pawnMoveCost,
         reasonPawnMoveInvalid,
         remainingActionKinds,
@@ -982,7 +982,7 @@
             <div class="flex flex-wrap items-end gap-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1 max-sm:*:shrink-0">
                 {#each gameState.market.slots as cardId, slotIndex (cardId)}
                     {@const card = getCard(cardId)}
-                    {@const cost = marketCardCost(card, slotIndex)}
+                    {@const cost = investCost(gameState, slotIndex)}
                     {@const affordable = cost !== undefined && cost <= player.money}
                     <div class="flex flex-col items-center gap-1">
                         <button
@@ -1081,7 +1081,7 @@
                     {#if url}<img src={url} alt={kind} class="h-9 w-9 rounded-full" draggable="false" />{/if}
                     <div class="inline-flex overflow-hidden rounded-full border border-[#c9a961] text-xs">
                         <button type="button" onclick={() => cash && gameSession.toggleHuntCash(index)} class="px-3 py-1 {cash ? 'text-[#c9a961]' : 'bg-[#c9a961] font-semibold text-[#1b140c]'}">
-                            {kind === WeaponTokenKind.BonusGold ? 'Claim a level 2 mine' : 'Use it'}
+                            {kind === WeaponTokenKind.BonusGold ? (gameState.gainMineBonus ? 'Gain a mine' : 'Claim a level 2 mine') : 'Use it'}
                         </button>
                         <button type="button" onclick={() => !cash && gameSession.toggleHuntCash(index)} class="px-3 py-1 {cash ? 'bg-[#c9a961] font-semibold text-[#1b140c]' : 'text-[#c9a961]'}">
                             Take $3
@@ -1090,7 +1090,7 @@
                     {#if kind === WeaponTokenKind.BonusGold && !cash && huntPlayerId}
                         {@const open = freeBonusClaimMineIds(gameState, huntPlayerId)}
                         {#if open.length === 0}
-                            <span class="text-xs text-[#ff8a7a]">No open level 2 gold mine to claim: take $3 instead.</span>
+                            <span class="text-xs text-[#ff8a7a]">{gameState.gainMineBonus ? 'No mine you can gain' : 'No open level 2 gold mine to claim'}: take $3 instead.</span>
                         {:else}
                             <span class="text-xs text-[#c9a961]">Pick the mine:</span>
                             {#each open as nodeId (nodeId)}
@@ -1099,7 +1099,7 @@
                                     onclick={() => (gameSession.huntClaimNodeId = nodeId)}
                                     class="rounded-full border px-2 py-0.5 text-xs {gameSession.huntClaimNodeId === nodeId ? 'border-[#ffd166] bg-[#ffd166] font-semibold text-[#1b140c]' : 'border-[#8a6d3b] text-[#e8d9b8] hover:border-[#ffd166]'}"
                                 >
-                                    {BoardNodesById[nodeId]?.name ?? nodeId}
+                                    {BoardNodesById[nodeId]?.name ?? nodeId}{gameState.gainMineBonus ? ` (${gameState.board.mines[nodeId]?.token?.level ?? '?'})` : ''}
                                 </button>
                             {/each}
                         {/if}
@@ -1108,7 +1108,7 @@
             {/each}
         {/if}
         {@const bonusWarnings = huntPlayerId
-            ? huntBonusWarnings(gameState, huntPlayerId, gameSession.huntSelected.map((index) => pending.drawn[index]!))
+            ? huntBonusWarnings(gameState, huntPlayerId, gameSession.huntSelected.filter((index) => !gameSession.huntCashIndexes.includes(index)).map((index) => pending.drawn[index]!))
             : []}
         {#each bonusWarnings as warning (warning)}
             <div class="mt-2 rounded-md border border-[#e0b02a] bg-[#e0b02a]/15 px-2 py-1 text-xs text-[#ffd166]">
@@ -1156,7 +1156,7 @@
         <div class="flex flex-wrap items-end gap-4 max-sm:flex-nowrap max-sm:overflow-x-auto max-sm:pb-1 max-sm:*:shrink-0">
             {#each gameState.market.slots as cardId, slotIndex (cardId)}
                 {@const card = getCard(cardId)}
-                {@const cost = marketCardCost(card, slotIndex)}
+                {@const cost = investCost(gameState, slotIndex)}
                 {@const affordable = cost !== undefined && cost <= player.money}
                 <div class="flex flex-col items-center gap-1">
                     <button

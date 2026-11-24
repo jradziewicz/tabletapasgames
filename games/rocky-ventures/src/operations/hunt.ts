@@ -13,6 +13,7 @@ import {
 import { BonusTokensToSummonDragon, DragonLevel } from '../data/scourges.js'
 import { recordActionStat, recordCash, recordGems, recordStat, recordVictoryPoints } from './stats.js'
 import { StatKind } from '../model/stats.js'
+import { BlueMineLevel, RedMineLevel } from './claim.js'
 import { OreKind } from '../data/mineTokens.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { advanceWeapon } from './grid.js'
@@ -162,11 +163,18 @@ export function isBonusToken(kind: WeaponTokenKind): boolean {
 
 export const BonusClaimMineLevel = 2
 
-// Level 2 gold mines the player could claim for free with the claim bonus token.
+// Gold mines the mine bonus token could take for free: any the player could claim normally (Gain
+// Mine), or only level 2 ones in games from before 2026-11-24.
 export function freeBonusClaimMineIds(state: HydratedRockyVenturesGameState, playerId: string): string[] {
-    if (state.getPlayerState(playerId).claimTokens <= 0) return []
+    const player = state.getPlayerState(playerId)
+    if (player.claimTokens <= 0) return []
+    const levelAllowed = (level: number) => {
+        if (!state.gainMineBonus) return level === BonusClaimMineLevel
+        if (level >= BlueMineLevel) return player.blueMinesUnlocked
+        return level === RedMineLevel ? player.redMinesUnlocked : true
+    }
     return Object.entries(state.board.mines)
-        .filter(([, site]) => site && !site.empty && site.ownerPlayerId === undefined && site.token?.ore === OreKind.Gold && site.token.level === BonusClaimMineLevel)
+        .filter(([, site]) => site && !site.empty && site.ownerPlayerId === undefined && site.token?.ore === OreKind.Gold && levelAllowed(site.token.level))
         .map(([nodeId]) => nodeId)
 }
 
@@ -220,7 +228,9 @@ export function reasonResolveHuntInvalid(
     }
     if (claims.length === 1) {
         if (!request.claimNodeId) {
-            return 'Choose a level 2 gold mine to claim, or take the token as $3'
+            return state.gainMineBonus
+                ? 'Choose a mine to gain, or take the token as $3'
+                : 'Choose a level 2 gold mine to claim, or take the token as $3'
         }
         if (!freeBonusClaimMineIds(state, playerId).includes(request.claimNodeId)) {
             return 'That mine cannot be claimed with the bonus'

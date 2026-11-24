@@ -1,7 +1,8 @@
 import { DeliveryCityId } from '../data/board.js'
 import { isTwoSidedAgreement, TwoSidedAgreementLetters } from '../data/agreements.js'
+import { FinalFeastBaseCost } from '../data/setup.js'
 import { MaxGems } from '../model/playerState.js'
-import { getCard, CardKind } from '../data/cards.js'
+import { getCard, CardKind, HuntStarterCardId } from '../data/cards.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
 import { FirstEraCardId, SecondEraCardId, ThirdEraCardId } from './market.js'
 import { NewFeastPointBuyCosts } from './feastBonus.js'
@@ -47,6 +48,26 @@ function migrateFeastsLastInDecade(state: HydratedRockyVenturesGameState) {
         changed = true
     }
     if (changed) state.market = { ...state.market, drawPile }
+}
+
+// Games Justin moved onto the 2026-11-24 card list, starter Hunt card V, hunt bonuses and final
+// Feast cost partway through.
+export const CardListNov24GameIds: string[] = [
+    'WP4HCv2YJSiFsAjLzaVJe' // Rocky Balboa 2
+]
+
+// Card V goes on the end of each tableau, never in the middle: pawn positions, moves being sent and
+// the saved undo steps all refer to tableau cards by position, so earlier positions must not shift.
+function migrateToCardListNov24(state: HydratedRockyVenturesGameState) {
+    state.trackAndHuntCards = true
+    state.bonusInvestSlotCost = true
+    state.gainMineBonus = true
+    state.finalFeastBaseCost = FinalFeastBaseCost
+    if (state.huntStarterCard) return
+    state.huntStarterCard = true
+    for (const player of state.players) {
+        player.tableau = [...player.tableau, HuntStarterCardId]
+    }
 }
 
 function isFeastCard(cardId: string): boolean {
@@ -123,6 +144,9 @@ export function migrateRunningGame(state: HydratedRockyVenturesGameState) {
                     player.tuckedCardIds = player.tuckedCardIds.filter((cardId) => !isFeastCard(cardId))
                 }
             }
+        }
+        if (CardListNov24GameIds.includes(state.gameId)) {
+            migrateToCardListNov24(state)
         }
         if (FeastLastInDecadeGameIds.includes(state.gameId)) {
             migrateFeastsLastInDecade(state)

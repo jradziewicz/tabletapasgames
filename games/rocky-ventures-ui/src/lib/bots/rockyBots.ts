@@ -270,7 +270,8 @@ function resolveHuntMove(state: HydratedRockyVenturesGameState): BotMove | undef
     // Newer games: the claim bonus claims a level 2 gold mine if one is open, else it's taken as $3.
     if (state.bonusTokenCash) {
         const claims = chosen.filter((index) => pending.drawn[index] === WeaponTokenKind.BonusGold)
-        const open = freeBonusClaimMineIds(state, currentPlayerId(state))
+        const levelOf = (nodeId: string) => state.board.mines[nodeId]?.token?.level ?? 0
+        const open = freeBonusClaimMineIds(state, currentPlayerId(state)).sort((left, right) => levelOf(right) - levelOf(left))
         const claimNodeId = claims.length > 0 ? open[0] : undefined
         const cashIndexes = claims.filter((index, position) => !(claimNodeId && position === 0))
         return { type: ActionType.ResolveHunt, tokenIndexes: chosen, hitTargets, cashIndexes, ...(claimNodeId ? { claimNodeId } : {}) }

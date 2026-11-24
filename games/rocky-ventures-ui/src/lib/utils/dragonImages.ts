@@ -7,10 +7,17 @@ const dragonImagesByName: Record<string, string> = Images
 export const DragonTrackerImageUrl = dragonImagesByName['tracker']
 export const DragonTileImageUrl = dragonImagesByName['dragon']
 
+// Games from 2026-11-24 print the mine bonus as Gain Mine.
+let gainMineArt = false
+
+export function setGainMineArt(on: boolean) {
+    gainMineArt = on
+}
+
 // Newer games print a "$3" swap on every bonus token, and the gold bonus is the free level 2 claim.
 export function weaponTokenImageUrl(kind: WeaponTokenKind, cashTokens?: boolean): string | undefined {
     if (cashTokens) {
-        if (kind === WeaponTokenKind.BonusGold) return dragonImagesByName['bonusClaim']
+        if (kind === WeaponTokenKind.BonusGold) return dragonImagesByName[gainMineArt ? 'bonusGainMine' : 'bonusClaim']
         const cash = dragonImagesByName[`${kind}Cash`]
         if (cash) return cash
     }

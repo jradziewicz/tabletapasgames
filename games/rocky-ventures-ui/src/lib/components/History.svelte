@@ -236,7 +236,7 @@
         const card = getCard(cardId)
         const names =
             card.kind === CardKind.Player || card.kind === CardKind.Development
-                ? cardActionsFor(card, gameSession.gameState.revisedCards).map((cardAction) => CardActionNames[cardAction.kind])
+                ? cardActionsFor(card, gameSession.gameState.cardRevision).map((cardAction) => CardActionNames[cardAction.kind])
                 : []
         const discards = Array.isArray(action['discardIndexes']) ? action['discardIndexes'].length : 0
         const paid = -(delta(entry, playerId, 'money') ?? 0)

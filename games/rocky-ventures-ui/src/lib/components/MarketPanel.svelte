@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { CardKind, DeliveryCityId, MarketSlotPrices, getCard } from '@tabletop/rocky-ventures'
+    import { DeliveryCityId, MarketSlotPrices, investCost } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { cardImageUrl } from '$lib/utils/cardImages.js'
     import { agreementImageUrl, agreementTooltip } from '$lib/utils/agreementImages.js'
@@ -24,9 +24,8 @@
         return `$${MarketSlotPrices[index]}${labels.length ? ` · ${labels.join(', ')}` : ''}`
     }
 
-    function totalCost(cardId: string, index: number): number | undefined {
-        const card = getCard(cardId)
-        return card.kind === CardKind.Development ? card.baseCost + MarketSlotPrices[index]! : undefined
+    function totalCost(index: number): number | undefined {
+        return investCost(gameState, index)
     }
 </script>
 
@@ -42,7 +41,7 @@
         {#each MarketSlotPrices as _price, index (index)}
             {@const cardId = market.slots[index]}
             {@const imageUrl = cardId ? cardImageUrl(cardId) : undefined}
-            {@const cost = cardId ? totalCost(cardId, index) : undefined}
+            {@const cost = cardId ? totalCost(index) : undefined}
             <div class="flex w-[170px] flex-col items-center">
                 <div class="mb-1 whitespace-nowrap text-[11px] text-[#c9a961]">{slotTitle(index)}</div>
                 {#if cardId && imageUrl}

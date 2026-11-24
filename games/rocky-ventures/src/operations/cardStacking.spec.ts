@@ -70,7 +70,7 @@ describe('stacking a bought card', () => {
         const kinds = state.actionCardActions(player.playerId).map((action) => action.kind)
         expect(kinds).toEqual([
             CardActionKind.LayTrack,
-            ...cardActionsFor(getCard('d03') as DevelopmentCard, true).map((action) => action.kind)
+            ...cardActionsFor(getCard('d03') as DevelopmentCard, 2).map((action) => action.kind)
         ])
     })
 })

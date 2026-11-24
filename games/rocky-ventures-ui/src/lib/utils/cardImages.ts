@@ -9,6 +9,13 @@ export function setRevisedCardArt(revised: boolean) {
     revisedCardArt = revised
 }
 
+// Games on the 2026-11-24 card list show cards 15 and 19 with their hunt.
+let trackAndHuntArt = false
+
+export function setTrackAndHuntArt(on: boolean) {
+    trackAndHuntArt = on
+}
+
 // Games with the Feast buyer bonus show Feast cards that print the bonus.
 let feastBonusArt = false
 
@@ -28,6 +35,7 @@ export function cardImageUrl(cardId: string): string | undefined {
     return (
         (category ? cardImagesById[`feast-${category}`] : undefined) ??
         (feastBonusArt ? cardImagesById[`${cardId}-bonus`] : undefined) ??
+        (trackAndHuntArt ? cardImagesById[`${cardId}-hunt`] : undefined) ??
         (revisedCardArt ? cardImagesById[`${cardId}-revised`] : undefined) ??
         cardImagesById[cardId]
     )

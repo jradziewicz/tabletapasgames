@@ -4,26 +4,31 @@ import image1 from './green-p2.png'
 import image2 from './green-p3.png'
 import image3 from './green-p4.png'
 import image4 from './green-p5.png'
-import image5 from './purple-p1.png'
-import image6 from './purple-p2.png'
-import image7 from './purple-p3.png'
-import image8 from './purple-p4.png'
-import image9 from './purple-p5.png'
-import image10 from './red-p1.png'
-import image11 from './red-p2.png'
-import image12 from './red-p3.png'
-import image13 from './red-p4.png'
-import image14 from './red-p5.png'
-import image15 from './white-p1.png'
-import image16 from './white-p2.png'
-import image17 from './white-p3.png'
-import image18 from './white-p4.png'
-import image19 from './white-p5.png'
-import image20 from './yellow-p1.png'
-import image21 from './yellow-p2.png'
-import image22 from './yellow-p3.png'
-import image23 from './yellow-p4.png'
-import image24 from './yellow-p5.png'
+import image5 from './green-p6.png'
+import image6 from './purple-p1.png'
+import image7 from './purple-p2.png'
+import image8 from './purple-p3.png'
+import image9 from './purple-p4.png'
+import image10 from './purple-p5.png'
+import image11 from './purple-p6.png'
+import image12 from './red-p1.png'
+import image13 from './red-p2.png'
+import image14 from './red-p3.png'
+import image15 from './red-p4.png'
+import image16 from './red-p5.png'
+import image17 from './red-p6.png'
+import image18 from './white-p1.png'
+import image19 from './white-p2.png'
+import image20 from './white-p3.png'
+import image21 from './white-p4.png'
+import image22 from './white-p5.png'
+import image23 from './white-p6.png'
+import image24 from './yellow-p1.png'
+import image25 from './yellow-p2.png'
+import image26 from './yellow-p3.png'
+import image27 from './yellow-p4.png'
+import image28 from './yellow-p5.png'
+import image29 from './yellow-p6.png'
 
 // Image URL by file name (without .png)
 export const Images: Record<string, string> = {
@@ -32,24 +37,29 @@ export const Images: Record<string, string> = {
     'green-p3': image2,
     'green-p4': image3,
     'green-p5': image4,
-    'purple-p1': image5,
-    'purple-p2': image6,
-    'purple-p3': image7,
-    'purple-p4': image8,
-    'purple-p5': image9,
-    'red-p1': image10,
-    'red-p2': image11,
-    'red-p3': image12,
-    'red-p4': image13,
-    'red-p5': image14,
-    'white-p1': image15,
-    'white-p2': image16,
-    'white-p3': image17,
-    'white-p4': image18,
-    'white-p5': image19,
-    'yellow-p1': image20,
-    'yellow-p2': image21,
-    'yellow-p3': image22,
-    'yellow-p4': image23,
-    'yellow-p5': image24,
+    'green-p6': image5,
+    'purple-p1': image6,
+    'purple-p2': image7,
+    'purple-p3': image8,
+    'purple-p4': image9,
+    'purple-p5': image10,
+    'purple-p6': image11,
+    'red-p1': image12,
+    'red-p2': image13,
+    'red-p3': image14,
+    'red-p4': image15,
+    'red-p5': image16,
+    'red-p6': image17,
+    'white-p1': image18,
+    'white-p2': image19,
+    'white-p3': image20,
+    'white-p4': image21,
+    'white-p5': image22,
+    'white-p6': image23,
+    'yellow-p1': image24,
+    'yellow-p2': image25,
+    'yellow-p3': image26,
+    'yellow-p4': image27,
+    'yellow-p5': image28,
+    'yellow-p6': image29,
 }

@@ -15,7 +15,7 @@ import { CompanyId } from '../data/companies.js'
 import { AgreementLetter } from '../data/agreements.js'
 import { WeaponTokenKind } from '../data/weaponBag.js'
 import { MachineState } from '../definition/states.js'
-import { type Card, type CardAction, CardBonusKind, CardKind, cardActionsFor, cardPrices, getCard } from '../data/cards.js'
+import { type Card, type CardAction, CardBonusKind, CardKind, cardActionsFor, cardPrices, getCard, type CardRevision } from '../data/cards.js'
 import {
     DornochGoldPriceSlotIndex,
     EmptySlotDornochGoldPrice,
@@ -108,6 +108,11 @@ export const RockyVenturesGameState = Type.Evaluate(
             cardStacking: Type.Optional(Type.Boolean()),
             actionsInOrder: Type.Optional(Type.Boolean()),
             revisedCards: Type.Optional(Type.Boolean()),
+            trackAndHuntCards: Type.Optional(Type.Boolean()),
+            huntStarterCard: Type.Optional(Type.Boolean()),
+            bonusInvestSlotCost: Type.Optional(Type.Boolean()),
+            gainMineBonus: Type.Optional(Type.Boolean()),
+            finalFeastBaseCost: Type.Optional(Type.Number()),
             agreementsScoreOnDelivery: Type.Optional(Type.Boolean()),
             noAgreementDiscard: Type.Optional(Type.Boolean()),
             gemOnlyOnCircle: Type.Optional(Type.Boolean()),
@@ -178,6 +183,17 @@ export class HydratedRockyVenturesGameState
     declare actionsInOrder?: boolean
     // Plays the revised card actions, and cards 25 to 30 perform their actions when bought.
     declare revisedCards?: boolean
+    // Cards 15 and 19 end with a hunt (Justin's card list, 2026-11-24; new games and Rocky Balboa 2).
+    declare trackAndHuntCards?: boolean
+    // Players start with the basic Hunt card V. Also marks that a running game has been given it, so
+    // a player who discards it doesn't get it back.
+    declare huntStarterCard?: boolean
+    // Justin's 2026-11-24 changes (new games and Rocky Balboa 2): a Bonus Invest pays only the market
+    // slot's price, the mine bonus gains any mine the player could claim normally, and the final
+    // Feast has a base cost on top of its slot price.
+    declare bonusInvestSlotCost?: boolean
+    declare gainMineBonus?: boolean
+    declare finalFeastBaseCost?: number
     // An agreement's front scores VP on a gold sale into its city instead of offering a point buy.
     declare agreementsScoreOnDelivery?: boolean
     // Agreements can't be discarded for free track (2026-11-09).
@@ -249,7 +265,7 @@ export class HydratedRockyVenturesGameState
             if (card.kind !== CardKind.Development || card.bonus.kind !== CardBonusKind.ImmediateAction) {
                 return []
             }
-            return this.revisedCards ? cardActionsFor(card, true) : [card.bonus.action]
+            return this.revisedCards ? cardActionsFor(card, this.cardRevision) : [card.bonus.action]
         }
         if (card.kind !== CardKind.Player && card.kind !== CardKind.Development) {
             return []
@@ -259,10 +275,14 @@ export class HydratedRockyVenturesGameState
         const under = underId === undefined ? undefined : getCard(underId)
         const underAction =
             under?.kind === CardKind.Player || under?.kind === CardKind.Development
-                ? cardActionsFor(under, this.revisedCards)[0]
+                ? cardActionsFor(under, this.cardRevision)[0]
                 : undefined
-        const actions = cardActionsFor(card, this.revisedCards)
+        const actions = cardActionsFor(card, this.cardRevision)
         return underAction ? [underAction, ...actions] : actions
+    }
+
+    get cardRevision(): CardRevision {
+        return this.trackAndHuntCards ? 2 : this.revisedCards ? 1 : 0
     }
 
     get turnActionsSinceImmediate(): string[] {

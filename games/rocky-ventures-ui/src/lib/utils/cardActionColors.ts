@@ -1,4 +1,4 @@
-import { CardActionKind, CardKind, cardActionsFor, getCard } from '@tabletop/rocky-ventures'
+import { CardActionKind, CardKind, cardActionsFor, getCard, type CardRevision } from '@tabletop/rocky-ventures'
 
 // The action icon colours on the printed cards and player mat.
 const ActionColors: Partial<Record<CardActionKind, string>> = {
@@ -11,17 +11,17 @@ const ActionColors: Partial<Record<CardActionKind, string>> = {
     [CardActionKind.Tax]: '#a9d3e6'
 }
 
-function actionKinds(cardId: string, revised?: boolean): CardActionKind[] {
+function actionKinds(cardId: string, revision?: CardRevision): CardActionKind[] {
     const card = getCard(cardId)
     return card.kind === CardKind.Player || card.kind === CardKind.Development
-        ? cardActionsFor(card, revised).map((action) => action.kind)
+        ? cardActionsFor(card, revision).map((action) => action.kind)
         : []
 }
 
 // A card's chip background: its action colour, split evenly when it has more than one. A stack
 // counts the top action of the card underneath first.
-export function cardChipBackground(cardId: string, underCardId?: string, revised?: boolean): string {
-    const kinds = [...(underCardId ? actionKinds(underCardId, revised).slice(0, 1) : []), ...actionKinds(cardId, revised)]
+export function cardChipBackground(cardId: string, underCardId?: string, revision?: CardRevision): string {
+    const kinds = [...(underCardId ? actionKinds(underCardId, revision).slice(0, 1) : []), ...actionKinds(cardId, revision)]
     const colors = [...new Set(kinds.map((kind) => ActionColors[kind] ?? '#f3ead6'))]
     if (colors.length <= 1) {
         return colors[0] ?? '#f3ead6'

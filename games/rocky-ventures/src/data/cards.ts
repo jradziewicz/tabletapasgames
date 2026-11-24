@@ -223,6 +223,8 @@ const development = (
     silverPrice
 })
 
+export const HuntStarterCardId = 'p6'
+
 // The invest/tax card is printed as each player's mat (it can't be discarded), so the four
 // starting cards after it are numbered I-IV (2026-11-03).
 export const PlayerCards: PlayerCard[] = [
@@ -230,7 +232,9 @@ export const PlayerCards: PlayerCard[] = [
     { id: 'p2', kind: CardKind.Player, numeral: 'I', actions: [claimMine(1, 1)], exclusiveActions: false },
     { id: 'p3', kind: CardKind.Player, numeral: 'II', actions: [layTrack(2, 1)], exclusiveActions: false },
     { id: 'p4', kind: CardKind.Player, numeral: 'III', actions: [extract()], exclusiveActions: false },
-    { id: 'p5', kind: CardKind.Player, numeral: 'IV', actions: [acquire(1)], exclusiveActions: false }
+    { id: 'p5', kind: CardKind.Player, numeral: 'IV', actions: [acquire(1)], exclusiveActions: false },
+    // Starter card V (Justin, 2026-11-24): new games and Rocky Balboa 2.
+    { id: HuntStarterCardId, kind: CardKind.Player, numeral: 'V', actions: [hunt(1)], exclusiveActions: false }
 ]
 
 export const PlayerCardIds: string[] = PlayerCards.map((card) => card.id)
@@ -294,8 +298,22 @@ const RevisedCardActions: Record<string, CardAction[]> = {
     d30: [acquire(2), extract({ disregardScourges: 1 })]
 }
 
-export function cardActionsFor(card: PlayerCard | DevelopmentCard, revised?: boolean): CardAction[] {
-    return (revised ? RevisedCardActions[card.id] : undefined) ?? card.actions
+// Changes on top of the revised actions (Justin's card list, 2026-11-24): new games and Rocky
+// Balboa 2. Both cards now pair their track with a hunt.
+const TrackAndHuntCardActions: Record<string, CardAction[]> = {
+    d15: [layTrack(3, 1), hunt(1)],
+    d19: [layTrack(3, 1), hunt(1)]
+}
+
+// Which card list a game plays by: 0 the original, 1 the 2026-11-06 revision, 2 the 2026-11-24 one.
+export type CardRevision = 0 | 1 | 2
+
+export function cardActionsFor(card: PlayerCard | DevelopmentCard, revision: CardRevision = 0): CardAction[] {
+    return (
+        (revision >= 2 ? TrackAndHuntCardActions[card.id] : undefined) ??
+        (revision >= 1 ? RevisedCardActions[card.id] : undefined) ??
+        card.actions
+    )
 }
 
 export const EndOfEraCards: EndOfEraCard[] = [

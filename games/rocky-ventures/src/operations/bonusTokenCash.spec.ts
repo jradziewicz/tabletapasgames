@@ -53,6 +53,7 @@ describe('bonus tokens taken as $3 (new games)', () => {
         const state = startedState()
         const playerId = currentPlayerId(state)
         const player = state.getPlayerState(playerId)
+        delete state.gainMineBonus
         const nodeId = levelTwoMine(state)
         state.pendingHunt = { region: 'manorsGate', drawn: [WeaponTokenKind.BonusGold], apply: 1 }
         expect(freeBonusClaimMineIds(state, playerId)).toContain(nodeId)

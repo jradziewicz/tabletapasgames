@@ -1,7 +1,7 @@
 <script lang="ts">
     import MatGems from '$lib/components/MatGems.svelte'
     import { StartingPlayerCardId } from '@tabletop/rocky-ventures'
-    import { CardKind, GemActionCosts, getCard, marketCardCost, reasonGemActionInvalid, type GemActionKind } from '@tabletop/rocky-ventures'
+    import { CardKind, GemActionCosts, getCard, investCost, reasonGemActionInvalid, type GemActionKind } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import { cardImageUrl } from '$lib/utils/cardImages.js'
     import { playerCardImageUrl } from '$lib/utils/playerCardImages.js'
@@ -46,7 +46,7 @@
         if (cardId === undefined) {
             return ''
         }
-        const cost = marketCardCost(getCard(cardId), slotIndex)
+        const cost = investCost(gameState, slotIndex)
         return cost === undefined ? '–' : `$${cost}`
     }
 

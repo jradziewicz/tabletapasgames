@@ -11,6 +11,8 @@ export const StartingToolLevel = 1
 // Market slots in order from oldest ($1) to newest ($8); cards slide toward index 0.
 export const MarketSlotPrices: number[] = [1, 2, 3, 5, 8]
 export const MarketSize = MarketSlotPrices.length
+// The final Feast's base cost, on top of its market slot's price (Justin, 2026-11-24).
+export const FinalFeastBaseCost = 10
 export const DornochGoldPriceSlotIndex = 3
 export const SilverPriceSlotIndex = 2
 export const ManorGoldPriceSlotIndex = 1

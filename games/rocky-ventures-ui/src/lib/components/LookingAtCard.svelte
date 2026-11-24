@@ -166,7 +166,7 @@
         try {
             const card = getCard(cardId)
             if (card.kind !== CardKind.Player && card.kind !== CardKind.Development) return undefined
-            const names = cardActionsFor(card, gameSession.gameState.revisedCards).map((action) => cardActionText(action).split(':')[0])
+            const names = cardActionsFor(card, gameSession.gameState.cardRevision).map((action) => cardActionText(action).split(':')[0])
             if (!names.length) return undefined
             const exclusive = card.kind === CardKind.Player && card.exclusiveActions
             return exclusive ? names.join(' or ') : names.join(', then ')

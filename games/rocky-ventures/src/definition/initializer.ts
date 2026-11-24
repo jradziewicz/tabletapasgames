@@ -9,6 +9,7 @@ import {
     shuffle
 } from '@tabletop/common'
 import { NewFeastPointBuyCosts } from '../operations/feastBonus.js'
+import { FinalFeastBaseCost } from '../data/setup.js'
 import { pickFeastCategories } from '../operations/feastBonus.js'
 import { DummyPlayerCount } from '../model/dummy.js'
 import { HydratedRockyVenturesGameState, RockyVenturesGameState } from '../model/gameState.js'
@@ -93,6 +94,11 @@ export class RockyVenturesGameInitializer
             cardStacking: true,
             actionsInOrder: true,
             revisedCards: true,
+            trackAndHuntCards: true,
+            huntStarterCard: true,
+            bonusInvestSlotCost: true,
+            gainMineBonus: true,
+            finalFeastBaseCost: FinalFeastBaseCost,
             agreementsScoreOnDelivery: true,
             noAgreementDiscard: true,
             gemOnlyOnCircle: true,

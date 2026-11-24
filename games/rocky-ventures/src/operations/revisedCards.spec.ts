@@ -38,9 +38,19 @@ describe('revised card actions', () => {
         expect(kinds(state, 'd26')).toEqual([CardActionKind.ClaimMine, CardActionKind.ExtractAndSell])
     })
 
+    it('pairs track with a hunt on cards 15 and 19 in the 2026-11-24 card list only', () => {
+        const state = startedState()
+        expect(kinds(state, 'd15')).toEqual([CardActionKind.LayTrack, CardActionKind.Hunt])
+        expect(kinds(state, 'd19')).toEqual([CardActionKind.LayTrack, CardActionKind.Hunt])
+        delete state.trackAndHuntCards
+        expect(kinds(state, 'd15')).toEqual([CardActionKind.LayTrack])
+        expect(kinds(state, 'd19')).toEqual([CardActionKind.LayTrack, CardActionKind.Acquire])
+    })
+
     it('keeps the old actions in older games', () => {
         const state = startedState()
         delete state.revisedCards
+        delete state.trackAndHuntCards
         expect(kinds(state, 'd03')).toEqual([CardActionKind.ExtractAndSell, CardActionKind.Hunt])
         expect(kinds(state, 'd08')).toEqual([CardActionKind.Acquire, CardActionKind.Hunt])
     })
@@ -56,6 +66,7 @@ describe('revised card actions', () => {
     it('keeps the single immediate action in older games', () => {
         const state = startedState()
         delete state.revisedCards
+        delete state.trackAndHuntCards
         state.immediateCardId = 'd27'
         state.immediateStart = state.turnActionsTaken.length
         expect(remainingActionKinds(state)).toEqual([CardActionKind.Acquire])

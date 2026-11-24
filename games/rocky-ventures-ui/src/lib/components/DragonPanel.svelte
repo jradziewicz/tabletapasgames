@@ -16,10 +16,10 @@
     const bagRows: { kind: WeaponTokenKind; label: string }[] = $derived([
         { kind: WeaponTokenKind.Hit, label: 'Hit' },
         { kind: WeaponTokenKind.Miss, label: 'Miss' },
-        { kind: WeaponTokenKind.BonusGold, label: gameSession.gameState.bonusTokenCash ? 'Free level 2 claim' : '+3 gold' },
+        { kind: WeaponTokenKind.BonusGold, label: gameSession.gameState.gainMineBonus ? 'Gain a mine' : gameSession.gameState.bonusTokenCash ? 'Free level 2 claim' : '+3 gold' },
         { kind: WeaponTokenKind.BonusWeaponLevel, label: '+1 weapon level' },
         { kind: WeaponTokenKind.BonusGem, label: '+1 gem' },
-        { kind: WeaponTokenKind.BonusInvest, label: 'Invest action' }
+        { kind: WeaponTokenKind.BonusInvest, label: 'Bonus Invest action' }
     ])
 </script>
 

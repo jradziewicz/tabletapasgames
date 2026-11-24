@@ -1,10 +1,10 @@
 import { Prng } from '@tabletop/common'
 import { CardActionKind, CardBonusKind, CardKind, StartingPlayerCardId, getCard } from '../data/cards.js'
-import { TaxSlotIndex, taxIncomeFor } from '../data/setup.js'
+import { MarketSlotPrices, TaxSlotIndex, taxIncomeFor } from '../data/setup.js'
 import type { CompanyId } from '../data/companies.js'
 import type { DeliveryCityId } from '../data/board.js'
 import type { HydratedRockyVenturesGameState } from '../model/gameState.js'
-import { marketCardCost, removeFromMarket } from './market.js'
+import { ThirdEraCardId, marketCardCost, removeFromMarket } from './market.js'
 import { startPointBuy } from './turn.js'
 import { scoreFeastBuyerBonus } from './feastBonus.js'
 import { recordActionStat, recordCash, recordGems, recordStat } from './stats.js'
@@ -20,7 +20,14 @@ export function investCost(
     slotIndex: number
 ): number | undefined {
     const card = state.marketCard(slotIndex)
-    return card ? marketCardCost(card, slotIndex) : undefined
+    const cost = card ? marketCardCost(card, slotIndex) : undefined
+    if (!card || cost === undefined) {
+        return undefined
+    }
+    if (state.bonusInvest && state.bonusInvestSlotCost) {
+        return MarketSlotPrices[slotIndex] ?? 0
+    }
+    return card.id === ThirdEraCardId ? cost + (state.finalFeastBaseCost ?? 0) : cost
 }
 
 // Why picking `letter` from the city's agreement pile isn't allowed, if it isn't. Picking the top

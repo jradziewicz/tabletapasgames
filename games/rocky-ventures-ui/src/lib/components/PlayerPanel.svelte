@@ -200,8 +200,8 @@
             <button
                 type="button"
                 class="tableau-card relative flex h-7 w-6 items-center justify-center rounded border text-[11px] font-bold {spotlit(cardId) ? 'spotlit' : ''} {gameSession.mirroring && gameSession.watchedSelection?.lookingAtCardId === cardId && player.id === gameSession.gameState.activePlayerIds[0] ? 'mirror-pulse' : ''} {gameSession.pickedMoveCardId(player.id) === cardId ? 'move-picked' : ''}"
-                style="background: {cardChipBackground(cardId, playerState.stackedCards?.[cardId], gameSession.gameState.revisedCards)}; color: #111; border-color: #8a6d3b;"
-                title={cardActionsTooltip(cardId, gameSession.gameState.revisedCards)}
+                style="background: {cardChipBackground(cardId, playerState.stackedCards?.[cardId], gameSession.gameState.cardRevision)}; color: #111; border-color: #8a6d3b;"
+                title={cardActionsTooltip(cardId, gameSession.gameState.cardRevision)}
                 onclick={() => gameSession.zoomCard(cardId, imageUrl)}
                 onpointerenter={(event) => gameSession.previewCard(event, cardId, imageUrl)}
                 onpointerleave={() => gameSession.clearCardPreview()}
