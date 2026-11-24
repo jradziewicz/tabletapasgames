@@ -259,6 +259,7 @@
             {@const pending = gameState.pendingHunt}
             <div class="mt-2 text-xs text-[#c9a961]">
                 Hunting {regionLabel(pending.region)}, applying up to {Math.min(pending.apply, pending.drawn.length)} of the {pending.drawn.length} drawn:
+                <button type="button" class="hunt-help" onclick={() => gameSession.openAid('hunting')} title="How hunting works" aria-label="How hunting works">?</button>
             </div>
             <div class="mt-1 flex flex-wrap items-center gap-2">
                 {#each pending.drawn as kind, index (index)}
@@ -1023,6 +1024,7 @@
             <span class="text-xs text-[#c9a961]">
                 Apply up to {Math.min(pending.apply, pending.drawn.length)} of the {pending.drawn.length} drawn.
             </span>
+            <button type="button" class="hunt-help" onclick={() => gameSession.openAid('hunting')} title="How hunting works" aria-label="How hunting works">?</button>
         </div>
         <div class="flex flex-wrap items-center gap-3">
             {#each pending.drawn as kind, index (index)}
@@ -1288,6 +1290,24 @@
 </div>
 
 <style>
+    .hunt-help {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border: 1px solid #8a6d3b;
+        border-radius: 9999px;
+        font-size: 14px;
+        font-weight: 700;
+        line-height: 1;
+        color: #ffd166;
+        background: rgba(0, 0, 0, 0.25);
+    }
+    .hunt-help:hover {
+        border-color: #ffd166;
+    }
+
     /* Live play: the card the playing player has picked, as watchers see it. */
     .move-picked {
         box-shadow: 0 0 0 4px #ffd166, 0 0 18px 8px rgba(255, 209, 102, 0.85);

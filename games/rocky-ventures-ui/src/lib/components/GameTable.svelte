@@ -19,6 +19,7 @@
     import TableauPanel from '$lib/components/TableauPanel.svelte'
     import MarketPanel from '$lib/components/MarketPanel.svelte'
     import GridPanel from '$lib/components/GridPanel.svelte'
+    import AidsPanel from '$lib/components/AidsPanel.svelte'
     import DragonPanel from '$lib/components/DragonPanel.svelte'
     import CardZoom from '$lib/components/CardZoom.svelte'
     import CardSpotlight from '$lib/components/CardSpotlight.svelte'
@@ -140,6 +141,7 @@
         { id: 'grid', label: 'Weapon / Tool Grid' },
         { id: 'dragon', label: 'Dragon' },
         { id: 'railroads', label: 'Railroads' },
+        { id: 'aids', label: 'Aids', closable: false },
         // Admin only: where everyone's points came from.
         ...(session.isActingAdmin || session.isViewingHost ? [{ id: 'points', label: 'Points' }] : [])
     ])
@@ -232,6 +234,12 @@
     $effect(() => {
         if (session.huntActive && session.seesActiveView && !session.isViewingHistory) {
             workspaceTab = 'board'
+        }
+    })
+
+    $effect(() => {
+        if (session.aidRequest) {
+            workspaceTab = 'aids'
         }
     })
 
@@ -594,6 +602,8 @@
                                     <div class="p-2">
                                         <CompaniesPanel />
                                     </div>
+                                {:else if id === 'aids'}
+                                    <AidsPanel />
                                 {:else if id === 'points' && (session.isActingAdmin || session.isViewingHost)}
                                     <PointSources />
                                 {/if}

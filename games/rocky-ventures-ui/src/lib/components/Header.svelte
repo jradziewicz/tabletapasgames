@@ -12,6 +12,7 @@
         FeastBuyerBonuses,
         feastCategoryFor
     } from '@tabletop/rocky-ventures'
+    import { cardImageUrl } from '$lib/utils/cardImages.js'
     import { feastName } from '$lib/utils/feastNames.js'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
 
@@ -44,7 +45,7 @@
     }
 
     // `struck` draws a line through the label's first word (the slain dragon).
-    type TriggerChip = { key: string; label: string; tip: string; level: ChipLevel; pulse?: boolean; struck?: boolean; goldWord?: string }
+    type TriggerChip = { key: string; label: string; tip: string; level: ChipLevel; pulse?: boolean; struck?: boolean; goldWord?: string; imageUrl?: string }
     const triggerChips: TriggerChip[] = $derived([
         {
             key: 'deck',
@@ -100,6 +101,7 @@
                 goldWord: !done ? (category ? (category.id === 'goldMines' ? 'GOLD' : undefined) : index === 2 ? 'MINES' : undefined) : undefined,
                 level: done ? 'done' : slot >= 0 ? 'close' : 'far',
                 struck: false,
+                imageUrl: cardImageUrl(cardId),
                 tip: `${name}: ${slot >= 0 ? 'in the market now' : inDeck ? 'still in the deck' : 'already taken'}.${bonusText}`
             }
         }),
@@ -177,7 +179,7 @@
                     class:dragon-alert={chip.pulse}
                     style="border-color: {ChipColors[chip.level].border}; color: {ChipColors[chip.level].text}; background-color: {ChipColors[chip.level].background};"
                     aria-label={chip.tip}
-                    >{#if chip.goldWord}{chip.label.replace(chip.goldWord, '')}<span style="color: #f2c14e;">{chip.goldWord}</span>{:else if chip.struck}<span class="line-through decoration-2">{chip.label.split(' ')[0]}</span> {chip.label.split(' ').slice(1).join(' ')}{:else}{chip.label}{/if}<span class="chip-tip" role="tooltip">{chip.tip}</span></button
+                    >{#if chip.goldWord}{chip.label.replace(chip.goldWord, '')}<span style="color: #f2c14e;">{chip.goldWord}</span>{:else if chip.struck}<span class="line-through decoration-2">{chip.label.split(' ')[0]}</span> {chip.label.split(' ').slice(1).join(' ')}{:else}{chip.label}{/if}<span class="chip-tip" class:chip-tip-art={chip.imageUrl} role="tooltip">{#if chip.imageUrl}<img src={chip.imageUrl} alt="" width="414" height="644" draggable="false" class="mb-1.5 block h-auto w-full rounded" />{/if}{chip.tip}</span></button
                 >
             {/each}
         </div>
@@ -214,6 +216,20 @@
         white-space: normal;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
         pointer-events: none;
+    }
+    .chip-tip-art {
+        width: 260px;
+        max-width: 260px;
+    }
+    /* Phones: the chips wrap, so a tip hung off one of them could run off the side. */
+    @media (width < 640px) {
+        .chip-tip-art {
+            position: fixed;
+            top: 232px;
+            right: auto;
+            left: 50%;
+            transform: translateX(-50%);
+        }
     }
     .trigger-chip:hover .chip-tip,
     .trigger-chip:focus .chip-tip {

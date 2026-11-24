@@ -171,6 +171,14 @@ export class RockyVenturesGameSession extends GameSession<
     agreementPick: { slotIndex: number; cityId: DeliveryCityId } | undefined = $state()
     stackPick: { slotIndex: number } | undefined = $state()
     gridZoomOpen = $state(false)
+    // Set by the "?" on a hunt: opens the Aids tab at that card. A new object each time, so asking
+    // again after switching tabs works.
+    aidRequest: { aid: string } | undefined = $state()
+
+    openAid(aid: string) {
+        this.aidRequest = { aid }
+    }
+
     hoveredCard: { url: string; alt: string } | undefined = $state()
     botSeats: Record<string, BotProfile> = $state({})
     claimHuntNodeId: string | undefined = $state()
