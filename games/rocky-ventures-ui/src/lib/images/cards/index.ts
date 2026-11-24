@@ -26,50 +26,56 @@ import image31 from './d12.png'
 import image33 from './d13-revised.png'
 import image34 from './d13.png'
 import image35 from './d14.png'
-import image36 from './d15-hunt.png'
-import image37 from './d15.png'
-import image38 from './d16.png'
-import image39 from './d17.png'
-import image40 from './d18.png'
-import image41 from './d19-hunt.png'
-import image42 from './d19.png'
-import image43 from './d20.png'
-import image44 from './d21.png'
-import image46 from './d22-revised.png'
-import image47 from './d22.png'
-import image48 from './d23.png'
-import image49 from './d24.png'
-import image51 from './d25-revised.png'
-import image52 from './d25.png'
-import image54 from './d26-revised.png'
-import image55 from './d26.png'
-import image57 from './d27-revised.png'
-import image58 from './d27.png'
-import image60 from './d28-revised.png'
-import image61 from './d28.png'
-import image63 from './d29-revised.png'
-import image64 from './d29.png'
-import image66 from './d30-revised.png'
-import image67 from './d30.png'
-import image73 from './era1-bonus.png'
-import image74 from './era1.png'
-import image81 from './era2-bonus.png'
-import image82 from './era2.png'
-import image89 from './era3-bonus.png'
-import image90 from './era3.png'
-import image91 from './feast-devCards-cost.png'
-import image92 from './feast-devCards.png'
-import image93 from './feast-emptyMines-cost.png'
-import image94 from './feast-emptyMines.png'
-import image96 from './feast-gems.png'
-import image97 from './feast-goldMines-cost.png'
-import image98 from './feast-goldMines.png'
-import image100 from './feast-hits.png'
-import image103 from './feast-manaMines.png'
-import image105 from './feast-shares.png'
-import image107 from './feast-tool.png'
-import image109 from './feast-weapon.png'
-import image110 from './gameOver.png'
+import image37 from './d15-hunt.png'
+import image38 from './d15.png'
+import image39 from './d16.png'
+import image40 from './d17.png'
+import image41 from './d18.png'
+import image43 from './d19-hunt.png'
+import image44 from './d19.png'
+import image45 from './d20.png'
+import image46 from './d21.png'
+import image48 from './d22-revised.png'
+import image49 from './d22.png'
+import image50 from './d23.png'
+import image51 from './d24.png'
+import image53 from './d25-revised.png'
+import image54 from './d25.png'
+import image56 from './d26-revised.png'
+import image57 from './d26.png'
+import image59 from './d27-revised.png'
+import image60 from './d27.png'
+import image62 from './d28-revised.png'
+import image63 from './d28.png'
+import image65 from './d29-revised.png'
+import image66 from './d29.png'
+import image68 from './d30-revised.png'
+import image69 from './d30.png'
+import image75 from './era1-bonus.png'
+import image76 from './era1.png'
+import image83 from './era2-bonus.png'
+import image84 from './era2.png'
+import image91 from './era3-bonus.png'
+import image92 from './era3.png'
+import image94 from './feast-devCards-cost.png'
+import image95 from './feast-devCards.png'
+import image97 from './feast-emptyMines-cost.png'
+import image98 from './feast-emptyMines.png'
+import image100 from './feast-gems-cost.png'
+import image101 from './feast-gems.png'
+import image103 from './feast-goldMines-cost.png'
+import image104 from './feast-goldMines.png'
+import image106 from './feast-hits-cost.png'
+import image107 from './feast-hits.png'
+import image110 from './feast-manaMines-cost.png'
+import image111 from './feast-manaMines.png'
+import image113 from './feast-shares-cost.png'
+import image114 from './feast-shares.png'
+import image116 from './feast-tool-cost.png'
+import image117 from './feast-tool.png'
+import image119 from './feast-weapon-cost.png'
+import image120 from './feast-weapon.png'
+import image121 from './gameOver.png'
 
 // Image URL by file name (without .png)
 export const Images: Record<string, string> = {
@@ -100,48 +106,54 @@ export const Images: Record<string, string> = {
     'd13-revised': image33,
     'd13': image34,
     'd14': image35,
-    'd15-hunt': image36,
-    'd15': image37,
-    'd16': image38,
-    'd17': image39,
-    'd18': image40,
-    'd19-hunt': image41,
-    'd19': image42,
-    'd20': image43,
-    'd21': image44,
-    'd22-revised': image46,
-    'd22': image47,
-    'd23': image48,
-    'd24': image49,
-    'd25-revised': image51,
-    'd25': image52,
-    'd26-revised': image54,
-    'd26': image55,
-    'd27-revised': image57,
-    'd27': image58,
-    'd28-revised': image60,
-    'd28': image61,
-    'd29-revised': image63,
-    'd29': image64,
-    'd30-revised': image66,
-    'd30': image67,
-    'era1-bonus': image73,
-    'era1': image74,
-    'era2-bonus': image81,
-    'era2': image82,
-    'era3-bonus': image89,
-    'era3': image90,
-    'feast-devCards-cost': image91,
-    'feast-devCards': image92,
-    'feast-emptyMines-cost': image93,
-    'feast-emptyMines': image94,
-    'feast-gems': image96,
-    'feast-goldMines-cost': image97,
-    'feast-goldMines': image98,
-    'feast-hits': image100,
-    'feast-manaMines': image103,
-    'feast-shares': image105,
-    'feast-tool': image107,
-    'feast-weapon': image109,
-    'gameOver': image110,
+    'd15-hunt': image37,
+    'd15': image38,
+    'd16': image39,
+    'd17': image40,
+    'd18': image41,
+    'd19-hunt': image43,
+    'd19': image44,
+    'd20': image45,
+    'd21': image46,
+    'd22-revised': image48,
+    'd22': image49,
+    'd23': image50,
+    'd24': image51,
+    'd25-revised': image53,
+    'd25': image54,
+    'd26-revised': image56,
+    'd26': image57,
+    'd27-revised': image59,
+    'd27': image60,
+    'd28-revised': image62,
+    'd28': image63,
+    'd29-revised': image65,
+    'd29': image66,
+    'd30-revised': image68,
+    'd30': image69,
+    'era1-bonus': image75,
+    'era1': image76,
+    'era2-bonus': image83,
+    'era2': image84,
+    'era3-bonus': image91,
+    'era3': image92,
+    'feast-devCards-cost': image94,
+    'feast-devCards': image95,
+    'feast-emptyMines-cost': image97,
+    'feast-emptyMines': image98,
+    'feast-gems-cost': image100,
+    'feast-gems': image101,
+    'feast-goldMines-cost': image103,
+    'feast-goldMines': image104,
+    'feast-hits-cost': image106,
+    'feast-hits': image107,
+    'feast-manaMines-cost': image110,
+    'feast-manaMines': image111,
+    'feast-shares-cost': image113,
+    'feast-shares': image114,
+    'feast-tool-cost': image116,
+    'feast-tool': image117,
+    'feast-weapon-cost': image119,
+    'feast-weapon': image120,
+    'gameOver': image121,
 }
