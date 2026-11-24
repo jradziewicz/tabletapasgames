@@ -30,9 +30,17 @@ export function setFeastCardCategories(categories: Record<string, string> | unde
     feastCategories = categories
 }
 
+// Games where the final Feast has a base cost print it on that card.
+let finalFeastCostArt = false
+
+export function setFinalFeastCostArt(on: boolean) {
+    finalFeastCostArt = on
+}
+
 export function cardImageUrl(cardId: string): string | undefined {
     const category = feastCategories?.[cardId]
     return (
+        (category && finalFeastCostArt ? cardImagesById[`feast-${category}-cost`] : undefined) ??
         (category ? cardImagesById[`feast-${category}`] : undefined) ??
         (feastBonusArt ? cardImagesById[`${cardId}-bonus`] : undefined) ??
         (trackAndHuntArt ? cardImagesById[`${cardId}-hunt`] : undefined) ??

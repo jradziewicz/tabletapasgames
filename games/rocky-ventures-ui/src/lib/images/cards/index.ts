@@ -57,16 +57,19 @@ import image81 from './era2-bonus.png'
 import image82 from './era2.png'
 import image89 from './era3-bonus.png'
 import image90 from './era3.png'
-import image91 from './feast-devCards.png'
-import image92 from './feast-emptyMines.png'
-import image94 from './feast-gems.png'
-import image95 from './feast-goldMines.png'
-import image97 from './feast-hits.png'
-import image100 from './feast-manaMines.png'
-import image102 from './feast-shares.png'
-import image104 from './feast-tool.png'
-import image106 from './feast-weapon.png'
-import image107 from './gameOver.png'
+import image91 from './feast-devCards-cost.png'
+import image92 from './feast-devCards.png'
+import image93 from './feast-emptyMines-cost.png'
+import image94 from './feast-emptyMines.png'
+import image96 from './feast-gems.png'
+import image97 from './feast-goldMines-cost.png'
+import image98 from './feast-goldMines.png'
+import image100 from './feast-hits.png'
+import image103 from './feast-manaMines.png'
+import image105 from './feast-shares.png'
+import image107 from './feast-tool.png'
+import image109 from './feast-weapon.png'
+import image110 from './gameOver.png'
 
 // Image URL by file name (without .png)
 export const Images: Record<string, string> = {
@@ -128,14 +131,17 @@ export const Images: Record<string, string> = {
     'era2': image82,
     'era3-bonus': image89,
     'era3': image90,
-    'feast-devCards': image91,
-    'feast-emptyMines': image92,
-    'feast-gems': image94,
-    'feast-goldMines': image95,
-    'feast-hits': image97,
-    'feast-manaMines': image100,
-    'feast-shares': image102,
-    'feast-tool': image104,
-    'feast-weapon': image106,
-    'gameOver': image107,
+    'feast-devCards-cost': image91,
+    'feast-devCards': image92,
+    'feast-emptyMines-cost': image93,
+    'feast-emptyMines': image94,
+    'feast-gems': image96,
+    'feast-goldMines-cost': image97,
+    'feast-goldMines': image98,
+    'feast-hits': image100,
+    'feast-manaMines': image103,
+    'feast-shares': image105,
+    'feast-tool': image107,
+    'feast-weapon': image109,
+    'gameOver': image110,
 }
