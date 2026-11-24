@@ -6,7 +6,7 @@ import {
     BonusGemMinimumWeaponLevel,
     BonusGoldAmount,
     BonusInvestMinimumWeaponLevel,
-    HuntDrawRuleByWeaponLevel,
+    huntDrawRule,
     VictoryPointsPerHit,
     WeaponTokenKind
 } from '../data/weaponBag.js'
@@ -54,8 +54,7 @@ export function huntableRegions(state: HydratedRockyVenturesGameState): string[]
 }
 
 export function huntRule(state: HydratedRockyVenturesGameState, playerId: string) {
-    const level = state.getPlayerState(playerId).weaponLevel
-    return HuntDrawRuleByWeaponLevel[level] ?? HuntDrawRuleByWeaponLevel[1]!
+    return huntDrawRule(state.getPlayerState(playerId).weaponLevel, state.weaponFiveAppliesThree)
 }
 
 function drawFromBag(state: HydratedRockyVenturesGameState, count: number): WeaponTokenKind[] {

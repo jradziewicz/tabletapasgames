@@ -19,7 +19,7 @@
         DeliveryCityId,
         DragonHuntRegion,
         OreCapacityByToolLevel,
-        HuntDrawRuleByWeaponLevel,
+        huntDrawRule,
         hasRedUnlockAt,
         hasBlueUnlockAt,
         unlockEarnsGem,
@@ -693,7 +693,7 @@
                     {@const earnsGem =
                         (unlocksRed && unlockEarnsGem(gameState, plan.destination, 'red')) ||
                         (unlocksBlue && unlockEarnsGem(gameState, plan.destination, 'blue'))}
-                    {@const hunt = HuntDrawRuleByWeaponLevel[plan.destination.weapon]}
+                    {@const hunt = huntDrawRule(plan.destination.weapon, gameState.weaponFiveAppliesThree)}
                     {@const ore = OreCapacityByToolLevel[plan.destination.tool]}
                     <button
                         type="button"
@@ -711,7 +711,7 @@
                             {/if}
                         </span>
                         {#if isWeapon}
-                            {@const currentHunt = HuntDrawRuleByWeaponLevel[fromLevel]}
+                            {@const currentHunt = huntDrawRule(fromLevel, gameState.weaponFiveAppliesThree)}
                             {@const drawUp = (hunt?.draw ?? 0) > (currentHunt?.draw ?? 0)}
                             {@const applyUp = (hunt?.apply ?? 0) > (currentHunt?.apply ?? 0)}
                             <span class="flex items-baseline gap-2 font-mono font-black">

@@ -32,5 +32,14 @@ export const HuntDrawRuleByWeaponLevel: Record<number, HuntDrawRule> = {
     2: { draw: 2, apply: 1 },
     3: { draw: 3, apply: 2 },
     4: { draw: 4, apply: 2 },
-    5: { draw: 5, apply: 2 } // was apply 3 until 2026-11-01
+    5: { draw: 5, apply: 2 }
+}
+
+// Weapon level 5 applied 3 until 2026-11-01, and does again from 2026-11-24 (new games and Rocky
+// Balboa 2).
+export function huntDrawRule(weaponLevel: number, weaponFiveAppliesThree = false): HuntDrawRule {
+    if (weaponLevel === 5 && weaponFiveAppliesThree) {
+        return { draw: 5, apply: 3 }
+    }
+    return HuntDrawRuleByWeaponLevel[weaponLevel] ?? HuntDrawRuleByWeaponLevel[1]!
 }

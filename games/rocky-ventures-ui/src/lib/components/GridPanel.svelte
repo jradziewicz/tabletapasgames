@@ -1,6 +1,6 @@
 <script lang="ts">
     import { PlayerName } from '@tabletop/frontend-components'
-    import { OreCapacityByToolLevel, HuntDrawRuleByWeaponLevel } from '@tabletop/rocky-ventures'
+    import { OreCapacityByToolLevel, huntDrawRule } from '@tabletop/rocky-ventures'
     import { getGameSession } from '$lib/model/sessionContext.svelte.js'
     import GridView from '$lib/components/GridView.svelte'
 
@@ -33,7 +33,7 @@
         </thead>
         <tbody>
             {#each players as player (player.playerId)}
-                {@const hunt = HuntDrawRuleByWeaponLevel[player.weaponLevel]}
+                {@const hunt = huntDrawRule(player.weaponLevel, gameSession.gameState.weaponFiveAppliesThree)}
                 {@const ore = OreCapacityByToolLevel[player.toolLevel]}
                 <tr class="border-t border-[#4a3620]">
                     <td class="py-1"><PlayerName playerId={player.playerId} /></td>

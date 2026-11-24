@@ -62,6 +62,7 @@ function migrateToCardListNov24(state: HydratedRockyVenturesGameState) {
     state.trackAndHuntCards = true
     state.bonusInvestSlotCost = true
     state.gainMineBonus = true
+    state.weaponFiveAppliesThree = true
     state.finalFeastBaseCost = FinalFeastBaseCost
     if (state.huntStarterCard) return
     state.huntStarterCard = true

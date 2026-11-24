@@ -112,6 +112,7 @@ export const RockyVenturesGameState = Type.Evaluate(
             huntStarterCard: Type.Optional(Type.Boolean()),
             bonusInvestSlotCost: Type.Optional(Type.Boolean()),
             gainMineBonus: Type.Optional(Type.Boolean()),
+            weaponFiveAppliesThree: Type.Optional(Type.Boolean()),
             finalFeastBaseCost: Type.Optional(Type.Number()),
             agreementsScoreOnDelivery: Type.Optional(Type.Boolean()),
             noAgreementDiscard: Type.Optional(Type.Boolean()),
@@ -193,6 +194,8 @@ export class HydratedRockyVenturesGameState
     // Feast has a base cost on top of its slot price.
     declare bonusInvestSlotCost?: boolean
     declare gainMineBonus?: boolean
+    // A weapon level 5 hunt applies up to 3 tokens instead of 2.
+    declare weaponFiveAppliesThree?: boolean
     declare finalFeastBaseCost?: number
     // An agreement's front scores VP on a gold sale into its city instead of offering a point buy.
     declare agreementsScoreOnDelivery?: boolean

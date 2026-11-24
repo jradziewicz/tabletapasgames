@@ -2,7 +2,7 @@
     import { type Player } from '@tabletop/common'
     import {
         CardKind,
-        HuntDrawRuleByWeaponLevel,
+        huntDrawRule,
         OreCapacityByToolLevel,
         getCard,
         type HydratedRockyVenturesPlayerState
@@ -68,7 +68,7 @@
     const playerColor = $derived(gameSession.colors.getPlayerBgColorValue(player.id))
     const playerTextColor = $derived(gameSession.colors.getPlayerTextColorValue(player.id))
     const oreCapacity = $derived(OreCapacityByToolLevel[playerState.toolLevel])
-    const huntRule = $derived(HuntDrawRuleByWeaponLevel[playerState.weaponLevel])
+    const huntRule = $derived(huntDrawRule(playerState.weaponLevel, gameSession.gameState.weaponFiveAppliesThree))
 
     // Live play: the card this player just bought or taxed glows briefly where it landed.
     function spotlit(cardId: string | undefined): boolean {

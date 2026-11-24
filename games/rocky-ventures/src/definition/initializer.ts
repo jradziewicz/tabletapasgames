@@ -98,6 +98,7 @@ export class RockyVenturesGameInitializer
             huntStarterCard: true,
             bonusInvestSlotCost: true,
             gainMineBonus: true,
+            weaponFiveAppliesThree: true,
             finalFeastBaseCost: FinalFeastBaseCost,
             agreementsScoreOnDelivery: true,
             noAgreementDiscard: true,
