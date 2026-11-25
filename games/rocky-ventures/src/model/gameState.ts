@@ -110,6 +110,7 @@ export const RockyVenturesGameState = Type.Evaluate(
             revisedCards: Type.Optional(Type.Boolean()),
             trackAndHuntCards: Type.Optional(Type.Boolean()),
             huntStarterCard: Type.Optional(Type.Boolean()),
+            huntStarterCardPlaced: Type.Optional(Type.Boolean()),
             bonusInvestSlotCost: Type.Optional(Type.Boolean()),
             gainMineBonus: Type.Optional(Type.Boolean()),
             weaponFiveAppliesThree: Type.Optional(Type.Boolean()),
@@ -190,6 +191,8 @@ export class HydratedRockyVenturesGameState
     // Players start with the basic Hunt card V. Also marks that a running game has been given it, so
     // a player who discards it doesn't get it back.
     declare huntStarterCard?: boolean
+    // A running game given card V at the end of its tableaus has had it moved after card IV.
+    declare huntStarterCardPlaced?: boolean
     // Justin's 2026-11-24 changes (new games and Rocky Balboa 2): a Bonus Invest pays only the market
     // slot's price, the mine bonus gains any mine the player could claim normally, and the final
     // Feast has a base cost on top of its slot price.

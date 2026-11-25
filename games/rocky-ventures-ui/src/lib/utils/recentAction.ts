@@ -5,6 +5,7 @@ import {
     type RockyVenturesGameState
 } from '@tabletop/rocky-ventures'
 import type { RockyVenturesGameSession } from '$lib/model/session.svelte.js'
+import { savedState } from '$lib/utils/savedState.js'
 
 const engine = new GameEngine(Definition.runtime)
 
@@ -37,7 +38,7 @@ export function recentOtherPlayerAction<T>(
     if (actions.slice(index + 1).some((later) => later.playerId && later.playerId !== playerId)) return undefined
 
     try {
-        let state = session.gameState.dehydrate() as RockyVenturesGameState
+        let state = savedState(session)
         for (let later = actions.length - 1; later > index; later--) {
             state = engine.undoProcessedAction({ action: actions[later]!, state })
         }

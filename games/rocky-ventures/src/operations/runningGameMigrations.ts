@@ -56,8 +56,6 @@ export const CardListNov24GameIds: string[] = [
     'WP4HCv2YJSiFsAjLzaVJe' // Rocky Balboa 2
 ]
 
-// Card V goes on the end of each tableau, never in the middle: pawn positions, moves being sent and
-// the saved undo steps all refer to tableau cards by position, so earlier positions must not shift.
 function migrateToCardListNov24(state: HydratedRockyVenturesGameState) {
     state.trackAndHuntCards = true
     state.bonusInvestSlotCost = true
@@ -65,10 +63,34 @@ function migrateToCardListNov24(state: HydratedRockyVenturesGameState) {
     state.weaponFiveAppliesThree = true
     state.finalFeastBaseCost = FinalFeastBaseCost
     state.earlyFeastBaseCosts = true
-    if (state.huntStarterCard) return
-    state.huntStarterCard = true
+    if (!state.huntStarterCard) {
+        state.huntStarterCard = true
+        for (const player of state.players) {
+            player.tableau = [...player.tableau, HuntStarterCardId]
+        }
+    }
+    placeHuntStarterCard(state)
+}
+
+// Card V was first added at the end of each tableau. Justin wants it where it would have been from
+// the start, right after the other starting cards (2026-11-25). This happens once, and the pawn stays
+// on the card it was on. Undo still works: the next action's undo step is made against the saved
+// state, so it puts the old order back before any earlier step is undone.
+function placeHuntStarterCard(state: HydratedRockyVenturesGameState) {
+    if (state.huntStarterCardPlaced) return
+    state.huntStarterCardPlaced = true
     for (const player of state.players) {
-        player.tableau = [...player.tableau, HuntStarterCardId]
+        const under = (cardId: string) => player.stackedCards?.[cardId]
+        // A starting card that has been stacked on still holds its place in the row.
+        const isStarter = (cardId: string) => [cardId, under(cardId)].some((id) => id !== undefined && getCard(id).kind === CardKind.Player)
+        const holdsHunt = (cardId: string) => cardId === HuntStarterCardId || under(cardId) === HuntStarterCardId
+        const hunt = player.tableau.find(holdsHunt)
+        if (hunt === undefined) continue
+        const pawnCardId = player.pawnCardId
+        const rest = player.tableau.filter((cardId) => cardId !== hunt)
+        const at = rest.findLastIndex(isStarter) + 1
+        player.tableau = [...rest.slice(0, at), hunt, ...rest.slice(at)]
+        if (pawnCardId !== undefined) player.pawnIndex = player.tableau.indexOf(pawnCardId)
     }
 }
 

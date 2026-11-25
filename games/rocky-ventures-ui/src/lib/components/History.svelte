@@ -29,6 +29,7 @@
     import { cardImageUrl } from '$lib/utils/cardImages.js'
     import { playerCardImageUrl } from '$lib/utils/playerCardImages.js'
     import { weaponTokenImageUrl } from '$lib/utils/dragonImages.js'
+    import { savedState } from '$lib/utils/savedState.js'
     import { scourgeImageUrl } from '$lib/utils/scourgeImages.js'
     import { companyLogoUrl } from '$lib/utils/companyLogos.js'
     import { GridRegion, gridCellPosition } from '$lib/utils/trackLayout.js'
@@ -124,16 +125,22 @@
         let current: Snapshot | undefined
         try {
             current = snapshot(gameSession.gameState)
-            let state = gameSession.gameState.dehydrate() as RockyVenturesGameState
+            let state = savedState(gameSession)
             for (let i = actions.length - 1; i >= 0; i--) {
                 const action = actions[i]!
                 if (beforeByActionId.has(action.id)) break
                 if (!action.undoPatch) break
+                const after = state
                 state = engine.undoProcessedAction({ action, state })
                 const hydrated = Definition.runtime.hydrator.hydrateState(
                     structuredClone(state)
                 ) as HydratedRockyVenturesGameState
-                beforeByActionId.set(action.id, snapshot(hydrated))
+                const before = snapshot(hydrated)
+                // Moves made before card V was put in its place refer to the order saved back then.
+                if (!after.huntStarterCardPlaced) {
+                    for (const player of state.players) before.tableaus[player.playerId] = [...player.tableau]
+                }
+                beforeByActionId.set(action.id, before)
             }
         } catch (error) {
             console.warn('Could not summarise History', error)

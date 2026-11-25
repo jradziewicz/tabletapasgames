@@ -19,6 +19,7 @@
     import TableauPanel from '$lib/components/TableauPanel.svelte'
     import MarketPanel from '$lib/components/MarketPanel.svelte'
     import GridPanel from '$lib/components/GridPanel.svelte'
+    import { setBattleAxeScourgeArt } from '$lib/utils/scourgeImages.js'
     import { PlayerAidTabId, withPlayerAidTab } from '$lib/utils/workspaceTabs.js'
     import AidsPanel from '$lib/components/AidsPanel.svelte'
     import DragonPanel from '$lib/components/DragonPanel.svelte'
@@ -64,6 +65,7 @@
         ...(session.gameState.finalFeastBaseCost !== undefined ? ['era3'] : [])
     ])
     setGainMineArt(session.gameState.gainMineBonus === true)
+    setBattleAxeScourgeArt(session.gameState.huntHitsScoreAtFeasts === true)
     setFeastBonusArt(session.gameState.feastBuyerBonus === true)
     // Older games keep their original Feast cards and names (only their Mana colour was updated).
     setFeastCardCategories(session.gameState.feastCategories)
