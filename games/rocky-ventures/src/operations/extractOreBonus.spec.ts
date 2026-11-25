@@ -24,12 +24,12 @@ function startedState(): HydratedRockyVenturesGameState {
 }
 
 // Card 21: +1 ore and +1 tool for the extract.
-function extracted(ore: OreKind, level: number, toolLevel: number): number {
+function extracted(ore: OreKind, level: number, toolLevel: number, cardId = 'd21'): number {
     const state = startedState()
     const playerId = currentPlayerId(state)
     const player = state.getPlayerState(playerId)
     player.toolLevel = toolLevel
-    state.borrowedCardId = 'd21'
+    state.borrowedCardId = cardId
     const [nodeId, site] = Object.entries(state.board.mines)[0]!
     site!.token = { id: 'test', ore, level } as never
     site!.ownerPlayerId = playerId
@@ -48,5 +48,16 @@ describe("a card's +1 ore and +1 tool", () => {
         expect(extracted(OreKind.Silver, 3, 5)).toBe(4)
         // Both can go past 5 for that extract: a level 5 mine with the top tool gives 6.
         expect(extracted(OreKind.Gold, 5, 8)).toBe(6)
+    })
+
+    it('work the same for gold and Mana, and for +2 ore and +2 tool', () => {
+        // Level 4 gold or Mana with a limit of 3: the mine goes to 5, the limit to 4.
+        expect(extracted(OreKind.Gold, 4, 4)).toBe(4)
+        expect(extracted(OreKind.Silver, 4, 5)).toBe(4)
+        // +2 and +2 (card 26): level 4 goes to 6, a limit of 3 goes to 5.
+        expect(extracted(OreKind.Gold, 4, 4, 'd26')).toBe(5)
+        expect(extracted(OreKind.Silver, 4, 5, 'd26')).toBe(5)
+        // Level 2 goes to 4, under a limit of 5.
+        expect(extracted(OreKind.Gold, 2, 4, 'd26')).toBe(4)
     })
 })
