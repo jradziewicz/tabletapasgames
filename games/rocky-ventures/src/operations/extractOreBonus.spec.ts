@@ -46,5 +46,7 @@ describe("a card's +1 ore and +1 tool", () => {
         // A level 3 Mana mine gives 3 with a limit of 2.
         expect(extracted(OreKind.Silver, 3, 4)).toBe(3)
         expect(extracted(OreKind.Silver, 3, 5)).toBe(4)
+        // Both can go past 5 for that extract: a level 5 mine with the top tool gives 6.
+        expect(extracted(OreKind.Gold, 5, 8)).toBe(6)
     })
 })
