@@ -527,7 +527,7 @@
                     {:else}
                         <span>
                             <strong>{BoardNodesById[extractNodeId]?.name}</strong>: level {extractToken.level}
-                            {extractToken.ore}, extracting
+                            {extractToken.ore === OreKind.Gold ? 'gold' : 'Mana'}, extracting
                             <strong>{oreExtracted(gameState, activeId ?? '', extractNodeId)}</strong> ore.
                         </span>
                     {/if}

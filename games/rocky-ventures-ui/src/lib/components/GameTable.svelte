@@ -722,13 +722,21 @@
 
     /* Phones: the shared table layout gives the game 90vw and leaves the players column peeking in
        from the left. Let the game fill the screen (players stay one swipe right) and hide that
-       scroller's scrollbar. */
+       scroller's scrollbar. Sideways scrolling always comes to rest on the players or on the game,
+       never part way between with the game running off the right edge. */
     @media (width < 640px) {
         :global([data-game-ui='rocky-ventures'] div:has(> [data-rocky-game-column])) {
+            width: calc(100vw - 8px);
             min-width: calc(100vw - 8px);
+            max-width: calc(100vw - 8px);
+            scroll-snap-align: end;
+        }
+        :global([data-game-ui='rocky-ventures'] div:has(+ div > [data-rocky-game-column])) {
+            scroll-snap-align: start;
         }
         :global([data-game-ui='rocky-ventures'] div:has(> div > div > [data-rocky-game-column])) {
             scrollbar-width: none;
+            scroll-snap-type: x mandatory;
         }
         :global([data-game-ui='rocky-ventures'] div:has(> div > div > [data-rocky-game-column])::-webkit-scrollbar) {
             display: none;
