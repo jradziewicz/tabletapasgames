@@ -167,8 +167,9 @@ export function oreExtracted(
     const player = state.getPlayerState(playerId)
     const capacity = OreCapacityByToolLevel[player.toolLevel]
     const base = token.ore === OreKind.Gold ? capacity?.gold ?? 0 : capacity?.silver ?? 0
-    // A mine never gives more ore than its level, whatever the card adds (Justin, 2026-11-24).
-    return Math.min(token.level, base + action.temporaryToolLevels + action.bonusOre)
+    // A card's +ore raises the mine's level and its +tool raises what the player can take, gold and
+    // Mana alike; the lower of the two is extracted (Justin, 2026-11-24).
+    return Math.min(token.level + action.bonusOre, base + action.temporaryToolLevels)
 }
 
 export interface RouteResult {
