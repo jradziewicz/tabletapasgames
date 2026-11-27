@@ -58,24 +58,33 @@ import image84 from './era2.png'
 import image91 from './era3-bonus.png'
 import image92 from './era3.png'
 import image94 from './feast-devCards-cost.png'
-import image95 from './feast-devCards.png'
-import image97 from './feast-emptyMines-cost.png'
-import image98 from './feast-emptyMines.png'
-import image100 from './feast-gems-cost.png'
-import image101 from './feast-gems.png'
-import image103 from './feast-goldMines-cost.png'
-import image104 from './feast-goldMines.png'
-import image106 from './feast-hits-cost.png'
-import image107 from './feast-hits.png'
-import image110 from './feast-manaMines-cost.png'
-import image111 from './feast-manaMines.png'
-import image113 from './feast-shares-cost.png'
-import image114 from './feast-shares.png'
-import image116 from './feast-tool-cost.png'
-import image117 from './feast-tool.png'
-import image119 from './feast-weapon-cost.png'
-import image120 from './feast-weapon.png'
-import image121 from './gameOver.png'
+import image95 from './feast-devCards-mult.png'
+import image96 from './feast-devCards.png'
+import image98 from './feast-emptyMines-cost.png'
+import image99 from './feast-emptyMines-mult.png'
+import image100 from './feast-emptyMines.png'
+import image102 from './feast-gems-cost.png'
+import image103 from './feast-gems-mult.png'
+import image104 from './feast-gems.png'
+import image106 from './feast-goldMines-cost.png'
+import image107 from './feast-goldMines-mult.png'
+import image108 from './feast-goldMines.png'
+import image110 from './feast-hits-cost.png'
+import image111 from './feast-hits-mult.png'
+import image112 from './feast-hits.png'
+import image115 from './feast-manaMines-cost.png'
+import image116 from './feast-manaMines-mult.png'
+import image117 from './feast-manaMines.png'
+import image119 from './feast-shares-cost.png'
+import image120 from './feast-shares-mult.png'
+import image121 from './feast-shares.png'
+import image123 from './feast-tool-cost.png'
+import image124 from './feast-tool-mult.png'
+import image125 from './feast-tool.png'
+import image127 from './feast-weapon-cost.png'
+import image128 from './feast-weapon-mult.png'
+import image129 from './feast-weapon.png'
+import image130 from './gameOver.png'
 
 // Image URL by file name (without .png)
 export const Images: Record<string, string> = {
@@ -138,22 +147,31 @@ export const Images: Record<string, string> = {
     'era3-bonus': image91,
     'era3': image92,
     'feast-devCards-cost': image94,
-    'feast-devCards': image95,
-    'feast-emptyMines-cost': image97,
-    'feast-emptyMines': image98,
-    'feast-gems-cost': image100,
-    'feast-gems': image101,
-    'feast-goldMines-cost': image103,
-    'feast-goldMines': image104,
-    'feast-hits-cost': image106,
-    'feast-hits': image107,
-    'feast-manaMines-cost': image110,
-    'feast-manaMines': image111,
-    'feast-shares-cost': image113,
-    'feast-shares': image114,
-    'feast-tool-cost': image116,
-    'feast-tool': image117,
-    'feast-weapon-cost': image119,
-    'feast-weapon': image120,
-    'gameOver': image121,
+    'feast-devCards-mult': image95,
+    'feast-devCards': image96,
+    'feast-emptyMines-cost': image98,
+    'feast-emptyMines-mult': image99,
+    'feast-emptyMines': image100,
+    'feast-gems-cost': image102,
+    'feast-gems-mult': image103,
+    'feast-gems': image104,
+    'feast-goldMines-cost': image106,
+    'feast-goldMines-mult': image107,
+    'feast-goldMines': image108,
+    'feast-hits-cost': image110,
+    'feast-hits-mult': image111,
+    'feast-hits': image112,
+    'feast-manaMines-cost': image115,
+    'feast-manaMines-mult': image116,
+    'feast-manaMines': image117,
+    'feast-shares-cost': image119,
+    'feast-shares-mult': image120,
+    'feast-shares': image121,
+    'feast-tool-cost': image123,
+    'feast-tool-mult': image124,
+    'feast-tool': image125,
+    'feast-weapon-cost': image127,
+    'feast-weapon-mult': image128,
+    'feast-weapon': image129,
+    'gameOver': image130,
 }

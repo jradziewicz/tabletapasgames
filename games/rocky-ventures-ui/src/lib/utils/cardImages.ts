@@ -38,9 +38,17 @@ export function setFeastCostArt(cardIds: string[]) {
     feastCostArt = cardIds
 }
 
+// Games where Feasts cost a multiple of their slot price print 2x, 3x or 4x on them.
+let feastMultipleArt = false
+
+export function setFeastMultipleArt(on: boolean) {
+    feastMultipleArt = on
+}
+
 export function cardImageUrl(cardId: string): string | undefined {
     const category = feastCategories?.[cardId]
     return (
+        (category && feastMultipleArt ? cardImagesById[`feast-${category}-mult`] : undefined) ??
         (category && feastCostArt.includes(cardId) ? cardImagesById[`feast-${category}-cost`] : undefined) ??
         (category ? cardImagesById[`feast-${category}`] : undefined) ??
         (feastBonusArt ? cardImagesById[`${cardId}-bonus`] : undefined) ??
