@@ -86,13 +86,14 @@ describe('Gain Mine', () => {
 })
 
 describe('Feast prices', () => {
-    it('are 2x, 3x and 4x the slot price in new games, and a Bonus Invest pays the slot price', () => {
+    it('are 2x, 3x and 4x the slot price in new games, even with a Bonus Invest', () => {
         const state = startedState()
         expect(state.feastSlotMultiples).toBe(true)
         state.market.slots = ['d01', 'era1', 'era2', 'era3', 'd02']
         expect([1, 2, 3].map((slot) => investCost(state, slot))).toEqual([4, 9, 20])
         state.bonusInvest = true
-        expect([1, 2, 3].map((slot) => investCost(state, slot))).toEqual([2, 3, 5])
+        expect([1, 2, 3].map((slot) => investCost(state, slot))).toEqual([4, 9, 20])
+        expect(investCost(state, 0)).toBe(1)
     })
 
     it('add $2, $6 and $10 to the Feasts in games from Nov 24', () => {

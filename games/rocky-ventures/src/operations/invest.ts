@@ -24,12 +24,13 @@ export function investCost(
     if (!card || cost === undefined) {
         return undefined
     }
-    if (state.bonusInvest && state.bonusInvestSlotCost) {
-        return MarketSlotPrices[slotIndex] ?? 0
-    }
+    // A Feast costs its full multiple, even with a Bonus Invest (Justin, 2026-11-26).
     const multiple = state.feastSlotMultiples ? FeastSlotMultiples[card.id] : undefined
     if (multiple !== undefined) {
         return (MarketSlotPrices[slotIndex] ?? 0) * multiple
+    }
+    if (state.bonusInvest && state.bonusInvestSlotCost) {
+        return MarketSlotPrices[slotIndex] ?? 0
     }
     return cost + feastBaseCost(state, card.id)
 }
