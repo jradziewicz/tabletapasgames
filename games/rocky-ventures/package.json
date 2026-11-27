@@ -1,6 +1,6 @@
 {
     "name": "@tabletop/rocky-ventures",
-    "version": "0.0.55",
+    "version": "0.0.56",
     "type": "module",
     "exports": {
         "import": "./esm/index.js",

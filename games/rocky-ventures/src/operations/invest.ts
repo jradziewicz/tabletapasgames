@@ -27,8 +27,15 @@ export function investCost(
     if (state.bonusInvest && state.bonusInvestSlotCost) {
         return MarketSlotPrices[slotIndex] ?? 0
     }
+    const multiple = state.feastSlotMultiples ? FeastSlotMultiples[card.id] : undefined
+    if (multiple !== undefined) {
+        return (MarketSlotPrices[slotIndex] ?? 0) * multiple
+    }
     return cost + feastBaseCost(state, card.id)
 }
+
+// Feasts cost a multiple of their market slot's price (Justin, 2026-11-26; new games).
+export const FeastSlotMultiples: Record<string, number> = { [FirstEraCardId]: 2, [SecondEraCardId]: 3, [ThirdEraCardId]: 4 }
 
 // The first two Feasts' base costs, on top of their market slot's price (Justin, 2026-11-24).
 const EarlyFeastBaseCosts: Record<string, number> = { [FirstEraCardId]: 2, [SecondEraCardId]: 6 }

@@ -116,6 +116,7 @@ export const RockyVenturesGameState = Type.Evaluate(
             weaponFiveAppliesThree: Type.Optional(Type.Boolean()),
             finalFeastBaseCost: Type.Optional(Type.Number()),
             earlyFeastBaseCosts: Type.Optional(Type.Boolean()),
+            feastSlotMultiples: Type.Optional(Type.Boolean()),
             agreementsScoreOnDelivery: Type.Optional(Type.Boolean()),
             noAgreementDiscard: Type.Optional(Type.Boolean()),
             gemOnlyOnCircle: Type.Optional(Type.Boolean()),
@@ -203,6 +204,8 @@ export class HydratedRockyVenturesGameState
     declare finalFeastBaseCost?: number
     // The first two Feasts have base costs too ($2 and $6).
     declare earlyFeastBaseCosts?: boolean
+    // Feasts cost 2x, 3x and 4x their market slot's price, in place of any base cost.
+    declare feastSlotMultiples?: boolean
     // An agreement's front scores VP on a gold sale into its city instead of offering a point buy.
     declare agreementsScoreOnDelivery?: boolean
     // Agreements can't be discarded for free track (2026-11-09).
