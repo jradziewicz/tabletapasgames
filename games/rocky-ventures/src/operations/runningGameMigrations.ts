@@ -63,6 +63,8 @@ function migrateToCardListNov24(state: HydratedRockyVenturesGameState) {
     state.weaponFiveAppliesThree = true
     state.finalFeastBaseCost = FinalFeastBaseCost
     state.earlyFeastBaseCosts = true
+    // ...and then Feasts at 2x, 3x and 4x the slot price (Justin, 2026-11-27).
+    state.feastSlotMultiples = true
     if (!state.huntStarterCard) {
         state.huntStarterCard = true
         for (const player of state.players) {

@@ -33,14 +33,14 @@
     {
       "gameId": "rockyventures",
       "packageId": "rocky-ventures",
-      "logicVersion": "0.0.57",
+      "logicVersion": "0.0.58",
       "uiVersion": "0.0.176",
       "priorLogicVersions": [
+        "0.0.57",
         "0.0.56",
         "0.0.55",
         "0.0.54",
-        "0.0.53",
-        "0.0.52"
+        "0.0.53"
       ],
       "priorUiVersions": [
         "0.0.175",

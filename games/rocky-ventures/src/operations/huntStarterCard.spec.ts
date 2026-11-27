@@ -31,6 +31,7 @@ function olderState(): HydratedRockyVenturesGameState {
     delete state.trackAndHuntCards
     delete state.weaponFiveAppliesThree
     delete state.earlyFeastBaseCosts
+    delete state.feastSlotMultiples
     for (const player of state.players) player.tableau = ['p1', 'p2', 'p4', 'p5', 'd01']
     state.players[0]!.pawnIndex = 3
     return state
@@ -54,6 +55,7 @@ describe('starter Hunt card V', () => {
             expect(state.cardRevision).toBe(2)
             expect(state.weaponFiveAppliesThree).toBe(true)
             expect(state.earlyFeastBaseCosts).toBe(true)
+            expect(state.feastSlotMultiples).toBe(true)
             // Discarded later: loading the game again doesn't hand it back.
             state.players[0]!.tableau = ['p1', 'p2', 'p4', 'p5', 'd01']
             migrateRunningGame(state)
